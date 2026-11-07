@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Escandon — Pedidos en Tiempo Real</title>
+  <meta name="description" content="Escandon — Selección rápida Tap-to-select para Tacos, Hot Dogs y Bebidas con rastreador en tiempo real." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- NOTIFICACIÓN PUSH IN-APP (ALERTAS DE CAMBIO DE ESTADO EN TIEMPO REAL) -->
+<div class="push-notification" id="status-push-banner" role="status" aria-live="polite">
+  <span class="led-dot" id="push-led-dot"></span>
+  <div class="push-content">
+    <span class="push-kicker" id="push-kicker">ACTUALIZACIÓN EN VIVO</span>
+    <span class="push-message" id="push-message">Tu pedido está en preparación</span>
+  </div>
+</div>
+
+<!-- LANDING -->
+<div id="app-landing" class="landing">
+  <div class="landing-inner">
+    <div class="brand-block">
+      <div class="landing-logo">
+        <span class="logo-icon">◈</span>
+        <span class="logo-text brand-escandon">Escandon</span>
+      </div>
+      <div class="brand-credits">
+        <span>Powered by RestaurantOS</span>
+        <span>Designed by yanni glez</span>
+      </div>
+    </div>
+
+    <div class="cloud-pill" id="landing-cloud-status">
+      <span class="cloud-dot" id="landing-cloud-dot"></span>
+      <span id="landing-cloud-text">Conectando en tiempo real...</span>
+    </div>
+
+    <div class="landing-cards">
+      <button class="landing-card" id="btn-client" onclick="showView('client')">
+        <div class="lc-row">
+          <span class="lc-icon">🌮</span>
+          <div class="lc-texts">
+            <span class="lc-title">Ordenar Aquí</span>
+            <span class="lc-desc">Tacos, Hot Dogs y Bebidas al toque</span>
+          </div>
+          <span class="lc-arrow">→</span>
+        </div>
+      </button>
+
+      <button class="landing-card" id="btn-kitchen" onclick="showView('kitchen')">
+        <div class="lc-row">
+          <span class="lc-icon">🔒</span>
+          <div class="lc-texts">
+            <span class="lc-title">Cocina (KDS)</span>
+            <span class="lc-desc">Acceso privado con PIN</span>
+          </div>
+          <span class="lc-arrow">→</span>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- VISTA CLIENTE (100% MOBILE-FIRST · TAP-TO-SELECT · MINIMALISMO ABSOLUTO) -->
+<div id="view-client" class="view hidden">
+  <header class="topnav">
+    <div class="topnav-left">
+      <button class="nav-btn-minimal" id="btn-client-back" onclick="handleClientBack()">← Inicio</button>
+    </div>
+
+    <div class="nav-brand-center">
+      <div class="nav-brand-title">
+        <span class="logo-icon small">◈</span>
+        <span class="brand-escandon">Escandon</span>
+        <span class="client-cloud-dot" id="client-cloud-dot" title="Sincronización activa"></span>
+      </div>
+      <div class="nav-brand-credits">
+        <span>Powered by RestaurantOS</span>
+        <span class="credits-dot">·</span>
+        <span>Designed by yanni glez</span>
+      </div>
+    </div>
+
+    <div class="topnav-right">
+      <button class="tracker-pill-btn hidden" id="btn-return-tracker" onclick="openActiveTracker()">
+        <span class="led-dot" id="mini-tracker-led"></span>
+        <span>Mi Orden</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- CONTENEDOR PRINCIPAL DEL CLIENTE -->
+  <main class="client-scroll-container" id="client-scroll-container">
+
+    <!-- A) FLUJO DE MENÚ Y SELECCIÓN POR TOQUES (TAP-TO-SELECT) -->
+    <div id="client-menu-flow" class="client-menu-flow">
+
+      <!-- 1. Selección inicial de base -->
+      <section id="station-selector" class="station-selector">
+        <div class="minimal-heading">
+          <span class="step-label">ELIGE TU BASE</span>
+          <h1>¿Qué se te antoja hoy?</h1>
+        </div>
+
+        <div class="station-cards">
+          <button class="station-card" onclick="selectStation('taco')">
+            <div class="station-illustration" id="StationSvgTaco"></div>
+            <div class="station-card-body">
+              <div class="station-card-top">
+                <h2>Tacos</h2>
+                <span class="price-tag">$28</span>
+              </div>
+              <p>Tortilla sencilla o doble, bistec o longaniza y complementos incluidos.</p>
+            </div>
+          </button>
+
+          <button class="station-card" onclick="selectStation('hotdog')">
+            <div class="station-illustration" id="StationSvgHotdog"></div>
+            <div class="station-card-body">
+              <div class="station-card-top">
+                <h2>Hot Dogs</h2>
+                <span class="price-tag">$35</span>
+              </div>
+              <p>Pan suave con salchicha asada y todos los aderezos incluidos.</p>
+            </div>
+          </button>
+        </div>
+
+        <!-- Bebidas accesibles también desde el inicio si solo quieren bebida -->
+        <div class="drinks-section" id="drinks-section-home">
+          <div class="minimal-group-title">
+            <span>BEBIDAS FRÍAS (500 ML)</span>
+          </div>
+          <div class="drinks-list" id="drinks-list-home"></div>
+        </div>
+      </section>
+
+      <!-- 2. Armador minimalista por toques (Tap-to-select) -->
+      <section id="builder-workspace" class="builder-workspace hidden">
+        <!-- Cambio rápido de base -->
+        <div class="station-tabs">
+          <button class="station-tab" id="tab-taco" onclick="selectStation('taco')">
+            <span>🌮 Tacos</span>
+            <span class="tab-price">$28</span>
+          </button>
+          <button class="station-tab" id="tab-hotdog" onclick="selectStation('hotdog')">
+            <span>🌭 Hot Dogs</span>
+            <span class="tab-price">$35</span>
+          </button>
+        </div>
+
+        <!-- Vista limpia del platillo sin bordes ni marcos innecesarios -->
+        <div class="plate-preview-minimal">
+          <div class="plate-canvas" id="plate-canvas"></div>
+          <div class="live-summary-line">
+            <span class="live-summary-text" id="live-item-description">Toca tu tortilla y proteína</span>
+            <button class="btn-clear-minimal" onclick="resetCurrentBuilder()">Limpiar</button>
+          </div>
+        </div>
+
+        <!-- Opciones Tap-to-Select -->
+        <div class="tap-options-container" id="ingredients-tray"></div>
+
+        <!-- Sección de Bebidas integrada -->
+        <div class="drinks-section" id="drinks-section">
+          <div class="minimal-group-title">
+            <span>BEBIDAS (500 ML)</span>
+          </div>
+          <div class="drinks-list" id="drinks-list"></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- B) RASTREADOR DE ESTATUS EN TIEMPO REAL (4 ESTADOS + LED) -->
+    <section id="client-tracker-view" class="tracker-view hidden">
+      <div class="tracker-top">
+        <span class="tracker-order-num" id="tracker-order-num">ORDEN #001</span>
+        <span class="tracker-table-name" id="tracker-table-name">Mostrador</span>
+      </div>
+
+      <!-- Estado principal con indicador LED -->
+      <div class="tracker-hero-status">
+        <div class="tracker-status-pill">
+          <span class="led-dot" id="tracker-main-led"></span>
+          <h2 class="tracker-status-title" id="tracker-status-title">Pendiente</h2>
+        </div>
+        <p class="tracker-status-desc" id="tracker-status-desc">
+          Tu orden fue enviada y espera confirmación de cocina.
+        </p>
+      </div>
+
+      <!-- Línea de progreso minimalista de 4 fases -->
+      <div class="tracker-steps" id="tracker-steps">
+        <div class="tracker-step" data-step="pending">
+          <span class="step-node"></span>
+          <div class="step-info">
+            <span class="step-name">Pendiente</span>
+            <span class="step-sub">Orden enviada</span>
+          </div>
+        </div>
+        <div class="tracker-step" data-step="received">
+          <span class="step-node"></span>
+          <div class="step-info">
+            <span class="step-name">Recibido</span>
+            <span class="step-sub">Confirmado en cocina</span>
+          </div>
+        </div>
+        <div class="tracker-step" data-step="preparing">
+          <span class="step-node"></span>
+          <div class="step-info">
+            <span class="step-name">En preparación</span>
+            <span class="step-sub">Cocinando al momento</span>
+          </div>
+        </div>
+        <div class="tracker-step" data-step="ready">
+          <span class="step-node"></span>
+          <div class="step-info">
+            <span class="step-name">Listo</span>
+            <span class="step-sub">Pasa por tu pedido</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Resumen minimalista de lo pedido -->
+      <div class="tracker-order-summary">
+        <div class="minimal-group-title">
+          <span>DETALLE DE TU ORDEN</span>
+          <span id="tracker-order-total">$0</span>
+        </div>
+        <div class="tracker-items-list" id="tracker-items-list"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ZONA INFERIOR DEL PULGAR (CONTROLES PRINCIPALES EN MÓVIL) -->
+  <div class="thumb-dock" id="thumb-dock">
+    <!-- Acción rápida para agregar el Taco/Hot Dog actual al carrito -->
+    <div class="dock-builder-bar hidden" id="dock-builder-bar">
+      <button class="btn-dock-add" id="btn-add-built" onclick="addBuiltItemToCart()">
+        <span id="btn-add-built-label">+ Agregar Taco</span>
+        <span class="btn-dock-price" id="live-item-price">$28</span>
+      </button>
+    </div>
+
+    <!-- Barra principal de Carrito y Botón Pedir -->
+    <div class="dock-main-bar" id="mobile-bottom-bar">
+      <button class="dock-cart-trigger" onclick="toggleCart(true)">
+        <span class="dock-count" id="bb-count">0</span>
+        <div class="dock-cart-info">
+          <span class="dock-cart-label" id="bb-status-text">Tu pedido</span>
+          <span class="dock-cart-total" id="bb-total-price">$0</span>
+        </div>
+      </button>
+      <button class="dock-btn-pedir" id="btn-pedir-bar" onclick="openOrderModal()">
+        Pedir →
+      </button>
+    </div>
+
+    <!-- Barra inferior cuando está en modo Rastreador -->
+    <div class="dock-tracker-bar hidden" id="dock-tracker-bar">
+      <button class="btn-dock-secondary" onclick="startNewOrderFromTracker()">
+        + Pedir más cosas
+      </button>
+    </div>
+  </div>
+
+  <!-- BOTTOM SHEET DEL CARRITO (MINIMALISTA) -->
+  <div class="cart-overlay" id="cart-overlay" onclick="toggleCart(false)"></div>
+  <aside class="bottom-sheet-cart" id="cart-panel">
+    <div class="sheet-handle-area" onclick="toggleCart(false)">
+      <div class="sheet-grabber"></div>
+    </div>
+
+    <div class="cart-header">
+      <h2>Tu Pedido</h2>
+      <button class="cart-close" onclick="toggleCart(false)">Cerrar</button>
+    </div>
+
+    <div class="cart-items" id="cart-items">
+      <p class="cart-empty">Selecciona tus tacos, hot dogs o bebidas</p>
+    </div>
+
+    <div class="cart-footer">
+      <div class="cart-row total">
+        <span>Total</span>
+        <span id="cart-total">$0</span>
+      </div>
+      <button class="btn-send-order" id="btn-pedir-sheet" onclick="openOrderModal()">Pedir →</button>
+    </div>
+  </aside>
+
+  <!-- MODAL RÁPIDO NOMBRE / MESA -->
+  <div class="modal-overlay" id="modal-overlay" onclick="closeOrderModal()"></div>
+  <div class="modal" id="order-modal">
+    <h3 class="modal-title">¿Tu nombre o mesa?</h3>
+    <p class="modal-sub">Para avisarte en cuanto esté listo</p>
+    <input class="modal-input" id="table-input" type="text" placeholder="Ej: Mesa 4 · Ana" maxlength="40" autocomplete="off" />
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeOrderModal()">Cancelar</button>
+      <button class="btn-confirm" id="btn-submit-order" onclick="submitOrder()">Confirmar y Pedir</button>
+    </div>
+  </div>
+
+  <!-- Toast ligero para acciones del menú -->
+  <div class="toast" id="order-toast">
+    <span class="toast-icon">✓</span>
+    <span id="toast-msg">Agregado</span>
+  </div>
+</div>
+
+<!-- VISTA COCINA KDS (PROTEGIDA CON PIN 12345) -->
+<div id="view-kitchen" class="view hidden">
+
+  <!-- 1. PANTALLA DE BLOQUEO KDS (PRIVACIDAD CON PIN 12345) -->
+  <div id="kds-lock-screen" class="kds-lock-screen">
+    <div class="kds-lock-box">
+      <span class="logo-icon">◈</span>
+      <h2 class="kds-lock-title"><span class="brand-escandon">Escandon</span> · Cocina</h2>
+      <p class="kds-lock-sub">Ingresa el PIN para ver las comandas</p>
+
+      <form class="kds-pin-form" onsubmit="event.preventDefault(); verifyKDSPin();">
+        <input
+          type="password"
+          id="kds-pin-input"
+          class="kds-pin-input"
+          inputmode="numeric"
+          pattern="[0-9]*"
+          maxlength="5"
+          placeholder="•••••"
+          autocomplete="off"
+        />
+        <p class="kds-pin-error hidden" id="kds-pin-error">PIN incorrecto</p>
+        <button type="submit" class="btn-kds-unlock">Entrar</button>
+      </form>
+
+      <button class="btn-kds-back" onclick="showView('landing')">← Volver al inicio</button>
+    </div>
+  </div>
+
+  <!-- PANEL DE COMANDAS KDS (Visible únicamente tras desbloquear PIN) -->
+  <div id="kds-unlocked-content" class="kds-unlocked-content hidden">
+    <nav class="kds-nav">
+      <button class="nav-btn-minimal" onclick="lockKDSAndExit()">🔒 Bloquear</button>
+      <div class="kds-brand">
+        <span class="brand-escandon">Escandon</span>
+        <span class="kds-sub-title">· KDS</span>
+        <span class="kds-status" id="kds-status">● EN VIVO</span>
+      </div>
+      <div class="kds-right-tools">
+        <button class="btn-copy-link" onclick="copyCustomerLink()" title="Copiar link directo para clientes">
+          🔗 Link Clientes
+        </button>
+        <div class="kds-clock" id="kds-clock"></div>
+      </div>
+    </nav>
+
+    <div class="kds-filters">
+      <button class="kds-filter active" data-filter="all" onclick="setKDSFilter('all', this)">Todos</button>
+      <button class="kds-filter" data-filter="pending" onclick="setKDSFilter('pending', this)">Pendientes</button>
+      <button class="kds-filter" data-filter="received" onclick="setKDSFilter('received', this)">Recibidos</button>
+      <button class="kds-filter" data-filter="preparing" onclick="setKDSFilter('preparing', this)">En preparación</button>
+      <button class="kds-filter" data-filter="ready" onclick="setKDSFilter('ready', this)">Listos</button>
+    </div>
+
+    <div class="kds-board" id="kds-board">
+      <div class="kds-empty" id="kds-empty">
+        <p>Sin comandas activas</p>
+        <p class="kds-empty-sub">Los pedidos entrantes aparecerán al instante</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Sincronización multi-dispositivo en tiempo real -->
+<script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
