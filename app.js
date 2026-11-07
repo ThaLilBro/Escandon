@@ -235,11 +235,13 @@ let hotdogDraft = {
 };
 
 let cartItems            = []; // [{ key, name, emoji, price, qty, station }]
-let orders               = []; // Comandas sincronizadas
+let orders               = []; // Comandas activas sincronizadas
+let completedOrders      = []; // Pedidos marcados como "Listo" y entregados en el turno actual
 let myOrderIds           = []; // IDs de órdenes creadas por este cliente
 let activeTrackedOrderId = null;
 let cartOpen             = false;
 let kdsFilter            = 'all';
+let kdsSubView           = 'comandas'; // 'comandas' | 'sales'
 let orderCounter         = 0;
 let kdsUnlocked          = false;
 
@@ -424,6 +426,7 @@ function handleIncomingEvent(type, payload, fromRemote = false) {
       orders.sort((a, b) => a.createdAt - b.createdAt);
       persistOrders();
       renderKDS();
+      renderDailySales();
       renderClientTracker();
       if (fromRemote) playKitchenBell();
     }
@@ -434,17 +437,41 @@ function handleIncomingEvent(type, payload, fromRemote = false) {
       o.status = payload.status;
       persistOrders();
       renderKDS();
+      renderDailySales();
       notifyClientIfMyOrderChanged(o.id, prevStatus, o.status, o.num);
     }
+  } else if (type === 'ORDER_DELIVER') {
+    const existingActive = orders.find(x => x.id === payload.id);
+    const toArchive = payload.order || existingActive;
+    if (toArchive && !completedOrders.some(c => c.id === toArchive.id)) {
+      completedOrders.push({ ...toArchive, status: 'ready', deliveredAt: Date.now() });
+    }
+    orders = orders.filter(x => x.id !== payload.id);
+    persistOrders();
+    renderKDS();
+    renderDailySales();
+    renderClientTracker();
+    updateHeaderTrackerPill();
   } else if (type === 'ORDER_DELETE') {
     const before = orders.length;
     orders = orders.filter(x => x.id !== payload.id);
     if (orders.length !== before) {
       persistOrders();
       renderKDS();
+      renderDailySales();
       renderClientTracker();
       updateHeaderTrackerPill();
     }
+  } else if (type === 'SHIFT_RESET') {
+    orders = [];
+    completedOrders = [];
+    orderCounter = 0;
+    activeTrackedOrderId = null;
+    persistOrders();
+    renderKDS();
+    renderDailySales();
+    renderClientTracker();
+    updateHeaderTrackerPill();
   }
 }
 
@@ -454,13 +481,29 @@ function mergeRemoteStateSnapshot(snapshot) {
   // Detectar si alguna orden de este cliente cambió de estado en el snapshot
   const prevStatusMap = new Map(orders.map(o => [o.id, o.status]));
 
-  if (typeof snapshot.orderCounter === 'number' && snapshot.orderCounter > orderCounter) {
-    orderCounter = snapshot.orderCounter;
+  const isShiftReset =
+    snapshot.orders.length === 0 &&
+    Array.isArray(snapshot.completedOrders) &&
+    snapshot.completedOrders.length === 0 &&
+    snapshot.orderCounter === 0;
+
+  if (isShiftReset) {
+    orderCounter = 0;
+    completedOrders = [];
+    orders = [];
+  } else {
+    if (typeof snapshot.orderCounter === 'number' && snapshot.orderCounter > orderCounter) {
+      orderCounter = snapshot.orderCounter;
+    }
+    orders = snapshot.orders;
+    if (Array.isArray(snapshot.completedOrders)) {
+      completedOrders = snapshot.completedOrders;
+    }
   }
 
-  orders = snapshot.orders;
   persistOrders();
   renderKDS();
+  renderDailySales();
 
   orders.forEach(o => {
     const prev = prevStatusMap.get(o.id);
@@ -546,6 +589,7 @@ function publishCloudSync(type, payload) {
     });
     const statePacket = JSON.stringify({
       orders,
+      completedOrders,
       orderCounter,
       sender: DEVICE_ID,
       updatedAt: Date.now(),
@@ -560,7 +604,7 @@ function publishCloudSync(type, payload) {
     fetch(`${dbUrl}/escandon_kds.json`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ orders, orderCounter, updatedAt: Date.now() }),
+      body: JSON.stringify({ orders, completedOrders, orderCounter, updatedAt: Date.now() }),
     }).catch(() => {});
   }
 }
@@ -571,7 +615,7 @@ localChannel.onmessage = (e) => {
 };
 
 window.addEventListener('storage', (e) => {
-  if (e.key === 'kds-orders') {
+  if (e.key === 'kds-orders' || e.key === 'kds-completed-orders') {
     const prevMap = new Map(orders.map(o => [o.id, o.status]));
     loadPersistedOrders();
     orders.forEach(o => {
@@ -581,6 +625,7 @@ window.addEventListener('storage', (e) => {
       }
     });
     renderKDS();
+    renderDailySales();
     renderClientTracker();
     updateHeaderTrackerPill();
   }
@@ -588,6 +633,7 @@ window.addEventListener('storage', (e) => {
 
 function persistOrders() {
   localStorage.setItem('kds-orders', JSON.stringify(orders));
+  localStorage.setItem('kds-completed-orders', JSON.stringify(completedOrders));
   localStorage.setItem('kds-counter', String(orderCounter));
   localStorage.setItem('kds-my-orders', JSON.stringify(myOrderIds));
   if (activeTrackedOrderId) {
@@ -599,17 +645,20 @@ function persistOrders() {
 
 function loadPersistedOrders() {
   try {
-    const saved   = localStorage.getItem('kds-orders');
-    const cnt     = localStorage.getItem('kds-counter');
-    const mine    = localStorage.getItem('kds-my-orders');
-    const tracked = localStorage.getItem('kds-tracked-id');
+    const saved          = localStorage.getItem('kds-orders');
+    const savedCompleted = localStorage.getItem('kds-completed-orders');
+    const cnt            = localStorage.getItem('kds-counter');
+    const mine           = localStorage.getItem('kds-my-orders');
+    const tracked        = localStorage.getItem('kds-tracked-id');
 
-    if (saved)   orders = JSON.parse(saved);
-    if (cnt)     orderCounter = parseInt(cnt, 10) || 0;
-    if (mine)    myOrderIds = JSON.parse(mine);
-    if (tracked) activeTrackedOrderId = parseInt(tracked, 10) || null;
+    orders               = saved ? JSON.parse(saved) : [];
+    completedOrders      = savedCompleted ? JSON.parse(savedCompleted) : [];
+    orderCounter         = cnt ? (parseInt(cnt, 10) || 0) : 0;
+    myOrderIds           = mine ? JSON.parse(mine) : [];
+    activeTrackedOrderId = tracked ? (parseInt(tracked, 10) || null) : null;
   } catch (e) {
     orders = [];
+    completedOrders = [];
     orderCounter = 0;
     myOrderIds = [];
     activeTrackedOrderId = null;
@@ -660,7 +709,9 @@ function verifyKDSPin() {
     if (errEl) errEl.classList.add('hidden');
     unlockAudioContext();
     renderKitchenLockState();
+    setKDSSubView('comandas');
     renderKDS();
+    renderDailySales();
     startClock();
     startTimers();
   } else {
@@ -671,7 +722,9 @@ function verifyKDSPin() {
 }
 
 function lockKDSAndExit() {
+  closeCloseShiftModal();
   kdsUnlocked = false;
+  kdsSubView = 'comandas';
   sessionStorage.removeItem('escandon-kds-unlocked');
   renderKitchenLockState();
   showView('landing');
@@ -1434,6 +1487,8 @@ function submitOrder() {
     table: tableVal,
     items: cartItems.map((it, idx) => ({
       id: idx + 1,
+      key: it.key || '',
+      station: it.station || '',
       name: it.name,
       emoji: it.emoji,
       price: it.price,
@@ -1533,9 +1588,32 @@ function initKitchenView() {
   renderKitchenLockState();
 
   if (kdsUnlocked) {
+    setKDSSubView(kdsSubView);
     renderKDS();
+    renderDailySales();
     startClock();
     startTimers();
+  }
+}
+
+function toggleKDSSalesView() {
+  setKDSSubView(kdsSubView === 'sales' ? 'comandas' : 'sales');
+}
+
+function setKDSSubView(subView) {
+  kdsSubView = subView === 'sales' ? 'sales' : 'comandas';
+  const comandasEl = document.getElementById('kds-comandas-section');
+  const salesEl    = document.getElementById('kds-sales-section');
+  const salesBtn   = document.getElementById('btn-kds-sales');
+
+  if (comandasEl) comandasEl.classList.toggle('hidden', kdsSubView === 'sales');
+  if (salesEl)    salesEl.classList.toggle('hidden', kdsSubView !== 'sales');
+  if (salesBtn)   salesBtn.classList.toggle('active', kdsSubView === 'sales');
+
+  if (kdsSubView === 'sales') {
+    renderDailySales();
+  } else {
+    renderKDS();
   }
 }
 
@@ -1616,7 +1694,7 @@ function renderKDS() {
         <button class="order-btn" onclick="changeOrderStatus(${order.id}, 'received')">↩ Atrás</button>
       `;
       return `
-        <button class="order-btn btn-delete" onclick="deleteOrder(${order.id})">✕ Entregar</button>
+        <button class="order-btn btn-ready" onclick="deliverOrder(${order.id})">✓ Entregar</button>
         <button class="order-btn" onclick="changeOrderStatus(${order.id}, 'preparing')">↩ Atrás</button>
       `;
     })();
@@ -1657,7 +1735,25 @@ function changeOrderStatus(orderId, newStatus) {
   persistOrders();
   publishCloudSync('ORDER_STATUS', { id: orderId, status: newStatus });
   renderKDS();
+  renderDailySales();
   notifyClientIfMyOrderChanged(order.id, prevStatus, newStatus, order.num);
+}
+
+// Archiva un pedido "Listo" como entregado para limpiar el tablero KDS sin perder su venta en el Corte del Día
+function deliverOrder(orderId) {
+  const order = orders.find(o => o.id === orderId);
+  if (order && order.status === 'ready') {
+    if (!completedOrders.some(c => c.id === order.id)) {
+      completedOrders.push({ ...order, status: 'ready', deliveredAt: Date.now() });
+    }
+  }
+  orders = orders.filter(o => o.id !== orderId);
+  persistOrders();
+  publishCloudSync('ORDER_DELIVER', { id: orderId, order });
+  renderKDS();
+  renderDailySales();
+  renderClientTracker();
+  updateHeaderTrackerPill();
 }
 
 function deleteOrder(orderId) {
@@ -1665,8 +1761,185 @@ function deleteOrder(orderId) {
   persistOrders();
   publishCloudSync('ORDER_DELETE', { id: orderId });
   renderKDS();
+  renderDailySales();
   renderClientTracker();
   updateHeaderTrackerPill();
+}
+
+// ══════════════════════════════════════════════
+//  CORTE DEL DÍA ("VENTAS DEL DÍA" — PEDIDOS LISTOS)
+// ══════════════════════════════════════════════
+function formatMoney(amount) {
+  return '$' + Number(amount || 0).toLocaleString('es-MX');
+}
+
+function calculateDailySales() {
+  // Suma todos los pedidos marcados como "Listos" (tanto visibles en tablero como ya entregados en el turno)
+  const readyMap = new Map();
+
+  completedOrders.forEach(o => {
+    if (o && o.id) readyMap.set(o.id, o);
+  });
+
+  orders.forEach(o => {
+    if (o && o.id && o.status === 'ready') {
+      readyMap.set(o.id, o);
+    }
+  });
+
+  const readyList = Array.from(readyMap.values());
+
+  let totalRevenue = 0;
+  let totalUnits   = 0;
+
+  const breakdown = {
+    tacos:   { qty: 0, amount: 0 },
+    hotdogs: { qty: 0, amount: 0 },
+    aguas:   { qty: 0, amount: 0, jamaica: 0, horchata: 0 },
+    cocas:   { qty: 0, amount: 0 },
+  };
+
+  readyList.forEach(order => {
+    const items = Array.isArray(order.items) ? order.items : [];
+    let computedOrderTotal = 0;
+
+    items.forEach(it => {
+      const qty     = Number(it.qty) || 0;
+      const price   = Number(it.price) || 0;
+      const lineAmt = qty * price;
+      const key     = String(it.key || '').toLowerCase();
+      const station = String(it.station || '').toLowerCase();
+      const name    = String(it.name || '').toLowerCase();
+
+      computedOrderTotal += lineAmt;
+      totalUnits += qty;
+
+      if (station === 'taco' || key.startsWith('taco:') || name.startsWith('taco')) {
+        breakdown.tacos.qty    += qty;
+        breakdown.tacos.amount += lineAmt;
+      } else if (station === 'hotdog' || key.startsWith('hotdog:') || name.startsWith('hot dog') || name.startsWith('hotdog')) {
+        breakdown.hotdogs.qty    += qty;
+        breakdown.hotdogs.amount += lineAmt;
+      } else if (key === 'drink_jamaica' || name.includes('jamaica')) {
+        breakdown.aguas.qty     += qty;
+        breakdown.aguas.amount  += lineAmt;
+        breakdown.aguas.jamaica += qty;
+      } else if (key === 'drink_horchata' || name.includes('horchata')) {
+        breakdown.aguas.qty      += qty;
+        breakdown.aguas.amount   += lineAmt;
+        breakdown.aguas.horchata += qty;
+      } else if (name.includes('agua')) {
+        breakdown.aguas.qty    += qty;
+        breakdown.aguas.amount += lineAmt;
+      } else if (key === 'drink_coca' || name.includes('coca')) {
+        breakdown.cocas.qty    += qty;
+        breakdown.cocas.amount += lineAmt;
+      }
+    });
+
+    totalRevenue += (typeof order.total === 'number' ? order.total : computedOrderTotal);
+  });
+
+  return {
+    ordersCount: readyList.length,
+    totalRevenue,
+    totalUnits,
+    breakdown,
+  };
+}
+
+function renderDailySales() {
+  if (!kdsUnlocked) return;
+
+  const stats = calculateDailySales();
+
+  const totalMoneyEl  = document.getElementById('sales-total-money');
+  const ordersCountEl = document.getElementById('sales-orders-count');
+  const totalUnitsEl  = document.getElementById('sales-total-units');
+
+  const qtyTacosEl   = document.getElementById('sales-qty-tacos');
+  const amtTacosEl   = document.getElementById('sales-amt-tacos');
+  const qtyHotdogsEl = document.getElementById('sales-qty-hotdogs');
+  const amtHotdogsEl = document.getElementById('sales-amt-hotdogs');
+  const qtyAguasEl   = document.getElementById('sales-qty-aguas');
+  const amtAguasEl   = document.getElementById('sales-amt-aguas');
+  const subAguasEl   = document.getElementById('sales-sub-aguas');
+  const qtyCocasEl   = document.getElementById('sales-qty-cocas');
+  const amtCocasEl   = document.getElementById('sales-amt-cocas');
+
+  if (totalMoneyEl)  totalMoneyEl.textContent = formatMoney(stats.totalRevenue);
+  if (ordersCountEl) {
+    ordersCountEl.textContent = stats.ordersCount === 1
+      ? '1 pedido marcado como Listo'
+      : `${stats.ordersCount} pedidos marcados como Listos`;
+  }
+  if (totalUnitsEl) {
+    totalUnitsEl.textContent = stats.totalUnits === 1
+      ? '1 vendido'
+      : `${stats.totalUnits} vendidos`;
+  }
+
+  if (qtyTacosEl)   qtyTacosEl.textContent   = stats.breakdown.tacos.qty;
+  if (amtTacosEl)   amtTacosEl.textContent   = formatMoney(stats.breakdown.tacos.amount);
+
+  if (qtyHotdogsEl) qtyHotdogsEl.textContent = stats.breakdown.hotdogs.qty;
+  if (amtHotdogsEl) amtHotdogsEl.textContent = formatMoney(stats.breakdown.hotdogs.amount);
+
+  if (qtyAguasEl)   qtyAguasEl.textContent   = stats.breakdown.aguas.qty;
+  if (amtAguasEl)   amtAguasEl.textContent   = formatMoney(stats.breakdown.aguas.amount);
+  if (subAguasEl) {
+    subAguasEl.textContent = stats.breakdown.aguas.qty > 0
+      ? `$25 c/u · Jamaica: ${stats.breakdown.aguas.jamaica} · Horchata: ${stats.breakdown.aguas.horchata}`
+      : '$25 c/u · Jamaica y Horchata';
+  }
+
+  if (qtyCocasEl)   qtyCocasEl.textContent   = stats.breakdown.cocas.qty;
+  if (amtCocasEl)   amtCocasEl.textContent   = formatMoney(stats.breakdown.cocas.amount);
+}
+
+function openCloseShiftModal() {
+  const stats  = calculateDailySales();
+  const descEl = document.getElementById('shift-modal-desc');
+  if (descEl) {
+    descEl.textContent = `Se limpiarán los datos del turno actual (${formatMoney(stats.totalRevenue)} en ventas y comandas registradas) y todos los contadores volverán a cero para empezar un nuevo día.`;
+  }
+  const overlayEl = document.getElementById('shift-modal-overlay');
+  const modalEl   = document.getElementById('shift-reset-modal');
+  if (overlayEl) overlayEl.classList.add('open');
+  if (modalEl)   modalEl.classList.add('open');
+}
+
+function closeCloseShiftModal() {
+  const overlayEl = document.getElementById('shift-modal-overlay');
+  const modalEl   = document.getElementById('shift-reset-modal');
+  if (overlayEl) overlayEl.classList.remove('open');
+  if (modalEl)   modalEl.classList.remove('open');
+}
+
+function confirmCloseShift() {
+  orders = [];
+  completedOrders = [];
+  orderCounter = 0;
+  activeTrackedOrderId = null;
+
+  persistOrders();
+  publishCloudSync('SHIFT_RESET', { resetAt: Date.now() });
+
+  closeCloseShiftModal();
+  renderKDS();
+  renderDailySales();
+  renderClientTracker();
+  updateHeaderTrackerPill();
+  showKDSToast('Turno cerrado · Contadores en cero');
+}
+
+function showKDSToast(msg) {
+  const toast = document.getElementById('kds-toast');
+  const msgEl = document.getElementById('kds-toast-msg');
+  if (!toast) return;
+  if (msgEl) msgEl.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2400);
 }
 
 // ══════════════════════════════════════════════
@@ -1675,6 +1948,7 @@ function deleteOrder(orderId) {
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     closeOrderModal();
+    closeCloseShiftModal();
     if (cartOpen) toggleCart(false);
   }
   if (e.key === 'Enter' && document.getElementById('order-modal').classList.contains('open')) {

@@ -353,26 +353,148 @@
         <span class="kds-status" id="kds-status">● EN VIVO</span>
       </div>
       <div class="kds-right-tools">
+        <button class="btn-kds-sales" id="btn-kds-sales" onclick="toggleKDSSalesView()">
+          Ventas del Día
+        </button>
         <button class="btn-copy-link" onclick="copyCustomerLink()" title="Copiar link directo para clientes">
-          🔗 Link Clientes
+          🔗 <span class="copy-link-label">Link Clientes</span>
         </button>
         <div class="kds-clock" id="kds-clock"></div>
       </div>
     </nav>
 
-    <div class="kds-filters">
-      <button class="kds-filter active" data-filter="all" onclick="setKDSFilter('all', this)">Todos</button>
-      <button class="kds-filter" data-filter="pending" onclick="setKDSFilter('pending', this)">Pendientes</button>
-      <button class="kds-filter" data-filter="received" onclick="setKDSFilter('received', this)">Recibidos</button>
-      <button class="kds-filter" data-filter="preparing" onclick="setKDSFilter('preparing', this)">En preparación</button>
-      <button class="kds-filter" data-filter="ready" onclick="setKDSFilter('ready', this)">Listos</button>
+    <!-- SUB-VISTA 1: TABLERO DE COMANDAS EN TIEMPO REAL -->
+    <div id="kds-comandas-section" class="kds-comandas-section">
+      <div class="kds-filters">
+        <button class="kds-filter active" data-filter="all" onclick="setKDSFilter('all', this)">Todos</button>
+        <button class="kds-filter" data-filter="pending" onclick="setKDSFilter('pending', this)">Pendientes</button>
+        <button class="kds-filter" data-filter="received" onclick="setKDSFilter('received', this)">Recibidos</button>
+        <button class="kds-filter" data-filter="preparing" onclick="setKDSFilter('preparing', this)">En preparación</button>
+        <button class="kds-filter" data-filter="ready" onclick="setKDSFilter('ready', this)">Listos</button>
+      </div>
+
+      <div class="kds-board" id="kds-board">
+        <div class="kds-empty" id="kds-empty">
+          <p>Sin comandas activas</p>
+          <p class="kds-empty-sub">Los pedidos entrantes aparecerán al instante</p>
+        </div>
+      </div>
     </div>
 
-    <div class="kds-board" id="kds-board">
-      <div class="kds-empty" id="kds-empty">
-        <p>Sin comandas activas</p>
-        <p class="kds-empty-sub">Los pedidos entrantes aparecerán al instante</p>
+    <!-- SUB-VISTA 2: PANEL DE CORTE DEL DÍA ("VENTAS DEL DÍA") -->
+    <section id="kds-sales-section" class="kds-sales-section hidden">
+      <div class="sales-container">
+        <div class="sales-header-row">
+          <div>
+            <span class="step-label">CORTE DEL DÍA</span>
+            <h2 class="sales-title">Ventas del Día</h2>
+          </div>
+          <button class="btn-sales-back" onclick="setKDSSubView('comandas')">← Comandas</button>
+        </div>
+
+        <!-- Total de Ganancias ($) -->
+        <div class="sales-hero-card">
+          <span class="sales-hero-label">TOTAL DE GANANCIAS ($)</span>
+          <div class="sales-hero-amount" id="sales-total-money">$0</div>
+          <div class="sales-hero-meta">
+            <span class="led-dot led-ready"></span>
+            <span id="sales-orders-count">0 pedidos marcados como Listos</span>
+          </div>
+        </div>
+
+        <!-- Desglose: Productos Vendidos -->
+        <div class="sales-breakdown-card">
+          <div class="minimal-group-title">
+            <span>PRODUCTOS VENDIDOS</span>
+            <span id="sales-total-units">0 vendidos</span>
+          </div>
+
+          <div class="sales-products-list">
+            <div class="sales-product-row">
+              <div class="sales-prod-left">
+                <span class="sales-prod-emoji">🌮</span>
+                <div class="sales-prod-texts">
+                  <span class="sales-prod-name">Tacos</span>
+                  <span class="sales-prod-sub">$28 c/u</span>
+                </div>
+              </div>
+              <div class="sales-prod-right">
+                <span class="sales-prod-qty" id="sales-qty-tacos">0</span>
+                <span class="sales-prod-subtotal" id="sales-amt-tacos">$0</span>
+              </div>
+            </div>
+
+            <div class="sales-product-row">
+              <div class="sales-prod-left">
+                <span class="sales-prod-emoji">🌭</span>
+                <div class="sales-prod-texts">
+                  <span class="sales-prod-name">Hot Dogs</span>
+                  <span class="sales-prod-sub">$35 c/u</span>
+                </div>
+              </div>
+              <div class="sales-prod-right">
+                <span class="sales-prod-qty" id="sales-qty-hotdogs">0</span>
+                <span class="sales-prod-subtotal" id="sales-amt-hotdogs">$0</span>
+              </div>
+            </div>
+
+            <div class="sales-product-row">
+              <div class="sales-prod-left">
+                <span class="sales-prod-emoji">💧</span>
+                <div class="sales-prod-texts">
+                  <span class="sales-prod-name">Aguas</span>
+                  <span class="sales-prod-sub" id="sales-sub-aguas">$25 c/u · Jamaica y Horchata</span>
+                </div>
+              </div>
+              <div class="sales-prod-right">
+                <span class="sales-prod-qty" id="sales-qty-aguas">0</span>
+                <span class="sales-prod-subtotal" id="sales-amt-aguas">$0</span>
+              </div>
+            </div>
+
+            <div class="sales-product-row">
+              <div class="sales-prod-left">
+                <span class="sales-prod-emoji">🥤</span>
+                <div class="sales-prod-texts">
+                  <span class="sales-prod-name">Coca-Colas</span>
+                  <span class="sales-prod-sub">$30 c/u · Retornable 500ml</span>
+                </div>
+              </div>
+              <div class="sales-prod-right">
+                <span class="sales-prod-qty" id="sales-qty-cocas">0</span>
+                <span class="sales-prod-subtotal" id="sales-amt-cocas">$0</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Botón Cerrar Turno -->
+        <div class="sales-actions-area">
+          <button class="btn-close-shift" onclick="openCloseShiftModal()">
+            Cerrar Turno
+          </button>
+          <p class="sales-close-hint">Limpia los datos del día y regresa los contadores a cero.</p>
+        </div>
       </div>
+    </section>
+
+    <!-- MODAL DE CONFIRMACIÓN DE SEGURIDAD: CERRAR TURNO -->
+    <div class="modal-overlay" id="shift-modal-overlay" onclick="closeCloseShiftModal()"></div>
+    <div class="modal" id="shift-reset-modal">
+      <h3 class="modal-title">¿Cerrar Turno?</h3>
+      <p class="modal-sub" id="shift-modal-desc">
+        Se limpiarán todos los datos de ventas y las comandas del día, regresando los contadores a cero para empezar un nuevo día.
+      </p>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeCloseShiftModal()">Cancelar</button>
+        <button class="btn-confirm-danger" onclick="confirmCloseShift()">Sí, Cerrar Turno</button>
+      </div>
+    </div>
+
+    <!-- Toast ligero en Cocina -->
+    <div class="toast" id="kds-toast">
+      <span class="toast-icon">✓</span>
+      <span id="kds-toast-msg">Turno cerrado</span>
     </div>
   </div>
 </div>
