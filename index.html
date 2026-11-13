@@ -174,6 +174,24 @@
           <div class="drinks-list" id="drinks-list"></div>
         </div>
       </section>
+
+      <!-- Asistencia rápida en mesa desde el menú -->
+      <div class="service-assistance-card">
+        <div class="minimal-group-title">
+          <span>ASISTENCIA EN MESA</span>
+          <span class="service-live-tag">● Directo a cocina</span>
+        </div>
+        <div class="service-btns-row">
+          <button type="button" class="btn-service-action" onclick="requestTableService('waiter')">
+            <span>🔔</span>
+            <span>Llamar Mesero</span>
+          </button>
+          <button type="button" class="btn-service-action bill" onclick="requestTableService('bill')">
+            <span>🧾</span>
+            <span>Pedir la Cuenta</span>
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- B) RASTREADOR DE ESTATUS EN TIEMPO REAL (4 ESTADOS + LED) -->
@@ -223,6 +241,24 @@
             <span class="step-name">Listo</span>
             <span class="step-sub">Pasa por tu pedido</span>
           </div>
+        </div>
+      </div>
+
+      <!-- Botones de Asistencia en Tiempo Real (Llamar Mesero / Pedir la Cuenta) -->
+      <div class="service-assistance-card">
+        <div class="minimal-group-title">
+          <span>¿NECESITAS ALGO MÁS EN TU MESA?</span>
+          <span class="service-live-tag" id="tracker-service-feedback">● En vivo</span>
+        </div>
+        <div class="service-btns-row">
+          <button type="button" class="btn-service-action" onclick="requestTableService('waiter')">
+            <span>🔔</span>
+            <span>Llamar Mesero</span>
+          </button>
+          <button type="button" class="btn-service-action bill" onclick="requestTableService('bill')">
+            <span>🧾</span>
+            <span>Pedir la Cuenta</span>
+          </button>
         </div>
       </div>
 
@@ -295,6 +331,18 @@
     </div>
   </aside>
 
+  <!-- MODAL DE SUGERENCIA DE VENTA CRUZADA (UPSELLING AUTOMÁTICO DE BEBIDAS) -->
+  <div class="modal-overlay" id="upsell-overlay" onclick="skipUpsellAndContinue()"></div>
+  <div class="modal upsell-modal" id="upsell-modal">
+    <span class="step-label">¿ACOMPAÑAS TU ORDEN?</span>
+    <h3 class="modal-title">¿Te agregamos una bebida bien fría?</h3>
+    <p class="modal-sub">Toca una opción para sumarla al instante antes de pedir</p>
+    <div class="upsell-drinks-list" id="upsell-drinks-list"></div>
+    <button type="button" class="btn-upsell-skip" onclick="skipUpsellAndContinue()">
+      No gracias, continuar sin bebida →
+    </button>
+  </div>
+
   <!-- MODAL RÁPIDO NOMBRE / MESA -->
   <div class="modal-overlay" id="modal-overlay" onclick="closeOrderModal()"></div>
   <div class="modal" id="order-modal">
@@ -304,6 +352,18 @@
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeOrderModal()">Cancelar</button>
       <button class="btn-confirm" id="btn-submit-order" onclick="submitOrder()">Confirmar y Pedir</button>
+    </div>
+  </div>
+
+  <!-- MODAL RÁPIDO PARA INDICAR MESA AL LLAMAR MESERO / PEDIR CUENTA -->
+  <div class="modal-overlay" id="service-modal-overlay" onclick="closeServiceTableModal()"></div>
+  <div class="modal" id="service-table-modal">
+    <h3 class="modal-title" id="service-modal-title">¿En qué mesa estás?</h3>
+    <p class="modal-sub">Para que el personal se acerque de inmediato</p>
+    <input class="modal-input" id="service-table-input" type="text" placeholder="Ej: Mesa 4" maxlength="40" autocomplete="off" />
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeServiceTableModal()">Cancelar</button>
+      <button class="btn-confirm" onclick="confirmServiceTableModal()">Enviar Aviso</button>
     </div>
   </div>
 
@@ -345,7 +405,7 @@
 
   <!-- PANEL DE COMANDAS KDS (Visible únicamente tras desbloquear PIN) -->
   <div id="kds-unlocked-content" class="kds-unlocked-content hidden">
-    <nav class="kds-nav">
+    <nav class="kds-nav no-print">
       <button class="nav-btn-minimal" onclick="lockKDSAndExit()">🔒 Bloquear</button>
       <div class="kds-brand">
         <span class="brand-escandon">Escandon</span>
@@ -353,6 +413,12 @@
         <span class="kds-status" id="kds-status">● EN VIVO</span>
       </div>
       <div class="kds-right-tools">
+        <button class="btn-kds-sales" id="btn-kds-stock" onclick="toggleKDSStockView()">
+          Stock
+        </button>
+        <button class="btn-kds-sales" id="btn-kds-qrs" onclick="toggleKDSQRsView()">
+          QRs Mesas
+        </button>
         <button class="btn-kds-sales" id="btn-kds-sales" onclick="toggleKDSSalesView()">
           Ventas del Día
         </button>
@@ -362,6 +428,9 @@
         <div class="kds-clock" id="kds-clock"></div>
       </div>
     </nav>
+
+    <!-- BANNER DE AVISOS DE MESA EN VIVO (LLAMAR MESERO / PEDIR LA CUENTA) -->
+    <div id="kds-service-alerts" class="kds-service-alerts hidden no-print"></div>
 
     <!-- SUB-VISTA 1: TABLERO DE COMANDAS EN TIEMPO REAL -->
     <div id="kds-comandas-section" class="kds-comandas-section">
@@ -519,6 +588,68 @@
             <button class="btn-export-secondary" onclick="exportAllHistoryExcel()">Exportar todo</button>
           </div>
         </div>
+      </div>
+    </section>
+
+    <!-- SUB-VISTA 3: AGOTAR PRODUCTO / CONTROL DE STOCK CON 1 CLIC -->
+    <section id="kds-stock-section" class="kds-sales-section hidden">
+      <div class="sales-container">
+        <div class="sales-header-row">
+          <div>
+            <span class="step-label">CONTROL DE INVENTARIO EN TIEMPO REAL</span>
+            <h2 class="sales-title">Agotar Producto (Stock)</h2>
+          </div>
+          <button class="btn-sales-back" onclick="setKDSSubView('comandas')">← Comandas</button>
+        </div>
+
+        <p class="stock-helper-text">
+          Toca cualquier ingrediente o bebida para alternar entre <strong>Disponible</strong> y <strong>Agotado</strong>. Se bloquea al instante en los celulares de los clientes.
+        </p>
+
+        <div id="kds-stock-list" class="kds-stock-list"></div>
+
+        <div class="sales-actions-area">
+          <button class="btn-dock-secondary" onclick="restoreAllStockItems()">
+            ✓ Marcar Todo como Disponible
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- SUB-VISTA 4: GENERADOR DE CÓDIGOS QR POR MESA (IMPRIMIBLES) -->
+    <section id="kds-qrs-section" class="kds-sales-section hidden">
+      <div class="sales-container qr-generator-container">
+        <div class="sales-header-row no-print">
+          <div>
+            <span class="step-label">ETIQUETAS LISTAS PARA IMPRIMIR</span>
+            <h2 class="sales-title">Códigos QR por Mesa</h2>
+          </div>
+          <button class="btn-sales-back" onclick="setKDSSubView('comandas')">← Comandas</button>
+        </div>
+
+        <div class="sales-breakdown-card qr-config-card no-print">
+          <div class="qr-config-grid">
+            <div class="qr-field">
+              <label for="qr-table-count">Cantidad de mesas</label>
+              <input type="number" id="qr-table-count" class="modal-input qr-num-input" min="1" max="50" value="8" onchange="renderTableQRCards()" />
+            </div>
+            <div class="qr-field">
+              <label for="qr-base-url">Enlace base del menú</label>
+              <input type="text" id="qr-base-url" class="modal-input qr-url-input" onchange="renderTableQRCards()" />
+            </div>
+          </div>
+          <label class="auto-export-toggle">
+            <input type="checkbox" id="qr-include-barra" checked onchange="renderTableQRCards()" />
+            <span>Incluir tarjeta QR para Mostrador / Para llevar</span>
+          </label>
+          <div class="history-export-row">
+            <button type="button" class="btn-export-excel" onclick="printTableQRCards()">
+              🖨️ Imprimir / Guardar PDF de QRs
+            </button>
+          </div>
+        </div>
+
+        <div id="qr-cards-grid" class="qr-cards-grid"></div>
       </div>
     </section>
 

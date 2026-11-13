@@ -2116,5 +2116,442 @@ button, input {
   .kds-nav { padding: 0 10px; gap: 6px; }
   .kds-sub-title, .kds-clock, .copy-link-label { display: none; }
   .btn-copy-link { padding: 6px 8px; }
-  .btn-kds-sales { padding: 6px 10px; font-size: 11px; }
+  .btn-kds-sales { padding: 6px 9px; font-size: 11px; }
+}
+
+/* ════════════════════════════════════════════════
+   1. LLAMAR AL MESERO / PEDIR LA CUENTA
+════════════════════════════════════════════════ */
+.service-assistance-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.service-live-tag {
+  color: var(--brand-orange);
+  font-size: 10px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.service-btns-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.btn-service-action {
+  height: 44px;
+  background: var(--bg-1);
+  border: 1px solid var(--line-active);
+  border-radius: var(--radius-sm);
+  color: var(--text-0);
+  font-size: 12.5px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition), color var(--transition);
+}
+
+.btn-service-action:active,
+.btn-service-action:hover {
+  background: var(--bg-2);
+  border-color: var(--brand-orange);
+  color: var(--brand-orange);
+}
+
+.btn-service-action.bill:active,
+.btn-service-action.bill:hover {
+  border-color: var(--led-yellow);
+  color: var(--led-yellow);
+}
+
+/* Banner de alertas de mesa en Cocina (KDS) */
+.kds-service-alerts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #17120a;
+  border-bottom: 1px solid rgba(255, 107, 26, 0.35);
+  flex-shrink: 0;
+}
+
+.service-alert-pill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--bg-2);
+  border: 1px solid var(--brand-orange);
+  border-left: 4px solid var(--brand-orange);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  min-width: 260px;
+  flex: 1;
+  max-width: 420px;
+}
+
+.service-alert-pill.type-bill {
+  border-color: var(--led-yellow);
+  border-left-color: var(--led-yellow);
+}
+
+.service-alert-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.service-alert-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-0);
+}
+
+.service-alert-sub {
+  font-size: 11px;
+  color: var(--text-2);
+  font-family: var(--font-mono);
+}
+
+.btn-resolve-alert {
+  background: var(--brand-orange);
+  color: #0a0a0a;
+  border: none;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 800;
+  padding: 7px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.service-alert-pill.type-bill .btn-resolve-alert {
+  background: var(--led-yellow);
+}
+
+/* ════════════════════════════════════════════════
+   2. CONTROL DE STOCK / AGOTAR PRODUCTO (MODO 86)
+════════════════════════════════════════════════ */
+.tap-card.sold-out,
+.drink-row.sold-out,
+.station-card.sold-out {
+  opacity: 0.42;
+  cursor: not-allowed;
+  border-color: var(--line) !important;
+  background: var(--bg-0) !important;
+}
+
+.tap-card.sold-out .tap-included {
+  color: var(--red) !important;
+  font-weight: 700;
+}
+
+.drink-row.sold-out .btn-tap-drink {
+  background: var(--bg-1);
+  color: var(--red);
+  cursor: not-allowed;
+}
+
+.stock-helper-text {
+  font-size: 12.5px;
+  color: var(--text-2);
+  line-height: 1.45;
+}
+
+.kds-stock-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.stock-group-card {
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.stock-items-grid {
+  display: flex;
+  flex-direction: column;
+}
+
+.stock-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+}
+
+.stock-item-row:last-child {
+  border-bottom: none;
+  padding-bottom: 2px;
+}
+
+.stock-item-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-0);
+}
+
+.stock-item-row.is-sold-out .stock-item-name {
+  color: var(--text-2);
+  text-decoration: line-through;
+}
+
+.stock-status-pill {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: none;
+  cursor: pointer;
+  min-width: 106px;
+  text-align: center;
+}
+
+.stock-status-pill.available {
+  background: rgba(34, 229, 102, 0.14);
+  color: var(--led-green);
+  border: 1px solid rgba(34, 229, 102, 0.4);
+}
+
+.stock-status-pill.exhausted {
+  background: rgba(232, 90, 79, 0.16);
+  color: var(--red);
+  border: 1px solid var(--red);
+}
+
+/* ════════════════════════════════════════════════
+   3. VENTA CRUZADA AUTOMÁTICA (UPSELLING MODAL)
+════════════════════════════════════════════════ */
+.upsell-modal {
+  width: 360px;
+}
+
+.upsell-drinks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.upsell-drink-btn {
+  width: 100%;
+  background: var(--bg-2);
+  border: 1px solid var(--line-active);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color var(--transition), background var(--transition);
+}
+
+.upsell-drink-btn:active,
+.upsell-drink-btn:hover {
+  border-color: var(--brand-orange);
+  background: var(--brand-orange-soft);
+}
+
+.upsell-drink-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.upsell-drink-emoji {
+  font-size: 20px;
+}
+
+.upsell-drink-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-0);
+}
+
+.upsell-drink-cta {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--brand-orange);
+  white-space: nowrap;
+}
+
+.btn-upsell-skip {
+  width: 100%;
+  height: 40px;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--text-2);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-upsell-skip:active {
+  color: var(--text-0);
+  border-color: var(--line-active);
+}
+
+/* ════════════════════════════════════════════════
+   4. GENERADOR DE CÓDIGOS QR POR MESA (IMPRIMIBLES)
+════════════════════════════════════════════════ */
+.qr-generator-container {
+  max-width: 780px;
+}
+
+.qr-config-card {
+  gap: 12px;
+}
+
+.qr-config-grid {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 10px;
+}
+
+.qr-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.qr-field label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-2);
+}
+
+.qr-field .modal-input {
+  margin-bottom: 0;
+  padding: 9px 11px;
+  font-size: 13px;
+}
+
+.qr-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 14px;
+}
+
+.qr-print-card {
+  background: #ffffff;
+  color: #0a0a0a;
+  border-radius: var(--radius);
+  padding: 18px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  border: 2px solid #222222;
+}
+
+.qr-card-brand {
+  font-size: 16px;
+  font-weight: 800;
+  color: #ff6b1a;
+  letter-spacing: -0.3px;
+}
+
+.qr-card-table {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0a0a0a;
+  line-height: 1.1;
+}
+
+.qr-card-box {
+  width: 168px;
+  height: 168px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  padding: 4px;
+}
+
+.qr-card-box svg,
+.qr-card-box img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.qr-card-cta {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #222222;
+}
+
+.qr-card-url {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: #666666;
+  word-break: break-all;
+}
+
+@media (max-width: 600px) {
+  .qr-config-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  html, body, .view, .kds-unlocked-content, .kds-sales-section {
+    height: auto !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  .no-print,
+  #app-landing,
+  #view-client,
+  #kds-lock-screen,
+  #kds-comandas-section,
+  #kds-sales-section,
+  #kds-stock-section,
+  #status-push-banner {
+    display: none !important;
+  }
+  #view-kitchen,
+  #kds-unlocked-content,
+  #kds-qrs-section {
+    display: block !important;
+    padding: 0 !important;
+  }
+  .qr-generator-container {
+    max-width: 100% !important;
+  }
+  .qr-cards-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 12px !important;
+  }
+  .qr-print-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    border: 1.5px solid #000000 !important;
+  }
 }

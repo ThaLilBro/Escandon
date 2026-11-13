@@ -237,13 +237,17 @@ let hotdogDraft = {
 let cartItems            = []; // [{ key, name, emoji, price, qty, station }]
 let orders               = []; // Comandas activas sincronizadas
 let completedOrders      = []; // Pedidos marcados como "Listo" y entregados en el turno actual
+let soldOutItems         = []; // Claves de ingredientes/bebidas agotados (Modo 86)
+let serviceCalls         = []; // Solicitudes activas de mesa (Llamar mesero / Pedir cuenta)
 let myOrderIds           = []; // IDs de órdenes creadas por este cliente
 let activeTrackedOrderId = null;
 let cartOpen             = false;
 let kdsFilter            = 'all';
-let kdsSubView           = 'comandas'; // 'comandas' | 'sales'
+let kdsSubView           = 'comandas'; // 'comandas' | 'sales' | 'stock' | 'qrs'
 let orderCounter         = 0;
 let kdsUnlocked          = false;
+let upsellOfferedForCart = false;
+let pendingServiceType   = null; // 'waiter' | 'bill'
 
 const DEVICE_ID = 'dev_' + Math.random().toString(36).slice(2, 10);
 
@@ -474,13 +478,43 @@ function handleIncomingEvent(type, payload, fromRemote = false) {
   } else if (type === 'SHIFT_RESET') {
     orders = [];
     completedOrders = [];
+    serviceCalls = [];
     orderCounter = 0;
     activeTrackedOrderId = null;
     persistOrders();
     renderKDS();
+    renderKDSServiceAlerts();
     renderDailySales();
     renderClientTracker();
     updateHeaderTrackerPill();
+  } else if (type === 'STOCK_UPDATE') {
+    if (Array.isArray(payload.soldOutItems)) {
+      soldOutItems = payload.soldOutItems;
+      persistOrders();
+      sanitizeDraftAgainstStock();
+      if (currentView === 'client') {
+        renderDrinksSection();
+        if (currentStation) renderBuilderWorkspace();
+      }
+      if (kdsUnlocked && kdsSubView === 'stock') {
+        renderKDSStockPanel();
+      }
+    }
+  } else if (type === 'SERVICE_CALL') {
+    if (payload && payload.id && !serviceCalls.some(c => c.id === payload.id)) {
+      // Reemplazar llamada previa del mismo tipo y misma mesa para no duplicar
+      serviceCalls = serviceCalls.filter(c => !(c.table === payload.table && c.type === payload.type));
+      serviceCalls.push(payload);
+      persistOrders();
+      renderKDSServiceAlerts();
+      if (fromRemote) playKitchenBell();
+    }
+  } else if (type === 'SERVICE_RESOLVE') {
+    if (payload && payload.id) {
+      serviceCalls = serviceCalls.filter(c => c.id !== payload.id);
+      persistOrders();
+      renderKDSServiceAlerts();
+    }
   }
 }
 
@@ -489,6 +523,7 @@ function mergeRemoteStateSnapshot(snapshot) {
 
   // Detectar si alguna orden de este cliente cambió de estado en el snapshot
   const prevStatusMap = new Map(orders.map(o => [o.id, o.status]));
+  const prevCallsCount = serviceCalls.length;
 
   const isShiftReset =
     snapshot.orders.length === 0 &&
@@ -500,6 +535,7 @@ function mergeRemoteStateSnapshot(snapshot) {
     orderCounter = 0;
     completedOrders = [];
     orders = [];
+    serviceCalls = [];
   } else {
     if (typeof snapshot.orderCounter === 'number' && snapshot.orderCounter > orderCounter) {
       orderCounter = snapshot.orderCounter;
@@ -510,9 +546,26 @@ function mergeRemoteStateSnapshot(snapshot) {
     }
   }
 
+  if (Array.isArray(snapshot.soldOutItems)) {
+    soldOutItems = snapshot.soldOutItems;
+    sanitizeDraftAgainstStock();
+  }
+  if (Array.isArray(snapshot.serviceCalls)) {
+    serviceCalls = snapshot.serviceCalls;
+    if (serviceCalls.length > prevCallsCount) playKitchenBell();
+  }
+
   persistOrders();
   renderKDS();
+  renderKDSServiceAlerts();
   renderDailySales();
+  if (currentView === 'client') {
+    renderDrinksSection();
+    if (currentStation) renderBuilderWorkspace();
+  }
+  if (kdsUnlocked && kdsSubView === 'stock') {
+    renderKDSStockPanel();
+  }
 
   orders.forEach(o => {
     const prev = prevStatusMap.get(o.id);
@@ -589,6 +642,8 @@ function normalizeFirebaseKdsSnapshot(raw) {
   return {
     orders: toArr(raw.orders),
     completedOrders: toArr(raw.completedOrders),
+    soldOutItems: toArr(raw.soldOutItems),
+    serviceCalls: toArr(raw.serviceCalls),
     orderCounter: typeof raw.orderCounter === 'number' ? raw.orderCounter : 0,
     sender: raw.sender || '',
     updatedAt: raw.updatedAt || 0,
@@ -642,6 +697,8 @@ function publishCloudSync(type, payload) {
     const statePacket = JSON.stringify({
       orders,
       completedOrders,
+      soldOutItems,
+      serviceCalls,
       orderCounter,
       sender: DEVICE_ID,
       updatedAt: Date.now(),
@@ -659,6 +716,8 @@ function publishCloudSync(type, payload) {
       body: JSON.stringify({
         orders,
         completedOrders,
+        soldOutItems,
+        serviceCalls,
         orderCounter,
         sender: DEVICE_ID,
         updatedAt: Date.now(),
@@ -673,9 +732,15 @@ localChannel.onmessage = (e) => {
 };
 
 window.addEventListener('storage', (e) => {
-  if (e.key === 'kds-orders' || e.key === 'kds-completed-orders') {
+  if (
+    e.key === 'kds-orders' ||
+    e.key === 'kds-completed-orders' ||
+    e.key === 'kds-sold-out' ||
+    e.key === 'kds-service-calls'
+  ) {
     const prevMap = new Map(orders.map(o => [o.id, o.status]));
     loadPersistedOrders();
+    sanitizeDraftAgainstStock();
     orders.forEach(o => {
       const prev = prevMap.get(o.id);
       if (prev && prev !== o.status) {
@@ -683,7 +748,13 @@ window.addEventListener('storage', (e) => {
       }
     });
     renderKDS();
+    renderKDSServiceAlerts();
     renderDailySales();
+    if (currentView === 'client') {
+      renderDrinksSection();
+      if (currentStation) renderBuilderWorkspace();
+    }
+    if (kdsUnlocked && kdsSubView === 'stock') renderKDSStockPanel();
     renderClientTracker();
     updateHeaderTrackerPill();
   }
@@ -692,6 +763,8 @@ window.addEventListener('storage', (e) => {
 function persistOrders() {
   localStorage.setItem('kds-orders', JSON.stringify(orders));
   localStorage.setItem('kds-completed-orders', JSON.stringify(completedOrders));
+  localStorage.setItem('kds-sold-out', JSON.stringify(soldOutItems));
+  localStorage.setItem('kds-service-calls', JSON.stringify(serviceCalls));
   localStorage.setItem('kds-counter', String(orderCounter));
   localStorage.setItem('kds-my-orders', JSON.stringify(myOrderIds));
   if (activeTrackedOrderId) {
@@ -705,18 +778,24 @@ function loadPersistedOrders() {
   try {
     const saved          = localStorage.getItem('kds-orders');
     const savedCompleted = localStorage.getItem('kds-completed-orders');
+    const savedSoldOut   = localStorage.getItem('kds-sold-out');
+    const savedCalls     = localStorage.getItem('kds-service-calls');
     const cnt            = localStorage.getItem('kds-counter');
     const mine           = localStorage.getItem('kds-my-orders');
     const tracked        = localStorage.getItem('kds-tracked-id');
 
     orders               = saved ? JSON.parse(saved) : [];
     completedOrders      = savedCompleted ? JSON.parse(savedCompleted) : [];
+    soldOutItems         = savedSoldOut ? JSON.parse(savedSoldOut) : [];
+    serviceCalls         = savedCalls ? JSON.parse(savedCalls) : [];
     orderCounter         = cnt ? (parseInt(cnt, 10) || 0) : 0;
     myOrderIds           = mine ? JSON.parse(mine) : [];
     activeTrackedOrderId = tracked ? (parseInt(tracked, 10) || null) : null;
   } catch (e) {
     orders = [];
     completedOrders = [];
+    soldOutItems = [];
+    serviceCalls = [];
     orderCounter = 0;
     myOrderIds = [];
     activeTrackedOrderId = null;
@@ -934,8 +1013,47 @@ function showStationSelector() {
   renderCart();
 }
 
+// ─── Control de Stock / Ingredientes Agotados (Modo 86) ──
+function getStockKey(station, category, itemId) {
+  if (category === 'drink')   return `drink:${itemId}`;
+  if (category === 'station') return `station:${itemId}`;
+  if (station === 'taco') {
+    if (category === 'base')    return `base:${itemId}`;
+    if (category === 'protein') return `protein:${itemId}`;
+    if (category === 'topping') return `taco_top:${itemId}`;
+  }
+  if (station === 'hotdog') {
+    if (category === 'topping') return `dog_top:${itemId}`;
+  }
+  return `${category}:${itemId}`;
+}
+
+function isStockSoldOut(stockKey) {
+  return soldOutItems.includes(stockKey);
+}
+
+function sanitizeDraftAgainstStock() {
+  // Asegurar que la tortilla seleccionada no esté agotada
+  if (tacoDraft.tortilla && isStockSoldOut(getStockKey('taco', 'base', tacoDraft.tortilla))) {
+    const availBase = TACO_CONFIG.base.find(b => !isStockSoldOut(getStockKey('taco', 'base', b.id)));
+    tacoDraft.tortilla = availBase ? availBase.id : null;
+  }
+  // Asegurar que la proteína seleccionada no esté agotada
+  if (tacoDraft.protein && isStockSoldOut(getStockKey('taco', 'protein', tacoDraft.protein))) {
+    tacoDraft.protein = null;
+  }
+  // Filtrar complementos agotados
+  tacoDraft.toppings = tacoDraft.toppings.filter(id => !isStockSoldOut(getStockKey('taco', 'topping', id)));
+  hotdogDraft.toppings = hotdogDraft.toppings.filter(id => !isStockSoldOut(getStockKey('hotdog', 'topping', id)));
+}
+
 function selectStation(station) {
+  if (station === 'hotdog' && isStockSoldOut('station:hotdog')) {
+    showToast('Hot Dogs agotados por hoy');
+    return;
+  }
   currentStation = station;
+  sanitizeDraftAgainstStock();
   document.getElementById('station-selector').classList.add('hidden');
   document.getElementById('builder-workspace').classList.remove('hidden');
   document.getElementById('dock-builder-bar').classList.remove('hidden');
@@ -947,7 +1065,8 @@ function selectStation(station) {
   if (backBtnEl) backBtnEl.textContent = '← Bases';
 
   if (station === 'taco' && !tacoDraft.tortilla) {
-    tacoDraft.tortilla = 'sencilla';
+    const availBase = TACO_CONFIG.base.find(b => !isStockSoldOut(getStockKey('taco', 'base', b.id)));
+    tacoDraft.tortilla = availBase ? availBase.id : null;
   }
 
   renderBuilderWorkspace();
@@ -955,7 +1074,8 @@ function selectStation(station) {
 
 function resetCurrentBuilder() {
   if (currentStation === 'taco') {
-    tacoDraft = { tortilla: 'sencilla', protein: null, toppings: [] };
+    const availBase = TACO_CONFIG.base.find(b => !isStockSoldOut(getStockKey('taco', 'base', b.id)));
+    tacoDraft = { tortilla: availBase ? availBase.id : null, protein: null, toppings: [] };
   } else if (currentStation === 'hotdog') {
     hotdogDraft = { toppings: [] };
   }
@@ -964,11 +1084,20 @@ function resetCurrentBuilder() {
 
 // Selección directa por toque (Tap-to-Select)
 function tapSelectIngredient(category, itemId) {
+  const stockKey = getStockKey(currentStation, category, itemId);
+  if (isStockSoldOut(stockKey)) {
+    showToast('Ingrediente agotado por hoy');
+    return;
+  }
+
   if (currentStation === 'taco') {
     if (category === 'base') {
       tacoDraft.tortilla = itemId;
     } else if (category === 'protein') {
-      if (!tacoDraft.tortilla) tacoDraft.tortilla = 'sencilla';
+      if (!tacoDraft.tortilla) {
+        const availBase = TACO_CONFIG.base.find(b => !isStockSoldOut(getStockKey('taco', 'base', b.id)));
+        tacoDraft.tortilla = availBase ? availBase.id : null;
+      }
       tacoDraft.protein = (tacoDraft.protein === itemId) ? null : itemId;
     } else if (category === 'topping') {
       const idx = tacoDraft.toppings.indexOf(itemId);
@@ -1132,33 +1261,39 @@ function renderBuilderWorkspace() {
 }
 
 function renderTapCard(category, item, isSelected) {
+  const stockKey = getStockKey(currentStation, category, item.id);
+  const isOut    = isStockSoldOut(stockKey);
   return `
     <button type="button"
-            class="tap-card${isSelected ? ' selected' : ''}"
+            class="tap-card${isSelected && !isOut ? ' selected' : ''}${isOut ? ' sold-out' : ''}"
+            ${isOut ? 'disabled' : ''}
             onclick="tapSelectIngredient('${category}', '${item.id}')">
       <span class="tap-check">✓</span>
       <div class="tap-art">${item.art}</div>
       <div class="tap-name">${item.name}</div>
-      <div class="tap-included">Incluido</div>
+      <div class="tap-included">${isOut ? 'Agotado' : 'Incluido'}</div>
     </button>
   `;
 }
 
 function renderDrinksSection() {
-  const html = DRINKS_CONFIG.map(drink => `
-    <div class="drink-row" onclick="addDrinkToCart('${drink.id}')">
-      <div class="drink-left">
-        <span class="drink-emoji">${drink.emoji}</span>
-        <div class="drink-info">
-          <span class="drink-name">${drink.name}</span>
-          <span class="drink-price">$${drink.price}</span>
+  const html = DRINKS_CONFIG.map(drink => {
+    const isOut = isStockSoldOut(getStockKey(null, 'drink', drink.id));
+    return `
+      <div class="drink-row${isOut ? ' sold-out' : ''}" onclick="addDrinkToCart('${drink.id}')">
+        <div class="drink-left">
+          <span class="drink-emoji">${drink.emoji}</span>
+          <div class="drink-info">
+            <span class="drink-name">${drink.name}</span>
+            <span class="drink-price">${isOut ? 'Agotado por hoy' : '$' + drink.price}</span>
+          </div>
         </div>
+        <button type="button" class="btn-tap-drink" ${isOut ? 'disabled' : ''} onclick="event.stopPropagation(); addDrinkToCart('${drink.id}')">
+          ${isOut ? 'Agotado' : '+ Agregar'}
+        </button>
       </div>
-      <button type="button" class="btn-tap-drink" onclick="event.stopPropagation(); addDrinkToCart('${drink.id}')">
-        + Agregar
-      </button>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 
   const listBuilder = document.getElementById('drinks-list');
   const listHome    = document.getElementById('drinks-list-home');
@@ -1169,6 +1304,10 @@ function renderDrinksSection() {
 function addDrinkToCart(drinkId) {
   const drink = DRINKS_CONFIG.find(d => d.id === drinkId);
   if (!drink) return;
+  if (isStockSoldOut(getStockKey(null, 'drink', drink.id))) {
+    showToast(`${drink.name} está agotada`);
+    return;
+  }
 
   const existing = cartItems.find(it => it.key === drink.id);
   if (existing) {
@@ -1503,8 +1642,20 @@ function toggleCart(forceState) {
 }
 
 // ══════════════════════════════════════════════
-//  3. ENVÍO DE ORDEN Y CONVERSIÓN EN RASTREADOR (4 ESTADOS + LED)
+//  3. UPSELLING AUTOMÁTICO, ENVÍO DE ORDEN Y RASTREADOR
 // ══════════════════════════════════════════════
+function getAvailableDrinksForUpsell() {
+  return DRINKS_CONFIG.filter(d => !isStockSoldOut(getStockKey(null, 'drink', d.id)));
+}
+
+function shouldOfferDrinkUpsell() {
+  if (upsellOfferedForCart) return false;
+  const hasFood  = cartItems.some(it => it.station !== 'drink');
+  const hasDrink = cartItems.some(it => it.station === 'drink');
+  const availDrinks = getAvailableDrinksForUpsell();
+  return hasFood && !hasDrink && availDrinks.length > 0;
+}
+
 function openOrderModal() {
   unlockAudioContext();
 
@@ -1515,9 +1666,62 @@ function openOrderModal() {
   if (cartItems.length === 0) return;
 
   if (cartOpen) toggleCart(false);
+
+  // Si lleva comida pero ninguna bebida, mostrar sugerencia de Venta Cruzada (Upselling)
+  if (shouldOfferDrinkUpsell()) {
+    upsellOfferedForCart = true;
+    openUpsellModal();
+    return;
+  }
+
+  openOrderModalDirect();
+}
+
+function openUpsellModal() {
+  const listEl = document.getElementById('upsell-drinks-list');
+  const avail  = getAvailableDrinksForUpsell();
+  if (!listEl || avail.length === 0) {
+    openOrderModalDirect();
+    return;
+  }
+
+  listEl.innerHTML = avail.map(drink => `
+    <button type="button" class="upsell-drink-btn" onclick="acceptUpsellDrink('${drink.id}')">
+      <div class="upsell-drink-left">
+        <span class="upsell-drink-emoji">${drink.emoji}</span>
+        <span class="upsell-drink-name">${drink.name}</span>
+      </div>
+      <span class="upsell-drink-cta">+ $${drink.price} · Agregar</span>
+    </button>
+  `).join('');
+
+  document.getElementById('upsell-overlay').classList.add('open');
+  document.getElementById('upsell-modal').classList.add('open');
+}
+
+function closeUpsellModal() {
+  const ov = document.getElementById('upsell-overlay');
+  const md = document.getElementById('upsell-modal');
+  if (ov) ov.classList.remove('open');
+  if (md) md.classList.remove('open');
+}
+
+function acceptUpsellDrink(drinkId) {
+  addDrinkToCart(drinkId);
+  closeUpsellModal();
+  openOrderModalDirect();
+}
+
+function skipUpsellAndContinue() {
+  closeUpsellModal();
+  openOrderModalDirect();
+}
+
+function openOrderModalDirect() {
   const inputEl = document.getElementById('table-input');
-  if (inputEl && presetTableFromURL && !inputEl.value) {
-    inputEl.value = presetTableFromURL;
+  const savedTable = localStorage.getItem('kds-last-table') || '';
+  if (inputEl && !inputEl.value) {
+    inputEl.value = presetTableFromURL || savedTable;
   }
 
   // Solicitar permiso opcional de notificaciones web sin bloquear el flujo
@@ -1539,6 +1743,8 @@ function submitOrder() {
   unlockAudioContext();
   const tableVal = document.getElementById('table-input').value.trim() || presetTableFromURL || 'Mostrador';
   if (cartItems.length === 0) return;
+
+  localStorage.setItem('kds-last-table', tableVal);
 
   orderCounter++;
   const order = {
@@ -1571,13 +1777,89 @@ function submitOrder() {
 
   // Limpiar carrito y convertir pantalla del cliente en el Rastreador en Tiempo Real
   cartItems = [];
-  tacoDraft = { tortilla: 'sencilla', protein: null, toppings: [] };
+  upsellOfferedForCart = false;
+  const availBase = TACO_CONFIG.base.find(b => !isStockSoldOut(getStockKey('taco', 'base', b.id)));
+  tacoDraft = { tortilla: availBase ? availBase.id : null, protein: null, toppings: [] };
   hotdogDraft = { toppings: [] };
   renderCart();
 
   setClientSubMode('tracker');
   const scrollEl = document.getElementById('client-scroll-container');
   if (scrollEl) scrollEl.scrollTo({ top: 0, behavior: 'instant' });
+}
+
+// ─── Llamar al Mesero / Pedir la Cuenta (Cliente → Cocina) ──
+function getDetectedCustomerTable() {
+  const activeOrder = activeTrackedOrderId ? orders.find(o => o.id === activeTrackedOrderId) : null;
+  if (activeOrder && activeOrder.table) return activeOrder.table;
+  if (presetTableFromURL) return presetTableFromURL;
+  const saved = localStorage.getItem('kds-last-table');
+  if (saved) return saved;
+  return '';
+}
+
+function requestTableService(type) {
+  unlockAudioContext();
+  const table = getDetectedCustomerTable();
+  if (!table) {
+    pendingServiceType = type;
+    const titleEl = document.getElementById('service-modal-title');
+    if (titleEl) {
+      titleEl.textContent = type === 'bill'
+        ? '¿De qué mesa pides la cuenta?'
+        : '¿En qué mesa necesitas al mesero?';
+    }
+    const inputEl = document.getElementById('service-table-input');
+    document.getElementById('service-modal-overlay').classList.add('open');
+    document.getElementById('service-table-modal').classList.add('open');
+    setTimeout(() => { if (inputEl) inputEl.focus(); }, 50);
+    return;
+  }
+  dispatchServiceCall(type, table);
+}
+
+function closeServiceTableModal() {
+  pendingServiceType = null;
+  const ov = document.getElementById('service-modal-overlay');
+  const md = document.getElementById('service-table-modal');
+  if (ov) ov.classList.remove('open');
+  if (md) md.classList.remove('open');
+}
+
+function confirmServiceTableModal() {
+  const inputEl = document.getElementById('service-table-input');
+  const tableVal = (inputEl ? inputEl.value.trim() : '') || 'Mostrador';
+  const type = pendingServiceType || 'waiter';
+  localStorage.setItem('kds-last-table', tableVal);
+  if (inputEl) inputEl.value = '';
+  closeServiceTableModal();
+  dispatchServiceCall(type, tableVal);
+}
+
+function dispatchServiceCall(type, table) {
+  const activeOrder = activeTrackedOrderId ? orders.find(o => o.id === activeTrackedOrderId) : null;
+  const callObj = {
+    id: Date.now() + Math.floor(Math.random() * 1000),
+    type: type === 'bill' ? 'bill' : 'waiter',
+    table,
+    orderNum: activeOrder ? activeOrder.num : null,
+    total: activeOrder ? activeOrder.total : getCartTotal(),
+    createdAt: Date.now(),
+  };
+
+  serviceCalls = serviceCalls.filter(c => !(c.table === callObj.table && c.type === callObj.type));
+  serviceCalls.push(callObj);
+  persistOrders();
+  publishCloudSync('SERVICE_CALL', callObj);
+  renderKDSServiceAlerts();
+
+  const feedbackEl = document.getElementById('tracker-service-feedback');
+  if (feedbackEl) {
+    feedbackEl.textContent = type === 'bill' ? '✓ Cuenta solicitada' : '✓ Mesero avisado';
+  }
+  showToast(type === 'bill'
+    ? `🧾 Cuenta solicitada para ${table}`
+    : `🔔 Mesero notificado para ${table}`);
 }
 
 function renderClientTracker() {
@@ -1650,6 +1932,7 @@ function initKitchenView() {
   if (kdsUnlocked) {
     setKDSSubView(kdsSubView);
     renderKDS();
+    renderKDSServiceAlerts();
     renderDailySales();
     startClock();
     startTimers();
@@ -1661,15 +1944,37 @@ function toggleKDSSalesView() {
   setKDSSubView(kdsSubView === 'sales' ? 'comandas' : 'sales');
 }
 
+function toggleKDSStockView() {
+  setKDSSubView(kdsSubView === 'stock' ? 'comandas' : 'stock');
+}
+
+function toggleKDSQRsView() {
+  setKDSSubView(kdsSubView === 'qrs' ? 'comandas' : 'qrs');
+}
+
 function setKDSSubView(subView) {
-  kdsSubView = subView === 'sales' ? 'sales' : 'comandas';
+  const valid = ['comandas', 'sales', 'stock', 'qrs'];
+  kdsSubView = valid.includes(subView) ? subView : 'comandas';
+
   const comandasEl = document.getElementById('kds-comandas-section');
   const salesEl    = document.getElementById('kds-sales-section');
-  const salesBtn   = document.getElementById('btn-kds-sales');
+  const stockEl    = document.getElementById('kds-stock-section');
+  const qrsEl      = document.getElementById('kds-qrs-section');
 
-  if (comandasEl) comandasEl.classList.toggle('hidden', kdsSubView === 'sales');
+  const salesBtn = document.getElementById('btn-kds-sales');
+  const stockBtn = document.getElementById('btn-kds-stock');
+  const qrsBtn   = document.getElementById('btn-kds-qrs');
+
+  if (comandasEl) comandasEl.classList.toggle('hidden', kdsSubView !== 'comandas');
   if (salesEl)    salesEl.classList.toggle('hidden', kdsSubView !== 'sales');
-  if (salesBtn)   salesBtn.classList.toggle('active', kdsSubView === 'sales');
+  if (stockEl)    stockEl.classList.toggle('hidden', kdsSubView !== 'stock');
+  if (qrsEl)      qrsEl.classList.toggle('hidden', kdsSubView !== 'qrs');
+
+  if (salesBtn) salesBtn.classList.toggle('active', kdsSubView === 'sales');
+  if (stockBtn) stockBtn.classList.toggle('active', kdsSubView === 'stock');
+  if (qrsBtn)   qrsBtn.classList.toggle('active', kdsSubView === 'qrs');
+
+  renderKDSServiceAlerts();
 
   if (kdsSubView === 'sales') {
     renderDailySales();
@@ -1677,9 +1982,241 @@ function setKDSSubView(subView) {
     ensureXLSX(); // Precarga la librería de Excel para descargas inmediatas
     const autoChk = document.getElementById('auto-export-shift');
     if (autoChk) autoChk.checked = getAutoExportPreference();
+  } else if (kdsSubView === 'stock') {
+    renderKDSStockPanel();
+  } else if (kdsSubView === 'qrs') {
+    initQRGeneratorView();
   } else {
     renderKDS();
   }
+}
+
+// ─── Alertas en Vivo de Mesa (Llamar Mesero / Pedir Cuenta) en KDS ──
+function renderKDSServiceAlerts() {
+  if (!kdsUnlocked) return;
+  const container = document.getElementById('kds-service-alerts');
+  if (!container) return;
+
+  if (!Array.isArray(serviceCalls) || serviceCalls.length === 0) {
+    container.classList.add('hidden');
+    container.innerHTML = '';
+    return;
+  }
+
+  container.classList.remove('hidden');
+  container.innerHTML = serviceCalls.map(call => {
+    const isBill = call.type === 'bill';
+    const title  = isBill
+      ? `🧾 ${call.table} · PIDE LA CUENTA`
+      : `🔔 ${call.table} · LLAMA AL MESERO`;
+    const subParts = [];
+    if (call.orderNum) subParts.push(`Orden #${String(call.orderNum).padStart(3, '0')}`);
+    if (isBill && call.total) subParts.push(`Total: $${call.total}`);
+    subParts.push(localTimeLabel(call.createdAt || Date.now()));
+
+    return `
+      <div class="service-alert-pill ${isBill ? 'type-bill' : 'type-waiter'}">
+        <div class="service-alert-info">
+          <span class="service-alert-title">${title}</span>
+          <span class="service-alert-sub">${subParts.join(' · ')}</span>
+        </div>
+        <button type="button" class="btn-resolve-alert" onclick="resolveServiceCall(${call.id})">
+          ✓ Atendido
+        </button>
+      </div>
+    `;
+  }).join('');
+}
+
+function resolveServiceCall(callId) {
+  serviceCalls = serviceCalls.filter(c => c.id !== callId);
+  persistOrders();
+  publishCloudSync('SERVICE_RESOLVE', { id: callId });
+  renderKDSServiceAlerts();
+}
+
+// ─── Panel de Stock / Agotar Producto con 1 Clic (Modo 86) ──
+function getKDSStockGroups() {
+  return [
+    {
+      title: 'TORTILLAS (TACOS)',
+      items: TACO_CONFIG.base.map(it => ({
+        key: getStockKey('taco', 'base', it.id),
+        name: it.name,
+      })),
+    },
+    {
+      title: 'PROTEÍNAS (TACOS)',
+      items: TACO_CONFIG.protein.map(it => ({
+        key: getStockKey('taco', 'protein', it.id),
+        name: it.name,
+      })),
+    },
+    {
+      title: 'COMPLEMENTOS (TACOS)',
+      items: TACO_CONFIG.toppings.map(it => ({
+        key: getStockKey('taco', 'topping', it.id),
+        name: `${it.name} (Taco)`,
+      })),
+    },
+    {
+      title: 'HOT DOGS Y ADEREZOS',
+      items: [
+        { key: 'station:hotdog', name: '🌭 Hot Dog Base (Pan y Salchicha)' },
+        ...HOTDOG_CONFIG.toppings.map(it => ({
+          key: getStockKey('hotdog', 'topping', it.id),
+          name: `${it.name} (Hot Dog)`,
+        })),
+      ],
+    },
+    {
+      title: 'BEBIDAS (500 ML)',
+      items: DRINKS_CONFIG.map(d => ({
+        key: getStockKey(null, 'drink', d.id),
+        name: `${d.emoji} ${d.name}`,
+      })),
+    },
+  ];
+}
+
+function renderKDSStockPanel() {
+  if (!kdsUnlocked) return;
+  const listEl = document.getElementById('kds-stock-list');
+  if (!listEl) return;
+
+  const groups = getKDSStockGroups();
+  listEl.innerHTML = groups.map(group => `
+    <div class="stock-group-card">
+      <div class="minimal-group-title">
+        <span>${group.title}</span>
+      </div>
+      <div class="stock-items-grid">
+        ${group.items.map(it => {
+          const isOut = isStockSoldOut(it.key);
+          return `
+            <div class="stock-item-row ${isOut ? 'is-sold-out' : ''}" onclick="toggleStockItem('${it.key}')">
+              <span class="stock-item-name">${it.name}</span>
+              <button type="button" class="stock-status-pill ${isOut ? 'exhausted' : 'available'}" onclick="event.stopPropagation(); toggleStockItem('${it.key}')">
+                ${isOut ? '✕ AGOTADO' : '● DISPONIBLE'}
+              </button>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleStockItem(stockKey) {
+  const idx = soldOutItems.indexOf(stockKey);
+  if (idx === -1) {
+    soldOutItems.push(stockKey);
+  } else {
+    soldOutItems.splice(idx, 1);
+  }
+  persistOrders();
+  publishCloudSync('STOCK_UPDATE', { soldOutItems });
+  sanitizeDraftAgainstStock();
+  renderKDSStockPanel();
+  showKDSToast(idx === -1 ? 'Marcado como Agotado' : 'Marcado como Disponible');
+}
+
+function restoreAllStockItems() {
+  if (soldOutItems.length === 0) {
+    showKDSToast('Todo el menú ya está disponible');
+    return;
+  }
+  soldOutItems = [];
+  persistOrders();
+  publishCloudSync('STOCK_UPDATE', { soldOutItems });
+  sanitizeDraftAgainstStock();
+  renderKDSStockPanel();
+  showKDSToast('Todo el menú está disponible');
+}
+
+// ─── Generador de Códigos QR Imprimibles por Mesa ──
+const QR_LIB_CDN = 'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js';
+let qrLibPromise = null;
+
+function ensureQRLib() {
+  if (typeof window.qrcode === 'function') return Promise.resolve(window.qrcode);
+  if (qrLibPromise) return qrLibPromise;
+  qrLibPromise = new Promise(resolve => {
+    const s = document.createElement('script');
+    s.src = QR_LIB_CDN;
+    s.async = true;
+    s.onload = () => resolve(typeof window.qrcode === 'function' ? window.qrcode : null);
+    s.onerror = () => { qrLibPromise = null; resolve(null); };
+    document.head.appendChild(s);
+  });
+  return qrLibPromise;
+}
+
+function getDefaultCustomerBaseUrl() {
+  return window.location.origin + window.location.pathname;
+}
+
+function initQRGeneratorView() {
+  const urlInput = document.getElementById('qr-base-url');
+  if (urlInput && !urlInput.value.trim()) {
+    urlInput.value = getDefaultCustomerBaseUrl();
+  }
+  renderTableQRCards();
+}
+
+function buildQRGraphicHTML(targetUrl) {
+  if (typeof window.qrcode === 'function') {
+    try {
+      const qr = window.qrcode(0, 'M');
+      qr.addData(targetUrl);
+      qr.make();
+      return qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
+    } catch (e) {}
+  }
+  const encoded = encodeURIComponent(targetUrl);
+  return `<img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=6&data=${encoded}" alt="QR" loading="lazy" />`;
+}
+
+async function renderTableQRCards() {
+  if (!kdsUnlocked) return;
+  const gridEl      = document.getElementById('qr-cards-grid');
+  const countInput  = document.getElementById('qr-table-count');
+  const urlInput    = document.getElementById('qr-base-url');
+  const barraChk    = document.getElementById('qr-include-barra');
+  if (!gridEl) return;
+
+  await ensureQRLib();
+
+  const count = Math.max(1, Math.min(50, parseInt(countInput ? countInput.value : '8', 10) || 8));
+  const baseUrl = (urlInput && urlInput.value.trim()) ? urlInput.value.trim() : getDefaultCustomerBaseUrl();
+  const branchParam = urlParams.get('sucursal') ? `&sucursal=${encodeURIComponent(urlParams.get('sucursal'))}` : '';
+
+  const tables = [];
+  for (let i = 1; i <= count; i++) {
+    tables.push({ label: `Mesa ${i}`, param: `Mesa ${i}` });
+  }
+  if (!barraChk || barraChk.checked) {
+    tables.push({ label: 'Mostrador / Para llevar', param: 'Mostrador' });
+  }
+
+  gridEl.innerHTML = tables.map(t => {
+    const fullUrl = `${baseUrl}?vista=cliente&mesa=${encodeURIComponent(t.param)}${branchParam}`;
+    return `
+      <div class="qr-print-card">
+        <div class="qr-card-brand">◈ Escandon</div>
+        <div class="qr-card-table">${t.label}</div>
+        <div class="qr-card-box">${buildQRGraphicHTML(fullUrl)}</div>
+        <div class="qr-card-cta">Escanea para ordenar desde tu celular</div>
+        <div class="qr-card-url">${fullUrl}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function printTableQRCards() {
+  renderTableQRCards().then(() => {
+    setTimeout(() => window.print(), 120);
+  });
 }
 
 function startClock() {
@@ -2014,6 +2551,7 @@ function confirmCloseShift() {
   // 3. Limpiar el día y regresar contadores a cero
   orders = [];
   completedOrders = [];
+  serviceCalls = [];
   orderCounter = 0;
   activeTrackedOrderId = null;
 
@@ -2022,6 +2560,7 @@ function confirmCloseShift() {
 
   closeCloseShiftModal();
   renderKDS();
+  renderKDSServiceAlerts();
   renderDailySales();
   renderClientTracker();
   updateHeaderTrackerPill();
@@ -2706,11 +3245,16 @@ async function exportAllHistoryExcel() {
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     closeOrderModal();
+    closeUpsellModal();
+    closeServiceTableModal();
     closeCloseShiftModal();
     if (cartOpen) toggleCart(false);
   }
   if (e.key === 'Enter' && document.getElementById('order-modal').classList.contains('open')) {
     submitOrder();
+  }
+  if (e.key === 'Enter' && document.getElementById('service-table-modal').classList.contains('open')) {
+    confirmServiceTableModal();
   }
 });
 
