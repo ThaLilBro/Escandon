@@ -18,8 +18,8 @@ const CLOUD_CONFIG = {
     'wss://broker.emqx.io:8084/mqtt',
     'wss://broker.hivemq.com:8884/mqtt',
   ],
-  // Opcional: URL de Firebase Realtime Database
-  firebaseDatabaseURL: '',
+  // Base de datos en la nube (Firebase Realtime Database)
+  firebaseDatabaseURL: 'https://escandon-taquerias-default-rtdb.firebaseio.com/',
 };
 
 // Metadatos de los 4 estados del pedido y colores de LED
@@ -435,10 +435,18 @@ function handleIncomingEvent(type, payload, fromRemote = false) {
     if (o && o.status !== payload.status) {
       const prevStatus = o.status;
       o.status = payload.status;
+      if (payload.readyAt) o.readyAt = payload.readyAt;
       persistOrders();
       renderKDS();
       renderDailySales();
       notifyClientIfMyOrderChanged(o.id, prevStatus, o.status, o.num);
+
+      // Historial mensual: registrar al pasar a "Listo" / retirar si regresó
+      if (o.status === 'ready') {
+        recordSalesForOrders([o], { cloud: false });
+      } else if (prevStatus === 'ready') {
+        removeSaleForOrder(o.id, { cloud: false });
+      }
     }
   } else if (type === 'ORDER_DELIVER') {
     const existingActive = orders.find(x => x.id === payload.id);
@@ -446,6 +454,7 @@ function handleIncomingEvent(type, payload, fromRemote = false) {
     if (toArchive && !completedOrders.some(c => c.id === toArchive.id)) {
       completedOrders.push({ ...toArchive, status: 'ready', deliveredAt: Date.now() });
     }
+    if (toArchive) recordSalesForOrders([toArchive], { cloud: false });
     orders = orders.filter(x => x.id !== payload.id);
     persistOrders();
     renderKDS();
@@ -509,8 +518,19 @@ function mergeRemoteStateSnapshot(snapshot) {
     const prev = prevStatusMap.get(o.id);
     if (prev && prev !== o.status) {
       notifyClientIfMyOrderChanged(o.id, prev, o.status, o.num);
+      if (prev === 'ready' && o.status !== 'ready') {
+        removeSaleForOrder(o.id, { cloud: false });
+      }
     }
   });
+
+  // Historial mensual: asegurar que todo pedido "Listo" quede registrado
+  if (!isShiftReset) {
+    recordSalesForOrders(
+      orders.filter(o => o.status === 'ready').concat(completedOrders),
+      { cloud: false }
+    );
+  }
 
   renderClientTracker();
   updateHeaderTrackerPill();
@@ -560,17 +580,49 @@ function initCloudWebSockets() {
   }
 }
 
+function normalizeFirebaseKdsSnapshot(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  if (!('updatedAt' in raw) && !('orders' in raw) && !('orderCounter' in raw)) return null;
+  const toArr = (v) => Array.isArray(v)
+    ? v.filter(Boolean)
+    : (v && typeof v === 'object' ? Object.values(v).filter(Boolean) : []);
+  return {
+    orders: toArr(raw.orders),
+    completedOrders: toArr(raw.completedOrders),
+    orderCounter: typeof raw.orderCounter === 'number' ? raw.orderCounter : 0,
+    sender: raw.sender || '',
+    updatedAt: raw.updatedAt || 0,
+  };
+}
+
 function initFirebaseIfConfigured() {
   const dbUrl = (CLOUD_CONFIG.firebaseDatabaseURL || '').trim().replace(/\/$/, '');
   if (!dbUrl) return;
+
+  // 1. Carga inicial del estado activo desde Firebase
+  fetch(`${dbUrl}/escandon_kds.json`)
+    .then(res => (res.ok ? res.json() : null))
+    .then(raw => {
+      const snap = normalizeFirebaseKdsSnapshot(raw);
+      if (snap && snap.sender !== DEVICE_ID) {
+        mergeRemoteStateSnapshot(snap);
+        updateCloudStatusUI(true);
+      }
+    })
+    .catch(() => {});
+
+  // 2. Suscripción en tiempo real (Server-Sent Events de Firebase)
   try {
     const evtSource = new EventSource(`${dbUrl}/escandon_kds.json`);
     evtSource.addEventListener('put', (e) => {
       try {
         const packet = JSON.parse(e.data);
-        if (packet && packet.data && packet.data.orders) {
-          mergeRemoteStateSnapshot(packet.data);
-          updateCloudStatusUI(true);
+        if (packet && packet.path === '/' && packet.data) {
+          const snap = normalizeFirebaseKdsSnapshot(packet.data);
+          if (snap && snap.sender !== DEVICE_ID) {
+            mergeRemoteStateSnapshot(snap);
+            updateCloudStatusUI(true);
+          }
         }
       } catch (err) {}
     });
@@ -604,7 +656,13 @@ function publishCloudSync(type, payload) {
     fetch(`${dbUrl}/escandon_kds.json`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ orders, completedOrders, orderCounter, updatedAt: Date.now() }),
+      body: JSON.stringify({
+        orders,
+        completedOrders,
+        orderCounter,
+        sender: DEVICE_ID,
+        updatedAt: Date.now(),
+      }),
     }).catch(() => {});
   }
 }
@@ -705,6 +763,7 @@ function verifyKDSPin() {
   if (inputEl.value.trim() === KDS_REQUIRED_PIN) {
     kdsUnlocked = true;
     sessionStorage.setItem('escandon-kds-unlocked', '1');
+    localStorage.setItem(KITCHEN_DEVICE_FLAG, '1'); // Este dispositivo guarda el historial de ventas
     inputEl.value = '';
     if (errEl) errEl.classList.add('hidden');
     unlockAudioContext();
@@ -714,6 +773,7 @@ function verifyKDSPin() {
     renderDailySales();
     startClock();
     startTimers();
+    retryUnsyncedCloud();
   } else {
     if (errEl) errEl.classList.remove('hidden');
     inputEl.value = '';
@@ -1593,6 +1653,7 @@ function initKitchenView() {
     renderDailySales();
     startClock();
     startTimers();
+    retryUnsyncedCloud();
   }
 }
 
@@ -1612,6 +1673,10 @@ function setKDSSubView(subView) {
 
   if (kdsSubView === 'sales') {
     renderDailySales();
+    renderMonthlyHistory();
+    ensureXLSX(); // Precarga la librería de Excel para descargas inmediatas
+    const autoChk = document.getElementById('auto-export-shift');
+    if (autoChk) autoChk.checked = getAutoExportPreference();
   } else {
     renderKDS();
   }
@@ -1732,11 +1797,19 @@ function changeOrderStatus(orderId, newStatus) {
   if (!order) return;
   const prevStatus = order.status;
   order.status = newStatus;
+  if (newStatus === 'ready') order.readyAt = Date.now();
   persistOrders();
-  publishCloudSync('ORDER_STATUS', { id: orderId, status: newStatus });
+  publishCloudSync('ORDER_STATUS', { id: orderId, status: newStatus, readyAt: order.readyAt || null });
   renderKDS();
   renderDailySales();
   notifyClientIfMyOrderChanged(order.id, prevStatus, newStatus, order.num);
+
+  // Historial mensual (base de datos): guardar venta al marcar "Listo"
+  if (newStatus === 'ready') {
+    recordSalesForOrders([order], { cloud: true });
+  } else if (prevStatus === 'ready') {
+    removeSaleForOrder(order.id, { cloud: true });
+  }
 }
 
 // Archiva un pedido "Listo" como entregado para limpiar el tablero KDS sin perder su venta en el Corte del Día
@@ -1746,6 +1819,7 @@ function deliverOrder(orderId) {
     if (!completedOrders.some(c => c.id === order.id)) {
       completedOrders.push({ ...order, status: 'ready', deliveredAt: Date.now() });
     }
+    recordSalesForOrders([order], { cloud: true });
   }
   orders = orders.filter(o => o.id !== orderId);
   persistOrders();
@@ -1901,7 +1975,7 @@ function openCloseShiftModal() {
   const stats  = calculateDailySales();
   const descEl = document.getElementById('shift-modal-desc');
   if (descEl) {
-    descEl.textContent = `Se limpiarán los datos del turno actual (${formatMoney(stats.totalRevenue)} en ventas y comandas registradas) y todos los contadores volverán a cero para empezar un nuevo día.`;
+    descEl.textContent = `Se limpiará el corte del turno actual (${formatMoney(stats.totalRevenue)} en ventas) y los contadores volverán a cero. Las ventas quedan guardadas en el historial mensual.`;
   }
   const overlayEl = document.getElementById('shift-modal-overlay');
   const modalEl   = document.getElementById('shift-reset-modal');
@@ -1917,6 +1991,27 @@ function closeCloseShiftModal() {
 }
 
 function confirmCloseShift() {
+  // 1. Guardar todas las ventas del turno en el historial mensual ANTES de limpiar
+  const shiftMap = new Map();
+  completedOrders.forEach(o => { if (o && o.id) shiftMap.set(o.id, o); });
+  orders.forEach(o => { if (o && o.id && o.status === 'ready') shiftMap.set(o.id, o); });
+  const shiftOrders = Array.from(shiftMap.values());
+
+  recordSalesForOrders(shiftOrders, { cloud: true });
+
+  // 2. Respaldo automático en Excel del corte (si está activado)
+  if (getAutoExportPreference() && shiftOrders.length > 0) {
+    const now = new Date();
+    const stamp = `${localDayKey(now.getTime())}_${pad2(now.getHours())}${pad2(now.getMinutes())}`;
+    exportSalesWorkbook({
+      records: shiftOrders.map(buildSaleRecord).sort((a, b) => a.ts - b.ts),
+      periodLabel: `Corte del ${formatDayLabel(localDayKey(now.getTime()))}`,
+      filename: `Escandon_Corte_${stamp}`,
+      includeMonthly: false,
+    });
+  }
+
+  // 3. Limpiar el día y regresar contadores a cero
   orders = [];
   completedOrders = [];
   orderCounter = 0;
@@ -1940,6 +2035,669 @@ function showKDSToast(msg) {
   if (msgEl) msgEl.textContent = msg;
   toast.classList.add('show');
   setTimeout(() => toast.classList.remove('show'), 2400);
+}
+
+// ══════════════════════════════════════════════
+//  HISTORIAL MENSUAL · BASE DE DATOS DE VENTAS
+//  - IndexedDB en el dispositivo de cocina (siempre activo)
+//  - Copia opcional en la nube: Firebase Realtime Database
+//    (se activa al llenar CLOUD_CONFIG.firebaseDatabaseURL)
+// ══════════════════════════════════════════════
+const KITCHEN_DEVICE_FLAG   = 'escandon-kds-device';
+const AUTO_EXPORT_PREF_KEY  = 'escandon-auto-export';
+const LEDGER_DB_NAME        = 'escandon-ledger';
+const LEDGER_STORE          = 'sales';
+const LEDGER_FALLBACK_KEY   = 'escandon-ledger-fallback';
+const XLSX_CDN_URL          = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
+const MONTH_KEY_RE          = /^\d{4}-\d{2}$/;
+const DAY_KEY_RE            = /^\d{4}-\d{2}-\d{2}$/;
+const MONTH_NAMES_ES        = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                               'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+let ledgerDbPromise      = null;
+let historySelectedMonth = null;
+let historyRefreshTimer  = null;
+let cloudMonthKeysCache  = null;
+let cloudRetryInProgress = false;
+const cloudMonthsSynced  = new Set();
+
+function isKitchenDevice() {
+  return kdsUnlocked || localStorage.getItem(KITCHEN_DEVICE_FLAG) === '1';
+}
+
+function getAutoExportPreference() {
+  return localStorage.getItem(AUTO_EXPORT_PREF_KEY) !== '0'; // Activado por defecto
+}
+
+function setAutoExportPreference(enabled) {
+  localStorage.setItem(AUTO_EXPORT_PREF_KEY, enabled ? '1' : '0');
+}
+
+// ─── Fechas (hora local del restaurante) ───────
+function pad2(n) {
+  return String(n).padStart(2, '0');
+}
+
+function localDayKey(ts) {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+function localMonthKey(ts) {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
+}
+
+function localTimeLabel(ts) {
+  const d = new Date(ts);
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
+function monthLabel(monthKey) {
+  if (!MONTH_KEY_RE.test(monthKey)) return monthKey;
+  const [y, m] = monthKey.split('-');
+  return `${MONTH_NAMES_ES[parseInt(m, 10) - 1]} ${y}`;
+}
+
+function formatDayLabel(dayKey) {
+  if (!DAY_KEY_RE.test(dayKey)) return dayKey;
+  const [y, m, d] = dayKey.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('es-MX', {
+    weekday: 'short', day: 'numeric', month: 'short',
+  });
+}
+
+// ─── Clasificación de productos vendidos ───────
+function categorizeSaleItem(it) {
+  const key     = String(it.key || '').toLowerCase();
+  const station = String(it.station || '').toLowerCase();
+  const name    = String(it.name || '').toLowerCase();
+
+  if (station === 'taco' || key.startsWith('taco:') || name.startsWith('taco')) return 'taco';
+  if (station === 'hotdog' || key.startsWith('hotdog:') || name.startsWith('hot dog') || name.startsWith('hotdog')) return 'hotdog';
+  if (key === 'drink_jamaica' || name.includes('jamaica')) return 'jamaica';
+  if (key === 'drink_horchata' || name.includes('horchata')) return 'horchata';
+  if (name.includes('agua')) return 'agua';
+  if (key === 'drink_coca' || name.includes('coca')) return 'coca';
+  return 'otro';
+}
+
+// Convierte una comanda en un registro de venta compacto para la base de datos
+function buildSaleRecord(order) {
+  const ts = order.readyAt || order.deliveredAt || order.createdAt || Date.now();
+  const items = (Array.isArray(order.items) ? order.items : []).map(it => ({
+    name: String(it.name || ''),
+    qty: Number(it.qty) || 0,
+    price: Number(it.price) || 0,
+    cat: it.cat || categorizeSaleItem(it),
+  }));
+  const computedTotal = items.reduce((s, it) => s + it.qty * it.price, 0);
+
+  return {
+    id: order.id,
+    branch: branchKey,
+    num: Number(order.num) || 0,
+    table: String(order.table || ''),
+    ts,
+    createdAt: order.createdAt || ts,
+    month: localMonthKey(ts),
+    day: localDayKey(ts),
+    total: typeof order.total === 'number' ? order.total : computedTotal,
+    items,
+  };
+}
+
+function countRecordProducts(record) {
+  const c = { tacos: 0, hotdogs: 0, aguas: 0, jamaica: 0, horchata: 0, cocas: 0 };
+  (record.items || []).forEach(it => {
+    const q = Number(it.qty) || 0;
+    if (it.cat === 'taco') c.tacos += q;
+    else if (it.cat === 'hotdog') c.hotdogs += q;
+    else if (it.cat === 'jamaica') { c.aguas += q; c.jamaica += q; }
+    else if (it.cat === 'horchata') { c.aguas += q; c.horchata += q; }
+    else if (it.cat === 'agua') c.aguas += q;
+    else if (it.cat === 'coca') c.cocas += q;
+  });
+  return c;
+}
+
+function aggregateSaleRecords(records) {
+  const mk = () => ({ qty: 0, amount: 0 });
+  const agg = {
+    orders: 0,
+    total: 0,
+    taco: mk(), hotdog: mk(), jamaica: mk(), horchata: mk(), agua: mk(), coca: mk(), otro: mk(),
+    days: new Map(),
+    months: new Map(),
+  };
+
+  records.forEach(r => {
+    const total = Number(r.total) || 0;
+    const counts = countRecordProducts(r);
+    agg.orders += 1;
+    agg.total += total;
+
+    (r.items || []).forEach(it => {
+      const bucket = agg[it.cat] || agg.otro;
+      bucket.qty += Number(it.qty) || 0;
+      bucket.amount += (Number(it.qty) || 0) * (Number(it.price) || 0);
+    });
+
+    [[agg.days, r.day], [agg.months, r.month]].forEach(([map, k]) => {
+      const row = map.get(k) || { key: k, orders: 0, total: 0, tacos: 0, hotdogs: 0, aguas: 0, cocas: 0 };
+      row.orders += 1;
+      row.total += total;
+      row.tacos += counts.tacos;
+      row.hotdogs += counts.hotdogs;
+      row.aguas += counts.aguas;
+      row.cocas += counts.cocas;
+      map.set(k, row);
+    });
+  });
+
+  return agg;
+}
+
+// ─── IndexedDB (con respaldo en localStorage) ──
+function openLedgerDB() {
+  if (ledgerDbPromise) return ledgerDbPromise;
+  ledgerDbPromise = new Promise((resolve, reject) => {
+    if (!('indexedDB' in window)) {
+      reject(new Error('IndexedDB no disponible'));
+      return;
+    }
+    const req = indexedDB.open(LEDGER_DB_NAME, 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(LEDGER_STORE)) {
+        const store = db.createObjectStore(LEDGER_STORE, { keyPath: 'id' });
+        store.createIndex('month', 'month', { unique: false });
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+  ledgerDbPromise.catch(() => { ledgerDbPromise = null; });
+  return ledgerDbPromise;
+}
+
+function fallbackReadAll() {
+  try { return JSON.parse(localStorage.getItem(LEDGER_FALLBACK_KEY) || '{}'); } catch (e) { return {}; }
+}
+
+function fallbackWriteAll(map) {
+  try { localStorage.setItem(LEDGER_FALLBACK_KEY, JSON.stringify(map)); } catch (e) {}
+}
+
+// overwrite=false → solo inserta si el registro no existe todavía
+async function ledgerUpsert(records, { overwrite = true } = {}) {
+  if (!records || records.length === 0) return;
+  try {
+    const db = await openLedgerDB();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(LEDGER_STORE, 'readwrite');
+      const store = tx.objectStore(LEDGER_STORE);
+      records.forEach(r => {
+        if (overwrite) {
+          store.put(r);
+        } else {
+          const getReq = store.get(r.id);
+          getReq.onsuccess = () => { if (!getReq.result) store.put(r); };
+        }
+      });
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error);
+    });
+  } catch (e) {
+    const map = fallbackReadAll();
+    records.forEach(r => { if (overwrite || !map[r.id]) map[r.id] = r; });
+    fallbackWriteAll(map);
+  }
+}
+
+async function ledgerGet(id) {
+  try {
+    const db = await openLedgerDB();
+    return await new Promise((resolve, reject) => {
+      const req = db.transaction(LEDGER_STORE, 'readonly').objectStore(LEDGER_STORE).get(id);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+  } catch (e) {
+    return fallbackReadAll()[id] || null;
+  }
+}
+
+async function ledgerDelete(id) {
+  try {
+    const db = await openLedgerDB();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(LEDGER_STORE, 'readwrite');
+      tx.objectStore(LEDGER_STORE).delete(id);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch (e) {
+    const map = fallbackReadAll();
+    delete map[id];
+    fallbackWriteAll(map);
+  }
+}
+
+async function ledgerGetAll() {
+  let all = [];
+  try {
+    const db = await openLedgerDB();
+    all = await new Promise((resolve, reject) => {
+      const req = db.transaction(LEDGER_STORE, 'readonly').objectStore(LEDGER_STORE).getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
+  } catch (e) {
+    all = Object.values(fallbackReadAll());
+  }
+  return all.filter(r => r && (r.branch || 'escandon-main') === branchKey && MONTH_KEY_RE.test(r.month));
+}
+
+// ─── Nube opcional: Firebase Realtime Database (REST) ──
+function firebaseBaseUrl() {
+  return (CLOUD_CONFIG.firebaseDatabaseURL || '').trim().replace(/\/$/, '');
+}
+
+function cloudSalesUrl(suffix) {
+  return `${firebaseBaseUrl()}/escandon_ventas/${branchKey}${suffix}.json`;
+}
+
+function stripLocalFields(record) {
+  const { cloudSynced, ...rest } = record;
+  return rest;
+}
+
+async function cloudPutSale(record) {
+  if (!firebaseBaseUrl()) return false;
+  try {
+    const res = await fetch(cloudSalesUrl(`/${record.month}/${record.id}`), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(stripLocalFields(record)),
+    });
+    return res.ok;
+  } catch (e) {
+    return false;
+  }
+}
+
+async function cloudDeleteSale(record) {
+  if (!firebaseBaseUrl() || !record) return;
+  try {
+    await fetch(cloudSalesUrl(`/${record.month}/${record.id}`), { method: 'DELETE' });
+  } catch (e) {}
+}
+
+async function cloudFetchMonth(month) {
+  if (!firebaseBaseUrl() || !MONTH_KEY_RE.test(month)) return null;
+  try {
+    const res = await fetch(cloudSalesUrl(`/${month}`));
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data ? Object.values(data).filter(r => r && r.id && MONTH_KEY_RE.test(r.month)) : [];
+  } catch (e) {
+    return null;
+  }
+}
+
+async function cloudFetchMonthKeys() {
+  if (!firebaseBaseUrl()) return null;
+  try {
+    const res = await fetch(`${cloudSalesUrl('')}?shallow=true`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data ? Object.keys(data).filter(k => MONTH_KEY_RE.test(k)) : [];
+  } catch (e) {
+    return null;
+  }
+}
+
+// Reintenta subir a la nube las ventas guardadas sin conexión
+async function retryUnsyncedCloud() {
+  if (!firebaseBaseUrl() || !isKitchenDevice() || cloudRetryInProgress) return;
+  cloudRetryInProgress = true;
+  try {
+    const pending = (await ledgerGetAll()).filter(r => !r.cloudSynced);
+    const synced = [];
+    for (const r of pending) {
+      if (await cloudPutSale(r)) synced.push({ ...r, cloudSynced: true });
+    }
+    if (synced.length) await ledgerUpsert(synced, { overwrite: true });
+  } finally {
+    cloudRetryInProgress = false;
+  }
+}
+
+// ─── Registrar / retirar ventas ────────────────
+// cloud=true → acción hecha en ESTE dispositivo (también se sube a Firebase si está configurado)
+function recordSalesForOrders(orderList, { cloud = false } = {}) {
+  if (!isKitchenDevice()) return Promise.resolve([]);
+  const list = (orderList || []).filter(o => o && o.id && Array.isArray(o.items));
+  if (list.length === 0) return Promise.resolve([]);
+
+  const records = list.map(o => ({ ...buildSaleRecord(o), cloudSynced: false }));
+
+  return ledgerUpsert(records, { overwrite: cloud })
+    .then(async () => {
+      if (cloud && firebaseBaseUrl()) {
+        const synced = [];
+        for (const r of records) {
+          if (await cloudPutSale(r)) synced.push({ ...r, cloudSynced: true });
+        }
+        if (synced.length) await ledgerUpsert(synced, { overwrite: true });
+      }
+      scheduleHistoryRefresh();
+      return records;
+    })
+    .catch(() => []);
+}
+
+function removeSaleForOrder(orderId, { cloud = false } = {}) {
+  if (!isKitchenDevice()) return Promise.resolve();
+  return ledgerGet(orderId)
+    .then(async record => {
+      await ledgerDelete(orderId);
+      if (cloud && record) await cloudDeleteSale(record);
+      scheduleHistoryRefresh();
+    })
+    .catch(() => {});
+}
+
+// ─── Panel visual del historial mensual ────────
+function scheduleHistoryRefresh() {
+  if (historyRefreshTimer) clearTimeout(historyRefreshTimer);
+  historyRefreshTimer = setTimeout(() => {
+    if (kdsUnlocked && kdsSubView === 'sales') renderMonthlyHistory();
+  }, 150);
+}
+
+function onHistoryMonthChange(value) {
+  if (!MONTH_KEY_RE.test(value)) return;
+  historySelectedMonth = value;
+  renderMonthlyHistory();
+}
+
+async function renderMonthlyHistory() {
+  if (!kdsUnlocked) return;
+  if (!historySelectedMonth) historySelectedMonth = localMonthKey(Date.now());
+
+  // 1. Pintar al instante con los datos guardados en el dispositivo
+  await paintMonthlyHistory();
+
+  // 2. Si hay nube configurada, traer siempre los datos más recientes del mes desde Firebase
+  if (firebaseBaseUrl()) {
+    let changed = false;
+    const keys = await cloudFetchMonthKeys();
+    if (keys) { cloudMonthKeysCache = keys; changed = true; }
+
+    const month = historySelectedMonth;
+    const remote = await cloudFetchMonth(month);
+    if (remote) {
+      cloudMonthsSynced.add(month);
+      await ledgerUpsert(remote.map(r => ({ ...r, cloudSynced: true })), { overwrite: true });
+      changed = true;
+    }
+    if (changed) await paintMonthlyHistory();
+    retryUnsyncedCloud();
+  }
+}
+
+async function paintMonthlyHistory() {
+  const selectEl   = document.getElementById('history-month-select');
+  const statusEl   = document.getElementById('history-db-status');
+  const totalEl    = document.getElementById('hist-total');
+  const ordersEl   = document.getElementById('hist-orders');
+  const avgEl      = document.getElementById('hist-avg');
+  const daysEl     = document.getElementById('hist-days');
+  const productsEl = document.getElementById('hist-products');
+  const listEl     = document.getElementById('hist-days-list');
+  if (!selectEl || !listEl) return;
+
+  const hasCloud = Boolean(firebaseBaseUrl());
+  if (statusEl) {
+    statusEl.textContent = hasCloud ? '☁ Nube + este dispositivo' : 'Guardado en este dispositivo';
+    statusEl.classList.toggle('cloud', hasCloud);
+  }
+
+  const all = await ledgerGetAll();
+  const currentMonth = localMonthKey(Date.now());
+
+  const monthSet = new Set(all.map(r => r.month));
+  monthSet.add(currentMonth);
+  monthSet.add(historySelectedMonth);
+  (cloudMonthKeysCache || []).forEach(m => monthSet.add(m));
+
+  const months = Array.from(monthSet).filter(m => MONTH_KEY_RE.test(m)).sort().reverse();
+  selectEl.innerHTML = months
+    .map(m => `<option value="${m}"${m === historySelectedMonth ? ' selected' : ''}>${monthLabel(m)}</option>`)
+    .join('');
+
+  const monthRecords = all.filter(r => r.month === historySelectedMonth);
+  const agg = aggregateSaleRecords(monthRecords);
+  const daysWithSales = agg.days.size;
+  const aguasQty = agg.jamaica.qty + agg.horchata.qty + agg.agua.qty;
+
+  if (totalEl)    totalEl.textContent    = formatMoney(agg.total);
+  if (ordersEl)   ordersEl.textContent   = agg.orders;
+  if (avgEl)      avgEl.textContent      = formatMoney(daysWithSales ? Math.round(agg.total / daysWithSales) : 0);
+  if (daysEl)     daysEl.textContent     = daysWithSales;
+  if (productsEl) productsEl.textContent = `🌮 ${agg.taco.qty} · 🌭 ${agg.hotdog.qty} · 💧 ${aguasQty} · 🥤 ${agg.coca.qty}`;
+
+  const dayRows = Array.from(agg.days.values())
+    .filter(d => DAY_KEY_RE.test(d.key))
+    .sort((a, b) => (a.key < b.key ? 1 : -1));
+
+  listEl.innerHTML = dayRows.length === 0
+    ? '<p class="history-empty">Sin ventas registradas este mes</p>'
+    : dayRows.map(d => `
+        <div class="history-day-row">
+          <span class="history-day-date">${formatDayLabel(d.key)}</span>
+          <span class="history-day-orders">${d.orders} ${d.orders === 1 ? 'pedido' : 'pedidos'}</span>
+          <span class="history-day-total">${formatMoney(d.total)}</span>
+        </div>`).join('');
+}
+
+// ─── Exportación a Excel (.xlsx) ───────────────
+let xlsxLoadPromise = null;
+
+function ensureXLSX() {
+  if (window.XLSX && window.XLSX.utils) return Promise.resolve(window.XLSX);
+  if (xlsxLoadPromise) return xlsxLoadPromise;
+  xlsxLoadPromise = new Promise(resolve => {
+    const s = document.createElement('script');
+    s.src = XLSX_CDN_URL;
+    s.async = true;
+    s.onload = () => resolve(window.XLSX && window.XLSX.utils ? window.XLSX : null);
+    s.onerror = () => { xlsxLoadPromise = null; resolve(null); };
+    document.head.appendChild(s);
+  });
+  return xlsxLoadPromise;
+}
+
+function buildSalesSheetsData(records, periodLabel, includeMonthly) {
+  const agg = aggregateSaleRecords(records);
+  const daysWithSales = agg.days.size;
+  const aguasQty = agg.jamaica.qty + agg.horchata.qty + agg.agua.qty;
+  const aguasAmt = agg.jamaica.amount + agg.horchata.amount + agg.agua.amount;
+  const generated = new Date().toLocaleString('es-MX');
+
+  const resumen = [
+    ['Escandon — Reporte de Ventas'],
+    ['Periodo', periodLabel],
+    ['Generado', generated],
+    [],
+    ['Concepto', 'Cantidad', 'Importe'],
+    ['Tacos ($28)', agg.taco.qty, agg.taco.amount],
+    ['Hot Dogs ($35)', agg.hotdog.qty, agg.hotdog.amount],
+    ['Agua de Jamaica ($25)', agg.jamaica.qty, agg.jamaica.amount],
+    ['Agua de Horchata ($25)', agg.horchata.qty, agg.horchata.amount],
+  ];
+  if (agg.agua.qty > 0) resumen.push(['Otras aguas', agg.agua.qty, agg.agua.amount]);
+  resumen.push(['Coca-Cola ($30)', agg.coca.qty, agg.coca.amount]);
+  if (agg.otro.qty > 0) resumen.push(['Otros', agg.otro.qty, agg.otro.amount]);
+  resumen.push(
+    [],
+    ['Total Aguas', aguasQty, aguasAmt],
+    ['Pedidos', agg.orders, ''],
+    ['Días con venta', daysWithSales, ''],
+    ['Ticket promedio', '', agg.orders ? Math.round((agg.total / agg.orders) * 100) / 100 : 0],
+    ['Promedio por día', '', daysWithSales ? Math.round((agg.total / daysWithSales) * 100) / 100 : 0],
+    ['TOTAL DE GANANCIAS', '', agg.total],
+  );
+
+  const sheets = [{ name: 'Resumen', rows: resumen, cols: [26, 12, 14], moneyCols: [2], headerRow: 4 }];
+
+  if (includeMonthly) {
+    const monthRows = Array.from(agg.months.values()).sort((a, b) => (a.key > b.key ? 1 : -1));
+    sheets.push({
+      name: 'Por Mes',
+      rows: [
+        ['Mes', 'Pedidos', 'Tacos', 'Hot Dogs', 'Aguas', 'Coca-Colas', 'Total ($)'],
+        ...monthRows.map(m => [monthLabel(m.key), m.orders, m.tacos, m.hotdogs, m.aguas, m.cocas, m.total]),
+        ['TOTAL', agg.orders, agg.taco.qty, agg.hotdog.qty, aguasQty, agg.coca.qty, agg.total],
+      ],
+      cols: [18, 10, 10, 10, 10, 12, 14],
+      moneyCols: [6],
+      headerRow: 0,
+    });
+  }
+
+  const dayRows = Array.from(agg.days.values()).sort((a, b) => (a.key > b.key ? 1 : -1));
+  sheets.push({
+    name: 'Por Día',
+    rows: [
+      ['Fecha', 'Pedidos', 'Tacos', 'Hot Dogs', 'Aguas', 'Coca-Colas', 'Total ($)'],
+      ...dayRows.map(d => [d.key, d.orders, d.tacos, d.hotdogs, d.aguas, d.cocas, d.total]),
+      ['TOTAL', agg.orders, agg.taco.qty, agg.hotdog.qty, aguasQty, agg.coca.qty, agg.total],
+    ],
+    cols: [12, 10, 10, 10, 10, 12, 14],
+    moneyCols: [6],
+    headerRow: 0,
+  });
+
+  sheets.push({
+    name: 'Detalle',
+    rows: [
+      ['Fecha', 'Hora', 'Folio', 'Mesa / Cliente', 'Tacos', 'Hot Dogs', 'Aguas', 'Coca-Colas', 'Productos', 'Total ($)'],
+      ...records.slice().sort((a, b) => a.ts - b.ts).map(r => {
+        const c = countRecordProducts(r);
+        const productos = (r.items || []).map(it => `${it.qty}x ${it.name}`).join(' · ');
+        return [r.day, localTimeLabel(r.ts), `#${String(r.num).padStart(3, '0')}`, r.table, c.tacos, c.hotdogs, c.aguas, c.cocas, productos, Number(r.total) || 0];
+      }),
+    ],
+    cols: [12, 8, 8, 20, 8, 10, 8, 11, 60, 12],
+    moneyCols: [9],
+    headerRow: 0,
+  });
+
+  return sheets;
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1500);
+}
+
+function csvCell(value) {
+  let s = value === null || value === undefined ? '' : String(value);
+  if (/^[=+\-@]/.test(s)) s = "'" + s; // Evita fórmulas inyectadas
+  return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+async function exportSalesWorkbook({ records, periodLabel, filename, includeMonthly }) {
+  if (!records || records.length === 0) {
+    showKDSToast('No hay ventas para exportar');
+    return;
+  }
+
+  const sheets = buildSalesSheetsData(records, periodLabel, includeMonthly);
+  const XLSXlib = await ensureXLSX();
+
+  if (XLSXlib) {
+    const wb = XLSXlib.utils.book_new();
+    sheets.forEach(sheet => {
+      const ws = XLSXlib.utils.aoa_to_sheet(sheet.rows);
+      ws['!cols'] = sheet.cols.map(wch => ({ wch }));
+      // Formato de moneda en las columnas de dinero
+      for (let r = sheet.headerRow + 1; r < sheet.rows.length; r++) {
+        sheet.moneyCols.forEach(c => {
+          const cell = ws[XLSXlib.utils.encode_cell({ r, c })];
+          if (cell && cell.t === 'n') cell.z = '"$"#,##0.00';
+        });
+      }
+      XLSXlib.utils.book_append_sheet(wb, ws, sheet.name);
+    });
+    XLSXlib.writeFile(wb, `${filename}.xlsx`);
+    showKDSToast('Reporte de Excel descargado');
+  } else {
+    // Sin internet para cargar la librería: exportar CSV compatible con Excel
+    const detalle = sheets.find(s => s.name === 'Detalle');
+    const csv = '\ufeff' + detalle.rows.map(row => row.map(csvCell).join(',')).join('\r\n');
+    downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8' }), `${filename}.csv`);
+    showKDSToast('Reporte descargado en CSV (abre en Excel)');
+  }
+}
+
+async function exportSelectedMonthExcel() {
+  if (!kdsUnlocked) return;
+  const month = historySelectedMonth || localMonthKey(Date.now());
+  if (firebaseBaseUrl()) {
+    const remote = await cloudFetchMonth(month);
+    if (remote) {
+      await ledgerUpsert(remote.map(r => ({ ...r, cloudSynced: true })), { overwrite: true });
+    }
+  }
+  const records = (await ledgerGetAll()).filter(r => r.month === month);
+  if (records.length === 0) {
+    showKDSToast(`Sin ventas registradas en ${monthLabel(month)}`);
+    return;
+  }
+  await exportSalesWorkbook({
+    records,
+    periodLabel: monthLabel(month),
+    filename: `Escandon_Ventas_${month}`,
+    includeMonthly: false,
+  });
+}
+
+async function exportAllHistoryExcel() {
+  if (!kdsUnlocked) return;
+
+  // Con nube configurada: traer todos los meses antes de exportar
+  if (firebaseBaseUrl()) {
+    const keys = (await cloudFetchMonthKeys()) || [];
+    for (const m of keys) {
+      const remote = await cloudFetchMonth(m);
+      if (remote) {
+        cloudMonthsSynced.add(m);
+        await ledgerUpsert(remote.map(r => ({ ...r, cloudSynced: true })), { overwrite: true });
+      }
+    }
+  }
+
+  const records = await ledgerGetAll();
+  if (records.length === 0) {
+    showKDSToast('Aún no hay ventas en el historial');
+    return;
+  }
+  await exportSalesWorkbook({
+    records,
+    periodLabel: 'Historial completo',
+    filename: `Escandon_Historial_${localDayKey(Date.now())}`,
+    includeMonthly: true,
+  });
 }
 
 // ══════════════════════════════════════════════

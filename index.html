@@ -473,7 +473,51 @@
           <button class="btn-close-shift" onclick="openCloseShiftModal()">
             Cerrar Turno
           </button>
-          <p class="sales-close-hint">Limpia los datos del día y regresa los contadores a cero.</p>
+          <label class="auto-export-toggle">
+            <input type="checkbox" id="auto-export-shift" onchange="setAutoExportPreference(this.checked)" />
+            <span>Descargar respaldo en Excel al cerrar turno</span>
+          </label>
+          <p class="sales-close-hint">Limpia el corte del día y regresa los contadores a cero. El historial mensual se conserva.</p>
+        </div>
+
+        <!-- HISTORIAL MENSUAL (BASE DE DATOS) + EXPORTACIÓN A EXCEL -->
+        <div class="sales-breakdown-card history-card">
+          <div class="minimal-group-title">
+            <span>HISTORIAL MENSUAL</span>
+            <span class="history-db-status" id="history-db-status">Este dispositivo</span>
+          </div>
+
+          <select id="history-month-select" class="history-month-select" onchange="onHistoryMonthChange(this.value)"></select>
+
+          <div class="history-stats-grid">
+            <div class="history-stat">
+              <span class="history-stat-label">Ganancias del mes</span>
+              <span class="history-stat-value accent" id="hist-total">$0</span>
+            </div>
+            <div class="history-stat">
+              <span class="history-stat-label">Pedidos</span>
+              <span class="history-stat-value" id="hist-orders">0</span>
+            </div>
+            <div class="history-stat">
+              <span class="history-stat-label">Promedio por día</span>
+              <span class="history-stat-value" id="hist-avg">$0</span>
+            </div>
+            <div class="history-stat">
+              <span class="history-stat-label">Días con venta</span>
+              <span class="history-stat-value" id="hist-days">0</span>
+            </div>
+          </div>
+
+          <div class="history-products-line" id="hist-products">🌮 0 · 🌭 0 · 💧 0 · 🥤 0</div>
+
+          <div class="history-days-list" id="hist-days-list">
+            <p class="history-empty">Sin ventas registradas este mes</p>
+          </div>
+
+          <div class="history-export-row">
+            <button class="btn-export-excel" onclick="exportSelectedMonthExcel()">📥 Exportar mes a Excel</button>
+            <button class="btn-export-secondary" onclick="exportAllHistoryExcel()">Exportar todo</button>
+          </div>
         </div>
       </div>
     </section>
@@ -483,7 +527,7 @@
     <div class="modal" id="shift-reset-modal">
       <h3 class="modal-title">¿Cerrar Turno?</h3>
       <p class="modal-sub" id="shift-modal-desc">
-        Se limpiarán todos los datos de ventas y las comandas del día, regresando los contadores a cero para empezar un nuevo día.
+        Se limpiará el corte y las comandas del día, regresando los contadores a cero. Las ventas quedan guardadas en el historial mensual.
       </p>
       <div class="modal-actions">
         <button class="btn-cancel" onclick="closeCloseShiftModal()">Cancelar</button>

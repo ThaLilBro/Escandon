@@ -1923,6 +1923,193 @@ button, input {
   cursor: pointer;
 }
 
+/* ─── RESPALDO AUTOMÁTICO AL CERRAR TURNO ───── */
+.auto-export-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-1);
+  cursor: pointer;
+  user-select: none;
+}
+
+.auto-export-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--brand-orange);
+  cursor: pointer;
+}
+
+/* ════════════════════════════════════════════════
+   HISTORIAL MENSUAL (BASE DE DATOS) + EXCEL
+════════════════════════════════════════════════ */
+.history-card {
+  margin-top: 6px;
+}
+
+.history-db-status {
+  color: var(--text-2);
+  text-transform: none;
+  letter-spacing: 0;
+  font-family: var(--font);
+  font-weight: 600;
+  font-size: 10.5px;
+}
+
+.history-db-status.cloud {
+  color: var(--led-green);
+}
+
+.history-month-select {
+  width: 100%;
+  height: 44px;
+  background: var(--bg-0);
+  border: 1px solid var(--line-active);
+  border-radius: var(--radius-sm);
+  color: var(--text-0);
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 700;
+  padding: 0 12px;
+  outline: none;
+  cursor: pointer;
+}
+
+.history-month-select:focus {
+  border-color: var(--brand-orange);
+}
+
+.history-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.history-stat {
+  background: var(--bg-0);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.history-stat-label {
+  font-size: 10.5px;
+  color: var(--text-2);
+  font-weight: 600;
+}
+
+.history-stat-value {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-0);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-stat-value.accent {
+  color: var(--led-green);
+}
+
+.history-products-line {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-1);
+  text-align: center;
+  padding: 2px 0;
+}
+
+.history-days-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.history-day-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 12.5px;
+}
+
+.history-day-row:last-child {
+  border-bottom: none;
+}
+
+.history-day-date {
+  color: var(--text-0);
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.history-day-orders {
+  color: var(--text-2);
+  font-size: 11.5px;
+  margin-left: auto;
+}
+
+.history-day-total {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--brand-orange);
+  min-width: 70px;
+  text-align: right;
+}
+
+.history-empty {
+  text-align: center;
+  color: var(--text-3);
+  font-size: 12.5px;
+  padding: 14px 0;
+}
+
+.history-export-row {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-export-excel {
+  flex: 1.6;
+  height: 46px;
+  background: var(--led-green);
+  color: #0a0a0a;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 13.5px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.btn-export-excel:active {
+  opacity: 0.85;
+}
+
+.btn-export-secondary {
+  flex: 1;
+  height: 46px;
+  background: var(--bg-2);
+  color: var(--text-0);
+  border: 1px solid var(--line-active);
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-export-secondary:active {
+  border-color: var(--led-green);
+  color: var(--led-green);
+}
+
 @media (max-width: 600px) {
   .order-card { width: 100%; }
   .kds-board { flex-direction: column; align-items: stretch; }
