@@ -7,8 +7,8 @@
   <meta name="description" content="Escandon — Selección rápida Tap-to-select para Tacos, Hot Dogs y Bebidas con rastreador en tiempo real." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css?v=20261118v7" />
 </head>
 <body>
 
@@ -25,13 +25,13 @@
 <div id="app-landing" class="landing">
   <div class="landing-inner">
     <div class="brand-block">
+      <span class="landing-kicker-pill">RESTAURANT OS · MULTI-TENANT POS</span>
       <div class="landing-logo">
         <span class="logo-icon">◈</span>
         <span class="logo-text brand-escandon">Escandon</span>
       </div>
       <div class="brand-credits">
-        <span>Powered by RestaurantOS</span>
-        <span>Designed by yanni glez</span>
+        <span>Arquitectura de Cuentas Separadas &amp; KDS en Tiempo Real</span>
       </div>
     </div>
 
@@ -41,27 +41,66 @@
     </div>
 
     <div class="landing-cards">
-      <button class="landing-card" id="btn-client" onclick="showView('client')">
+      <button class="landing-card primary-entry" id="btn-client" onclick="openClientWithMode('dine_in')">
         <div class="lc-row">
-          <span class="lc-icon">🌮</span>
+          <div class="lc-icon-box">🍽️</div>
           <div class="lc-texts">
-            <span class="lc-title">Ordenar Aquí</span>
-            <span class="lc-desc">Tacos, Hot Dogs y Bebidas al toque</span>
+            <div class="lc-title-row">
+              <span class="lc-title">Ordenar en Mesa</span>
+              <span class="lc-badge">Cuentas Separadas</span>
+            </div>
+            <span class="lc-desc">Pide en grupo desde tu mesa y paga solo lo tuyo con Apple Pay o tarjeta</span>
           </div>
           <span class="lc-arrow">→</span>
         </div>
       </button>
 
+      <div class="landing-card RemoteOrderCard">
+        <div class="lc-row">
+          <div class="lc-icon-box">🛵</div>
+          <div class="lc-texts">
+            <div class="lc-title-row">
+              <span class="lc-title">Pickup &amp; A Domicilio</span>
+              <span class="lc-badge pay-badge"> Pay · Pago Anticipado</span>
+            </div>
+            <span class="lc-desc">Pide por adelantado para recoger sin filas o recíbelo en tu puerta</span>
+          </div>
+        </div>
+        <div class="lc-mode-actions">
+          <button type="button" class="btn-lc-mode" onclick="openClientWithMode('pickup')">
+            <span>🛍️ Pickup (Para Llevar)</span>
+            <span>→</span>
+          </button>
+          <button type="button" class="btn-lc-mode" onclick="openClientWithMode('delivery')">
+            <span>🛵 Envío a Domicilio</span>
+            <span>→</span>
+          </button>
+        </div>
+      </div>
+
       <button class="landing-card" id="btn-kitchen" onclick="showView('kitchen')">
         <div class="lc-row">
-          <span class="lc-icon">🔒</span>
+          <div class="lc-icon-box">🔒</div>
           <div class="lc-texts">
-            <span class="lc-title">Cocina (KDS)</span>
-            <span class="lc-desc">Acceso privado con PIN</span>
+            <div class="lc-title-row">
+              <span class="lc-title">Cocina &amp; Finanzas (KDS)</span>
+              <span class="lc-badge subtle">PIN 12345</span>
+            </div>
+            <span class="lc-desc">Comandas en tiempo real, pagos Stripe, stock, QRs y Excel Ejecutivo</span>
           </div>
           <span class="lc-arrow">→</span>
         </div>
       </button>
+    </div>
+
+    <!-- Selector rápido de Sucursal / Inquilino para demostración SaaS -->
+    <div class="tenant-switcher-bar">
+      <span class="tenant-switcher-label">SUCURSAL ACTIVA (DEMO MULTI-DOMINIO)</span>
+      <div class="tenant-switcher-pills" id="landing-tenant-pills">
+        <button type="button" class="tenant-pill" data-tenant="escandon" onclick="switchActiveTenantDemo('escandon')">◈ Escandon</button>
+        <button type="button" class="tenant-pill" data-tenant="tacos-rey" onclick="switchActiveTenantDemo('tacos-rey')">👑 Tacos Rey</button>
+        <button type="button" class="tenant-pill" data-tenant="pescaderia-mar" onclick="switchActiveTenantDemo('pescaderia-mar')">🌊 Pescadería Mar</button>
+      </div>
     </div>
   </div>
 </div>
@@ -100,33 +139,76 @@
     <!-- A) FLUJO DE MENÚ Y SELECCIÓN POR TOQUES (TAP-TO-SELECT) -->
     <div id="client-menu-flow" class="client-menu-flow">
 
+      <!-- Selector de Modalidad: En Mesa vs. Pickup vs. A Domicilio -->
+      <div class="fulfillment-mode-tabs" id="fulfillment-mode-tabs">
+        <button type="button" class="fmode-tab active" id="fmode-dine_in" onclick="setFulfillmentMode('dine_in')">
+          <span>🍽️ En Mesa</span>
+        </button>
+        <button type="button" class="fmode-tab" id="fmode-pickup" onclick="setFulfillmentMode('pickup')">
+          <span>🛍️ Pickup</span>
+        </button>
+        <button type="button" class="fmode-tab" id="fmode-delivery" onclick="setFulfillmentMode('delivery')">
+          <span>🛵 A Domicilio</span>
+        </button>
+      </div>
+
+      <!-- Aviso de Pago Anticipado cuando elige Pickup o A Domicilio -->
+      <div class="prepay-mode-banner hidden" id="prepay-mode-banner">
+        <div class="prepay-banner-top">
+          <span class="prepay-badge" id="prepay-banner-badge">🔒 PAGO ANTICIPADO REQUERIDO</span>
+          <span class="prepay-wallets"> Pay · Stripe</span>
+        </div>
+        <p class="prepay-banner-desc" id="prepay-banner-desc">
+          Arma tu pedido y paga por adelantado desde tu celular para que cocina comience a prepararlo de inmediato.
+        </p>
+      </div>
+
+      <!-- Barra de Contexto de Mesa / Pickup / Domicilio -->
+      <button type="button" class="client-context-bar" id="client-context-bar" onclick="openIdentityPreselectModal()">
+        <div class="ctx-left">
+          <span class="ctx-dot"></span>
+          <span class="ctx-table-pill" id="ctx-table-pill">📍 Elegir Mesa</span>
+          <span class="ctx-sep">·</span>
+          <span class="ctx-guest-pill" id="ctx-guest-pill">👤 Tu nombre</span>
+        </div>
+        <span class="ctx-right-badge" id="ctx-group-pill">Cuentas separadas ✎</span>
+      </button>
+
+      <!-- Presencia en la mesa: quién más está pidiendo contigo -->
+      <div class="table-presence-strip hidden" id="table-presence-strip">
+        <div class="presence-avatars" id="presence-avatars"></div>
+        <span class="presence-text" id="presence-text">Tu mesa</span>
+      </div>
+
       <!-- 1. Selección inicial de base -->
       <section id="station-selector" class="station-selector">
         <div class="minimal-heading">
-          <span class="step-label">ELIGE TU BASE</span>
-          <h1>¿Qué se te antoja hoy?</h1>
+          <span class="step-label" id="menu-hero-kicker">MENÚ · TOCA PARA ARMAR</span>
+          <h1 id="menu-hero-title">¿Qué se te antoja hoy?</h1>
         </div>
 
         <div class="station-cards">
           <button class="station-card" onclick="selectStation('taco')">
             <div class="station-illustration" id="StationSvgTaco"></div>
             <div class="station-card-body">
+              <span class="station-kicker">AL MOMENTO · COMPLEMENTOS INCLUIDOS</span>
               <div class="station-card-top">
                 <h2>Tacos</h2>
                 <span class="price-tag">$28</span>
               </div>
-              <p>Tortilla sencilla o doble, bistec o longaniza y complementos incluidos.</p>
+              <p>Tortilla sencilla o doble, bistec o longaniza con cilantro, cebolla y salsa.</p>
             </div>
           </button>
 
           <button class="station-card" onclick="selectStation('hotdog')">
             <div class="station-illustration" id="StationSvgHotdog"></div>
             <div class="station-card-body">
+              <span class="station-kicker">CLÁSICO ARTESANAL · ADEREZOS INCLUIDOS</span>
               <div class="station-card-top">
                 <h2>Hot Dogs</h2>
                 <span class="price-tag">$35</span>
               </div>
-              <p>Pan suave con salchicha asada y todos los aderezos incluidos.</p>
+              <p>Pan suave con salchicha asada, aderezos clásicos, tomate y chiles curados.</p>
             </div>
           </button>
         </div>
@@ -175,11 +257,11 @@
         </div>
       </section>
 
-      <!-- Asistencia rápida en mesa desde el menú -->
-      <div class="service-assistance-card">
+      <!-- Asistencia rápida en mesa desde el menú (solo visible en modo En Mesa) -->
+      <div class="service-assistance-card" id="menu-table-assistance-card">
         <div class="minimal-group-title">
           <span>ASISTENCIA EN MESA</span>
-          <span class="service-live-tag">● Directo a cocina</span>
+          <span class="service-live-tag" id="menu-service-feedback">● Directo a cocina</span>
         </div>
         <div class="service-btns-row">
           <button type="button" class="btn-service-action" onclick="requestTableService('waiter')">
@@ -196,58 +278,144 @@
 
     <!-- B) RASTREADOR DE ESTATUS EN TIEMPO REAL (4 ESTADOS + LED) -->
     <section id="client-tracker-view" class="tracker-view hidden">
-      <div class="tracker-top">
-        <span class="tracker-order-num" id="tracker-order-num">ORDEN #001</span>
-        <span class="tracker-table-name" id="tracker-table-name">Mostrador</span>
+
+      <!-- Tarjeta héroe del estado (estilo Dynamic Island) -->
+      <div class="tracker-hero-card" id="tracker-hero-card" data-status="pending">
+        <div class="tracker-top">
+          <span class="tracker-order-num" id="tracker-order-num">ORDEN #001</span>
+          <span class="tracker-table-name" id="tracker-table-name">Mostrador</span>
+        </div>
+
+        <div class="tracker-hero-status">
+          <div class="tracker-status-pill">
+            <span class="led-dot" id="tracker-main-led"></span>
+            <h2 class="tracker-status-title" id="tracker-status-title">Pendiente</h2>
+          </div>
+          <p class="tracker-status-desc" id="tracker-status-desc">
+            Tu orden fue enviada y espera confirmación de cocina.
+          </p>
+        </div>
+
+        <div class="tracker-progress">
+          <div class="tracker-progress-fill" id="tracker-progress-fill"></div>
+        </div>
+
+        <div class="tracker-steps" id="tracker-steps">
+          <div class="tracker-step" data-step="pending">
+            <span class="step-node"></span>
+            <div class="step-info">
+              <span class="step-name">Enviado</span>
+              <span class="step-sub">A cocina</span>
+            </div>
+          </div>
+          <div class="tracker-step" data-step="received">
+            <span class="step-node"></span>
+            <div class="step-info">
+              <span class="step-name">Recibido</span>
+              <span class="step-sub">Confirmado</span>
+            </div>
+          </div>
+          <div class="tracker-step" data-step="preparing">
+            <span class="step-node"></span>
+            <div class="step-info">
+              <span class="step-name">Cocinando</span>
+              <span class="step-sub">Al momento</span>
+            </div>
+          </div>
+          <div class="tracker-step" data-step="ready">
+            <span class="step-node"></span>
+            <div class="step-info">
+              <span class="step-name" id="tracker-step-ready-title">Listo</span>
+              <span class="step-sub" id="tracker-step-ready-sub">¡Buen provecho!</span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <!-- Estado principal con indicador LED -->
-      <div class="tracker-hero-status">
-        <div class="tracker-status-pill">
-          <span class="led-dot" id="tracker-main-led"></span>
-          <h2 class="tracker-status-title" id="tracker-status-title">Pendiente</h2>
-        </div>
-        <p class="tracker-status-desc" id="tracker-status-desc">
-          Tu orden fue enviada y espera confirmación de cocina.
-        </p>
-      </div>
+      <!-- Detalles de Entrega (Pickup / A Domicilio) -->
+      <div class="tracker-fulfillment-box hidden" id="tracker-fulfillment-box"></div>
 
-      <!-- Línea de progreso minimalista de 4 fases -->
-      <div class="tracker-steps" id="tracker-steps">
-        <div class="tracker-step" data-step="pending">
-          <span class="step-node"></span>
-          <div class="step-info">
-            <span class="step-name">Pendiente</span>
-            <span class="step-sub">Orden enviada</span>
-          </div>
-        </div>
-        <div class="tracker-step" data-step="received">
-          <span class="step-node"></span>
-          <div class="step-info">
-            <span class="step-name">Recibido</span>
-            <span class="step-sub">Confirmado en cocina</span>
-          </div>
-        </div>
-        <div class="tracker-step" data-step="preparing">
-          <span class="step-node"></span>
-          <div class="step-info">
-            <span class="step-name">En preparación</span>
-            <span class="step-sub">Cocinando al momento</span>
-          </div>
-        </div>
-        <div class="tracker-step" data-step="ready">
-          <span class="step-node"></span>
-          <div class="step-info">
-            <span class="step-name">Listo</span>
-            <span class="step-sub">Pasa por tu pedido</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Botones de Asistencia en Tiempo Real (Llamar Mesero / Pedir la Cuenta) -->
-      <div class="service-assistance-card">
+      <!-- Quién está en tu mesa -->
+      <div class="tracker-presence-card hidden" id="tracker-presence-card">
         <div class="minimal-group-title">
-          <span>¿NECESITAS ALGO MÁS EN TU MESA?</span>
+          <span id="tracker-presence-title">EN TU MESA</span>
+          <span id="tracker-presence-count">1 persona</span>
+        </div>
+        <div class="tracker-presence-list" id="tracker-presence-list"></div>
+      </div>
+
+      <!-- Recibo digital: Mi Cuenta vs. Toda la Mesa (Split Bill) -->
+      <div class="tracker-order-summary receipt-card">
+        <div class="tracker-split-tabs" id="tracker-split-tabs">
+          <button type="button" class="split-tab active" id="tab-split-mine" onclick="setTrackerSplitView('mine')">
+            <span class="split-tab-title" id="tab-split-mine-label">👤 Mi Cuenta</span>
+            <span class="split-tab-amount" id="tab-split-mine-total">$0</span>
+          </button>
+          <button type="button" class="split-tab" id="tab-split-table" onclick="setTrackerSplitView('table')">
+            <span class="split-tab-title" id="tab-split-table-label">👥 Toda la Mesa</span>
+            <span class="split-tab-amount" id="tab-split-table-total">$0</span>
+          </button>
+        </div>
+
+        <div class="receipt-paper">
+          <div class="receipt-head">
+            <span class="receipt-brand"><span class="logo-icon small">◈</span> <span class="brand-escandon">Escandon</span></span>
+            <span class="receipt-paid-pill" id="tracker-paid-status-pill">POR PAGAR</span>
+          </div>
+          <div class="receipt-sub-meta">
+            <span class="receipt-meta" id="receipt-meta">—</span>
+          </div>
+          <div class="receipt-divider"></div>
+          <div class="minimal-group-title receipt-title-row">
+            <span id="tracker-summary-heading">DETALLE DE TU CUENTA</span>
+          </div>
+          <div class="tracker-items-list" id="tracker-items-list"></div>
+          <div class="receipt-divider"></div>
+          <div class="receipt-total-row">
+            <span>TOTAL</span>
+            <span id="tracker-order-total">$0</span>
+          </div>
+          <p class="receipt-foot" id="receipt-foot-text">IVA incluido · Precios en MXN</p>
+        </div>
+      </div>
+
+      <!-- PAGO DIGITAL EN MESA CON APPLE PAY & STRIPE CONNECT -->
+      <div class="digital-pay-card" id="tracker-digital-pay-card">
+        <div class="minimal-group-title">
+          <span>💳 PAGAR DESDE TU CELULAR (SIN ESPERAR)</span>
+          <span class="pay-methods-mini"> Pay · Stripe</span>
+        </div>
+        <div class="digital-pay-btns">
+          <button type="button" class="btn-apple-stripe-pay primary" id="btn-pay-my-share" onclick="openTrackerPaymentModal('mine')">
+            <span class="pay-btn-left">
+              <span class="apple-pay-mark"> Pay</span>
+              <span id="btn-pay-my-share-text">Pagar Mi Cuenta</span>
+            </span>
+            <span class="pay-btn-amt" id="btn-pay-my-share-amt">$0</span>
+          </button>
+          <button type="button" class="btn-apple-stripe-pay table-full hidden" id="btn-pay-full-table" onclick="openTrackerPaymentModal('table')">
+            <span class="pay-btn-left">
+              <span>👥</span>
+              <span id="btn-pay-full-table-text">Pagar Toda la Mesa</span>
+            </span>
+            <span class="pay-btn-amt" id="btn-pay-full-table-amt">$0</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Confirmación cuando la orden ya fue pagada con Apple Pay / Stripe -->
+      <div class="paid-confirmation-banner hidden" id="tracker-paid-confirmation-banner">
+        <div class="paid-conf-icon">✓</div>
+        <div class="paid-conf-texts">
+          <span class="paid-conf-title" id="paid-conf-title">Pago Verificado · Orden Pagada</span>
+          <span class="paid-conf-sub" id="paid-conf-sub">Transacción procesada de forma segura</span>
+        </div>
+      </div>
+
+      <!-- Asistencia y cuenta con mesero (solo visible en modo En Mesa) -->
+      <div class="service-assistance-card" id="tracker-table-assistance-card">
+        <div class="minimal-group-title">
+          <span>¿PREFIERES ASISTENCIA DEL PERSONAL?</span>
           <span class="service-live-tag" id="tracker-service-feedback">● En vivo</span>
         </div>
         <div class="service-btns-row">
@@ -255,29 +423,29 @@
             <span>🔔</span>
             <span>Llamar Mesero</span>
           </button>
-          <button type="button" class="btn-service-action bill" onclick="requestTableService('bill')">
+          <button type="button" class="btn-service-action bill" onclick="requestTableService('bill_individual')">
             <span>🧾</span>
-            <span>Pedir la Cuenta</span>
+            <span id="btn-bill-my-share-label">Pedir Cuenta Física</span>
           </button>
         </div>
-      </div>
-
-      <!-- Resumen minimalista de lo pedido -->
-      <div class="tracker-order-summary">
-        <div class="minimal-group-title">
-          <span>DETALLE DE TU ORDEN</span>
-          <span id="tracker-order-total">$0</span>
-        </div>
-        <div class="tracker-items-list" id="tracker-items-list"></div>
+        <button type="button" class="btn-service-action bill-full hidden" id="btn-bill-full-table" onclick="requestTableService('bill_table')">
+          <span>👥</span>
+          <span id="btn-bill-full-table-label">Pedir Cuenta Física de Toda la Mesa</span>
+        </button>
       </div>
     </section>
 
   </main>
 
-  <!-- ZONA INFERIOR DEL PULGAR (CONTROLES PRINCIPALES EN MÓVIL) -->
+  <!-- ZONA INFERIOR DEL PULGAR (DOCK FLOTANTE DE VIDRIO) -->
   <div class="thumb-dock" id="thumb-dock">
     <!-- Acción rápida para agregar el Taco/Hot Dog actual al carrito -->
     <div class="dock-builder-bar hidden" id="dock-builder-bar">
+      <div class="builder-qty-stepper" id="builder-qty-stepper">
+        <button type="button" class="bqty-btn" id="builder-qty-minus" onclick="changeBuilderDraftQty(-1)" aria-label="Disminuir cantidad">−</button>
+        <span class="bqty-val" id="builder-qty-val">1</span>
+        <button type="button" class="bqty-btn" id="builder-qty-plus" onclick="changeBuilderDraftQty(1)" aria-label="Aumentar cantidad">+</button>
+      </div>
       <button class="btn-dock-add" id="btn-add-built" onclick="addBuiltItemToCart()">
         <span id="btn-add-built-label">+ Agregar Taco</span>
         <span class="btn-dock-price" id="live-item-price">$28</span>
@@ -289,7 +457,10 @@
       <button class="dock-cart-trigger" onclick="toggleCart(true)">
         <span class="dock-count" id="bb-count">0</span>
         <div class="dock-cart-info">
-          <span class="dock-cart-label" id="bb-status-text">Tu pedido</span>
+          <div class="dock-cart-texts">
+            <span class="dock-cart-label" id="bb-status-text">Tu pedido</span>
+            <span class="dock-cart-sub" id="bb-table-line">Toca para ver tu pedido</span>
+          </div>
           <span class="dock-cart-total" id="bb-total-price">$0</span>
         </div>
       </button>
@@ -343,15 +514,167 @@
     </button>
   </div>
 
-  <!-- MODAL RÁPIDO NOMBRE / MESA -->
+  <!-- MODAL DINÁMICO: EN MESA (CUENTAS SEPARADAS) / PICKUP / A DOMICILIO -->
   <div class="modal-overlay" id="modal-overlay" onclick="closeOrderModal()"></div>
-  <div class="modal" id="order-modal">
-    <h3 class="modal-title">¿Tu nombre o mesa?</h3>
-    <p class="modal-sub">Para avisarte en cuanto esté listo</p>
-    <input class="modal-input" id="table-input" type="text" placeholder="Ej: Mesa 4 · Ana" maxlength="40" autocomplete="off" />
+  <div class="modal order-fulfillment-modal" id="order-modal">
+    <div class="modal-fmode-tabs" id="modal-fmode-tabs">
+      <button type="button" class="mfmode-tab active" data-fmode="dine_in" onclick="setFulfillmentMode('dine_in')">🍽️ En Mesa</button>
+      <button type="button" class="mfmode-tab" data-fmode="pickup" onclick="setFulfillmentMode('pickup')">🛍️ Pickup</button>
+      <button type="button" class="mfmode-tab" data-fmode="delivery" onclick="setFulfillmentMode('delivery')">🛵 Domicilio</button>
+    </div>
+
+    <span class="step-label" id="order-modal-kicker">CUENTAS SEPARADAS POR MESA</span>
+    <h3 class="modal-title" id="order-modal-title">¿Tu mesa y tu nombre?</h3>
+    <p class="modal-sub" id="order-modal-sub">Si están en grupo en la misma mesa, cada quien tendrá su propia cuenta individual.</p>
+
+    <!-- 1. Campo de Mesa (solo visible en modo En Mesa) -->
+    <div class="modal-field-block" id="modal-block-table">
+      <label class="modal-field-label" for="table-input">1. MESA O UBICACIÓN</label>
+      <div class="quick-table-chips" id="quick-table-chips">
+        <button type="button" class="table-chip" onclick="selectQuickTableChip('Mesa 1')">Mesa 1</button>
+        <button type="button" class="table-chip" onclick="selectQuickTableChip('Mesa 2')">Mesa 2</button>
+        <button type="button" class="table-chip" onclick="selectQuickTableChip('Mesa 3')">Mesa 3</button>
+        <button type="button" class="table-chip" onclick="selectQuickTableChip('Mesa 4')">Mesa 4</button>
+        <button type="button" class="table-chip" onclick="selectQuickTableChip('Mostrador')">Mostrador</button>
+      </div>
+      <input class="modal-input" id="table-input" type="text" placeholder="Ej: Mesa 4" maxlength="30" autocomplete="off" oninput="syncQuickTableChipSelection()" />
+    </div>
+
+    <!-- 2. Nombre del Cliente / Comensal (siempre visible) -->
+    <div class="modal-field-block" id="modal-block-guest">
+      <label class="modal-field-label" id="guest-name-label" for="guest-name-input">2. TU NOMBRE (COMENSAL)</label>
+      <input class="modal-input" id="guest-name-input" type="text" placeholder="Ej: Ana" maxlength="35" autocomplete="off" />
+    </div>
+
+    <!-- 3. Teléfono / WhatsApp (visible en Pickup y A Domicilio) -->
+    <div class="modal-field-block hidden" id="modal-block-phone">
+      <label class="modal-field-label" for="customer-phone-input">2. TELÉFONO / WHATSAPP (AVISO DE ESTATUS)</label>
+      <input class="modal-input" id="customer-phone-input" type="tel" placeholder="Ej: 55 1234 5678" maxlength="22" autocomplete="tel" />
+    </div>
+
+    <!-- 4. Horario de Recolección (solo visible en Pickup) -->
+    <div class="modal-field-block hidden" id="modal-block-pickup">
+      <label class="modal-field-label" for="pickup-time-input">3. ¿CUÁNDO PASAS A RECOGER?</label>
+      <div class="quick-table-chips" id="pickup-time-chips">
+        <button type="button" class="table-chip selected" onclick="selectPickupTimeChip('Lo antes posible (15-20 min)')">⚡ Lo antes posible (15-20 min)</button>
+        <button type="button" class="table-chip" onclick="selectPickupTimeChip('En 30 minutos')">🕒 En 30 min</button>
+        <button type="button" class="table-chip" onclick="selectPickupTimeChip('En 45 minutos')">🕓 En 45 min</button>
+      </div>
+      <input class="modal-input" id="pickup-time-input" type="text" value="Lo antes posible (15-20 min)" placeholder="Ej: En 20 minutos" maxlength="40" />
+    </div>
+
+    <!-- 5. Dirección Completa y Referencias (solo visible en A Domicilio) -->
+    <div class="modal-field-block hidden" id="modal-block-delivery">
+      <label class="modal-field-label" for="delivery-address-input">3. DIRECCIÓN DE ENTREGA (CALLE, NÚMERO Y COLONIA)</label>
+      <input class="modal-input" id="delivery-address-input" type="text" placeholder="Ej: Av. Nuevo León 120, Condesa" maxlength="90" autocomplete="street-address" />
+      <label class="modal-field-label" for="delivery-notes-input" style="margin-top:6px;">4. INTERIOR / REFERENCIAS PARA EL REPARTIDOR</label>
+      <input class="modal-input" id="delivery-notes-input" type="text" placeholder="Ej: Depto 302, portón negro" maxlength="70" />
+      <div class="delivery-fee-pill">
+        <span>🛵 Envío a domicilio</span>
+        <span>+$25.00 MXN</span>
+      </div>
+    </div>
+
+    <!-- Aviso de pago anticipado obligatorio en Pickup / Domicilio -->
+    <div class="modal-prepay-note hidden" id="modal-prepay-note">
+      <span>🔒</span>
+      <span>Para procesar órdenes de <strong>Pickup</strong> o <strong>A Domicilio</strong>, se realiza el pago anticipado con <strong>Apple Pay</strong> o <strong>Tarjeta</strong> en el siguiente paso.</span>
+    </div>
+
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeOrderModal()">Cancelar</button>
       <button class="btn-confirm" id="btn-submit-order" onclick="submitOrder()">Confirmar y Pedir</button>
+    </div>
+  </div>
+
+  <!-- MODAL DE CHECKOUT DIGITAL: STRIPE CONNECT + APPLE PAY / WALLET -->
+  <div class="modal-overlay" id="payment-modal-overlay" onclick="closePaymentModal()"></div>
+  <div class="modal payment-checkout-modal" id="payment-modal">
+    <div class="pay-modal-top">
+      <div class="pay-merchant-badge">
+        <span class="pay-lock-dot">🔒</span>
+        <span>Pago directo a <strong class="brand-escandon">Escandon</strong></span>
+      </div>
+      <span class="pay-connect-acct" id="pay-connect-acct-id">acct_escandon_mx</span>
+    </div>
+
+    <h3 class="modal-title" id="pay-modal-title">Checkout Seguro</h3>
+    <p class="modal-sub" id="pay-modal-subtitle">Fondos aislados con encriptación TLS · Stripe Connect</p>
+
+    <!-- Selector rápido de Propina -->
+    <div class="pay-tip-block">
+      <span class="modal-field-label">PROPINA OPCIONAL PARA EL EQUIPO</span>
+      <div class="pay-tip-pills" id="pay-tip-pills">
+        <button type="button" class="tip-pill" data-tip="0" onclick="selectPaymentTipPct(0)">Sin propina</button>
+        <button type="button" class="tip-pill active" data-tip="10" onclick="selectPaymentTipPct(10)">10%</button>
+        <button type="button" class="tip-pill" data-tip="15" onclick="selectPaymentTipPct(15)">15%</button>
+        <button type="button" class="tip-pill" data-tip="20" onclick="selectPaymentTipPct(20)">20%</button>
+      </div>
+    </div>
+
+    <!-- Resumen financiero del pago -->
+    <div class="pay-summary-box">
+      <div class="pay-sum-row">
+        <span id="pay-sum-concept-label">Consumo de alimentos</span>
+        <span id="pay-sum-subtotal">$0.00</span>
+      </div>
+      <div class="pay-sum-row hidden" id="pay-sum-delivery-row">
+        <span>🛵 Envío a domicilio</span>
+        <span id="pay-sum-delivery">$25.00</span>
+      </div>
+      <div class="pay-sum-row">
+        <span id="pay-sum-tip-label">Propina (10%)</span>
+        <span id="pay-sum-tip">$0.00</span>
+      </div>
+      <div class="pay-sum-row total">
+        <span>TOTAL A PAGAR (MXN)</span>
+        <span id="pay-sum-grand-total">$0.00</span>
+      </div>
+    </div>
+
+    <!-- 1. Botón Express de Apple Pay / Wallet -->
+    <button type="button" class="btn-wallet-apple-pay" id="btn-trigger-apple-pay" onclick="payWithApplePayWallet()">
+      <span class="ap-logo"> Pay</span>
+      <span class="ap-sub" id="btn-apple-pay-amount-label">Pago con 1 toque</span>
+    </button>
+
+    <!-- Simulación interactiva de hoja biométrica Apple Pay (Face ID / Touch ID) -->
+    <div class="apple-pay-biometric-box hidden" id="apple-pay-biometric-box">
+      <div class="ap-sheet-head">
+        <span class="ap-sheet-brand"> Pay</span>
+        <span class="ap-sheet-card">Visa •••• 4242 · Wallet</span>
+      </div>
+      <div class="ap-sheet-body">
+        <div class="ap-faceid-ring" id="ap-faceid-ring">☺</div>
+        <span class="ap-faceid-status" id="ap-faceid-status">Verificando Face ID...</span>
+      </div>
+    </div>
+
+    <div class="pay-or-divider">
+      <span>O PAGA CON TARJETA (STRIPE)</span>
+    </div>
+
+    <!-- 2. Formulario de Tarjeta (Stripe Elements Style) -->
+    <div class="stripe-card-form">
+      <div class="stripe-form-top">
+        <span class="modal-field-label">TARJETA DE CRÉDITO O DÉBITO</span>
+        <button type="button" class="btn-fill-demo-card" onclick="fillStripeDemoCard()">
+          ⚡ Autocompletar Demo (4242)
+        </button>
+      </div>
+      <input class="modal-input stripe-input" id="stripe-card-num" type="text" inputmode="numeric" placeholder="4242 •••• •••• 4242" maxlength="19" autocomplete="cc-number" oninput="formatStripeCardInput(this)" />
+      <div class="stripe-row-2">
+        <input class="modal-input stripe-input" id="stripe-card-exp" type="text" inputmode="numeric" placeholder="MM/AA" maxlength="5" autocomplete="cc-exp" oninput="formatStripeExpInput(this)" />
+        <input class="modal-input stripe-input" id="stripe-card-cvc" type="password" inputmode="numeric" placeholder="CVC" maxlength="4" autocomplete="cc-csc" />
+      </div>
+      <p class="stripe-error-msg hidden" id="stripe-error-msg">Verifica los datos de tu tarjeta</p>
+    </div>
+
+    <div class="modal-actions" style="margin-top:12px;">
+      <button type="button" class="btn-cancel" onclick="closePaymentModal()">Cancelar</button>
+      <button type="button" class="btn-confirm btn-stripe-submit" id="btn-stripe-submit" onclick="payWithStripeCard()">
+        🔒 Pagar con Tarjeta
+      </button>
     </div>
   </div>
 
@@ -450,91 +773,158 @@
       </div>
     </div>
 
-    <!-- SUB-VISTA 2: PANEL DE CORTE DEL DÍA ("VENTAS DEL DÍA") -->
+    <!-- SUB-VISTA 2: PANEL DE CORTE DEL DÍA ("VENTAS DEL DÍA" + EXCEL EJECUTIVO) -->
     <section id="kds-sales-section" class="kds-sales-section hidden">
       <div class="sales-container">
         <div class="sales-header-row">
           <div>
-            <span class="step-label">CORTE DEL DÍA</span>
+            <span class="step-label">FINANZAS &amp; REPORTES EJECUTIVOS</span>
             <h2 class="sales-title">Ventas del Día</h2>
           </div>
-          <button class="btn-sales-back" onclick="setKDSSubView('comandas')">← Comandas</button>
+          <div class="sales-header-actions">
+            <button type="button" class="btn-export-quick" onclick="exportCurrentShiftOrMonthExcel()">
+              📥 Descargar Excel (.xlsx)
+            </button>
+            <button class="btn-sales-back" onclick="setKDSSubView('comandas')">← Comandas</button>
+          </div>
         </div>
 
-        <!-- Total de Ganancias ($) -->
+        <!-- Tarjeta Principal + KPIs Ejecutivos del Turno -->
         <div class="sales-hero-card">
-          <span class="sales-hero-label">TOTAL DE GANANCIAS ($)</span>
-          <div class="sales-hero-amount" id="sales-total-money">$0</div>
+          <div class="sales-hero-top">
+            <div>
+              <span class="sales-hero-label">INGRESOS BRUTOS DEL TURNO ($ MXN)</span>
+              <div class="sales-hero-amount" id="sales-total-money">$0</div>
+            </div>
+            <span class="sales-tenant-badge"><span class="brand-escandon">Escandon</span> · Corte Activo</span>
+          </div>
           <div class="sales-hero-meta">
             <span class="led-dot led-ready"></span>
             <span id="sales-orders-count">0 pedidos marcados como Listos</span>
           </div>
+
+          <div class="sales-kpi-mini-grid">
+            <div class="sales-kpi-mini">
+              <span class="kpi-mini-label">Ticket Promedio</span>
+              <span class="kpi-mini-value" id="sales-avg-ticket">$0</span>
+            </div>
+            <div class="sales-kpi-mini">
+              <span class="kpi-mini-label">Unidades Vendidas</span>
+              <span class="kpi-mini-value" id="sales-total-units">0 vendidos</span>
+            </div>
+            <div class="sales-kpi-mini">
+              <span class="kpi-mini-label">Platillo Líder</span>
+              <span class="kpi-mini-value" id="sales-top-product">—</span>
+            </div>
+          </div>
         </div>
 
-        <!-- Desglose: Productos Vendidos -->
+        <!-- Desglose: Productos Vendidos con Barra de Participación -->
         <div class="sales-breakdown-card">
           <div class="minimal-group-title">
-            <span>PRODUCTOS VENDIDOS</span>
-            <span id="sales-total-units">0 vendidos</span>
+            <span>RENDIMIENTO POR CATEGORÍA</span>
+            <span>CANT. · IMPORTE</span>
           </div>
 
           <div class="sales-products-list">
             <div class="sales-product-row">
-              <div class="sales-prod-left">
-                <span class="sales-prod-emoji">🌮</span>
-                <div class="sales-prod-texts">
-                  <span class="sales-prod-name">Tacos</span>
-                  <span class="sales-prod-sub">$28 c/u</span>
+              <div class="sales-prod-main">
+                <div class="sales-prod-left">
+                  <span class="sales-prod-emoji">🌮</span>
+                  <div class="sales-prod-texts">
+                    <span class="sales-prod-name">Tacos</span>
+                    <span class="sales-prod-sub">$28 c/u · Sencillo o Doble</span>
+                  </div>
+                </div>
+                <div class="sales-prod-right">
+                  <span class="sales-prod-qty" id="sales-qty-tacos">0</span>
+                  <span class="sales-prod-subtotal" id="sales-amt-tacos">$0</span>
                 </div>
               </div>
-              <div class="sales-prod-right">
-                <span class="sales-prod-qty" id="sales-qty-tacos">0</span>
-                <span class="sales-prod-subtotal" id="sales-amt-tacos">$0</span>
+              <div class="sales-prod-bar-track">
+                <div class="sales-prod-bar-fill" id="sales-bar-tacos" style="width: 0%"></div>
               </div>
             </div>
 
             <div class="sales-product-row">
-              <div class="sales-prod-left">
-                <span class="sales-prod-emoji">🌭</span>
-                <div class="sales-prod-texts">
-                  <span class="sales-prod-name">Hot Dogs</span>
-                  <span class="sales-prod-sub">$35 c/u</span>
+              <div class="sales-prod-main">
+                <div class="sales-prod-left">
+                  <span class="sales-prod-emoji">🌭</span>
+                  <div class="sales-prod-texts">
+                    <span class="sales-prod-name">Hot Dogs</span>
+                    <span class="sales-prod-sub">$35 c/u · Clásico Artesanal</span>
+                  </div>
+                </div>
+                <div class="sales-prod-right">
+                  <span class="sales-prod-qty" id="sales-qty-hotdogs">0</span>
+                  <span class="sales-prod-subtotal" id="sales-amt-hotdogs">$0</span>
                 </div>
               </div>
-              <div class="sales-prod-right">
-                <span class="sales-prod-qty" id="sales-qty-hotdogs">0</span>
-                <span class="sales-prod-subtotal" id="sales-amt-hotdogs">$0</span>
+              <div class="sales-prod-bar-track">
+                <div class="sales-prod-bar-fill" id="sales-bar-hotdogs" style="width: 0%"></div>
               </div>
             </div>
 
             <div class="sales-product-row">
-              <div class="sales-prod-left">
-                <span class="sales-prod-emoji">💧</span>
-                <div class="sales-prod-texts">
-                  <span class="sales-prod-name">Aguas</span>
-                  <span class="sales-prod-sub" id="sales-sub-aguas">$25 c/u · Jamaica y Horchata</span>
+              <div class="sales-prod-main">
+                <div class="sales-prod-left">
+                  <span class="sales-prod-emoji">💧</span>
+                  <div class="sales-prod-texts">
+                    <span class="sales-prod-name">Aguas Frescas</span>
+                    <span class="sales-prod-sub" id="sales-sub-aguas">$25 c/u · Jamaica y Horchata</span>
+                  </div>
+                </div>
+                <div class="sales-prod-right">
+                  <span class="sales-prod-qty" id="sales-qty-aguas">0</span>
+                  <span class="sales-prod-subtotal" id="sales-amt-aguas">$0</span>
                 </div>
               </div>
-              <div class="sales-prod-right">
-                <span class="sales-prod-qty" id="sales-qty-aguas">0</span>
-                <span class="sales-prod-subtotal" id="sales-amt-aguas">$0</span>
+              <div class="sales-prod-bar-track">
+                <div class="sales-prod-bar-fill" id="sales-bar-aguas" style="width: 0%"></div>
               </div>
             </div>
 
             <div class="sales-product-row">
-              <div class="sales-prod-left">
-                <span class="sales-prod-emoji">🥤</span>
-                <div class="sales-prod-texts">
-                  <span class="sales-prod-name">Coca-Colas</span>
-                  <span class="sales-prod-sub">$30 c/u · Retornable 500ml</span>
+              <div class="sales-prod-main">
+                <div class="sales-prod-left">
+                  <span class="sales-prod-emoji">🥤</span>
+                  <div class="sales-prod-texts">
+                    <span class="sales-prod-name">Coca-Colas</span>
+                    <span class="sales-prod-sub">$30 c/u · Retornable 500ml</span>
+                  </div>
+                </div>
+                <div class="sales-prod-right">
+                  <span class="sales-prod-qty" id="sales-qty-cocas">0</span>
+                  <span class="sales-prod-subtotal" id="sales-amt-cocas">$0</span>
                 </div>
               </div>
-              <div class="sales-prod-right">
-                <span class="sales-prod-qty" id="sales-qty-cocas">0</span>
-                <span class="sales-prod-subtotal" id="sales-amt-cocas">$0</span>
+              <div class="sales-prod-bar-track">
+                <div class="sales-prod-bar-fill" id="sales-bar-cocas" style="width: 0%"></div>
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- VISTA PREVIA VISUAL DE LA TABLA DE EXCEL EJECUTIVA + DATOS DEMO -->
+        <div class="sales-breakdown-card excel-preview-card">
+          <div class="excel-preview-header">
+            <div>
+              <span class="step-label">DISEÑO CONTABLE MEJORADO (.XLSX)</span>
+              <h3 class="excel-preview-title">Tabla Ejecutiva de Excel</h3>
+            </div>
+            <div class="excel-preview-btns">
+              <button type="button" class="btn-seed-demo" onclick="seedDemoSalesForExcel()">
+                ✨ Cargar Datos Demo
+              </button>
+              <button type="button" class="btn-export-excel-sm" onclick="exportCurrentShiftOrMonthExcel()">
+                📥 Descargar .XLSX
+              </button>
+            </div>
+          </div>
+          <p class="excel-preview-desc">
+            Tu archivo Excel ahora incluye cabecera corporativa de la sucursal, tarjetas KPI financieras, formato contable en pesos (`$#,##0.00`), porcentaje de participación y desglose por Mesa y Comensal.
+          </p>
+          <div class="excel-sheet-preview-wrap" id="excel-sheet-preview-wrap"></div>
         </div>
 
         <!-- Botón Cerrar Turno -->
@@ -544,7 +934,7 @@
           </button>
           <label class="auto-export-toggle">
             <input type="checkbox" id="auto-export-shift" onchange="setAutoExportPreference(this.checked)" />
-            <span>Descargar respaldo en Excel al cerrar turno</span>
+            <span>Descargar respaldo en Excel Ejecutivo al cerrar turno</span>
           </label>
           <p class="sales-close-hint">Limpia el corte del día y regresa los contadores a cero. El historial mensual se conserva.</p>
         </div>
@@ -552,7 +942,7 @@
         <!-- HISTORIAL MENSUAL (BASE DE DATOS) + EXPORTACIÓN A EXCEL -->
         <div class="sales-breakdown-card history-card">
           <div class="minimal-group-title">
-            <span>HISTORIAL MENSUAL</span>
+            <span>HISTORIAL MENSUAL CONSOLIDADO</span>
             <span class="history-db-status" id="history-db-status">Este dispositivo</span>
           </div>
 
@@ -584,8 +974,8 @@
           </div>
 
           <div class="history-export-row">
-            <button class="btn-export-excel" onclick="exportSelectedMonthExcel()">📥 Exportar mes a Excel</button>
-            <button class="btn-export-secondary" onclick="exportAllHistoryExcel()">Exportar todo</button>
+            <button class="btn-export-excel" onclick="exportSelectedMonthExcel()">📥 Exportar mes a Excel Ejecutivo</button>
+            <button class="btn-export-secondary" onclick="exportAllHistoryExcel()">Exportar historial</button>
           </div>
         </div>
       </div>
@@ -676,6 +1066,6 @@
 
 <!-- Sincronización multi-dispositivo en tiempo real -->
 <script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
-<script src="app.js"></script>
+<script src="app.js?v=20261118v7"></script>
 </body>
 </html>

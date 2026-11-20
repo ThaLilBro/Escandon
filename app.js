@@ -8,7 +8,7 @@
 'use strict';
 
 // ══════════════════════════════════════════════
-//  CONFIGURACIÓN DE NUBE Y SEGURIDAD KDS
+//  CONFIGURACIÓN DE NUBE, MULTI-TENANT Y SEGURIDAD KDS
 // ══════════════════════════════════════════════
 const KDS_REQUIRED_PIN = '12345';
 
@@ -20,6 +20,37 @@ const CLOUD_CONFIG = {
   ],
   // Base de datos en la nube (Firebase Realtime Database)
   firebaseDatabaseURL: 'https://escandon-taquerias-default-rtdb.firebaseio.com/',
+};
+
+// Catálogo de inquilinos (Multi-Tenant SaaS). Cualquier slug nuevo también se aísla automáticamente.
+const TENANT_PROFILES = {
+  'escandon': {
+    id: 'escandon',
+    name: 'Escandon',
+    accent: '#ff6b1a',
+    accentSoft: 'rgba(255, 107, 26, 0.12)',
+    pin: '12345',
+    stripeAccountId: 'acct_1QEscandonMX01',
+    deliveryFee: 25,
+  },
+  'tacos-rey': {
+    id: 'tacos-rey',
+    name: 'Tacos Rey',
+    accent: '#f59e0b',
+    accentSoft: 'rgba(245, 158, 11, 0.14)',
+    pin: '12345',
+    stripeAccountId: 'acct_1QTacosReyMX02',
+    deliveryFee: 25,
+  },
+  'pescaderia-mar': {
+    id: 'pescaderia-mar',
+    name: 'Pescadería Mar',
+    accent: '#0ea5e9',
+    accentSoft: 'rgba(14, 165, 233, 0.14)',
+    pin: '12345',
+    stripeAccountId: 'acct_1QPescaderiaMX03',
+    deliveryFee: 25,
+  },
 };
 
 // Metadatos de los 4 estados del pedido y colores de LED
@@ -247,7 +278,9 @@ let kdsSubView           = 'comandas'; // 'comandas' | 'sales' | 'stock' | 'qrs'
 let orderCounter         = 0;
 let kdsUnlocked          = false;
 let upsellOfferedForCart = false;
-let pendingServiceType   = null; // 'waiter' | 'bill'
+let pendingServiceType   = null; // 'waiter' | 'bill_individual' | 'bill_table'
+let currentGuestName     = '';   // Nombre del comensal en este dispositivo (ej: 'Ana')
+let trackerSplitMode     = 'mine'; // 'mine' (Mi Cuenta) | 'table' (Toda la Mesa)
 
 const DEVICE_ID = 'dev_' + Math.random().toString(36).slice(2, 10);
 
@@ -321,12 +354,39 @@ function playKitchenBell() {
     const gain = sharedAudioCtx.createGain();
     osc.type = 'sine';
     osc.frequency.setValueAtTime(880, now);
-    gain.gain.setValueAtTime(0.14, now);
+    gain.gain.setValueAtTime(0.18, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
     osc.connect(gain);
     gain.connect(sharedAudioCtx.destination);
     osc.start(now);
     osc.stop(now + 0.36);
+  } catch (e) {}
+}
+
+// Timbre triple más llamativo cuando una mesa llama al mesero o pide la cuenta
+function playKitchenServiceAlertSound() {
+  if (currentView !== 'kitchen' || !kdsUnlocked) return;
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    if (!sharedAudioCtx) sharedAudioCtx = new AudioCtx();
+    if (sharedAudioCtx.state === 'suspended') sharedAudioCtx.resume();
+
+    const now = sharedAudioCtx.currentTime;
+    [987.77, 1318.51, 987.77].forEach((freq, idx) => {
+      const start = now + idx * 0.14;
+      const osc  = sharedAudioCtx.createOscillator();
+      const gain = sharedAudioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, start);
+      gain.gain.setValueAtTime(0.001, start);
+      gain.gain.linearRampToValueAtTime(0.26, start + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + 0.13);
+      osc.connect(gain);
+      gain.connect(sharedAudioCtx.destination);
+      osc.start(start);
+      osc.stop(start + 0.135);
+    });
   } catch (e) {}
 }
 
@@ -338,27 +398,61 @@ document.addEventListener('click', unlockAudioContext, { once: true });
 //  4. ALERTAS VISUALES EN TIEMPO REAL (PUSH IN-APP)
 // ══════════════════════════════════════════════
 let pushHideTimer = null;
+const notifiedServiceCallIds = new Set();
 
-function showStatusPushNotification(newStatus, orderNum) {
-  const meta = STATUS_META[newStatus];
-  if (!meta) return;
-
+function showCustomPushBanner({ ledClass = 'led-preparing', kicker = 'AVISO EN VIVO', message = '' }) {
   const bannerEl = document.getElementById('status-push-banner');
   const dotEl    = document.getElementById('push-led-dot');
   const kickerEl = document.getElementById('push-kicker');
   const msgEl    = document.getElementById('push-message');
 
   if (bannerEl && dotEl && kickerEl && msgEl) {
-    dotEl.className = `led-dot ${meta.ledClass}`;
-    kickerEl.textContent = `ORDEN #${String(orderNum).padStart(3, '0')} · ${meta.pushTitle}`;
-    msgEl.textContent = meta.pushMsg;
+    dotEl.className = `led-dot ${ledClass}`;
+    kickerEl.textContent = kicker;
+    msgEl.textContent = message;
 
     bannerEl.classList.add('show');
     if (pushHideTimer) clearTimeout(pushHideTimer);
     pushHideTimer = setTimeout(() => {
       bannerEl.classList.remove('show');
-    }, 4500);
+    }, 5000);
   }
+}
+
+function checkAndNotifyNewServiceCalls() {
+  if (!Array.isArray(serviceCalls) || serviceCalls.length === 0) return;
+  let newestUnseen = null;
+  serviceCalls.forEach(c => {
+    if (c && c.id && !notifiedServiceCallIds.has(c.id)) {
+      if (currentView === 'kitchen' && kdsUnlocked) {
+        notifiedServiceCallIds.add(c.id);
+        newestUnseen = c;
+      }
+    }
+  });
+
+  if (newestUnseen && currentView === 'kitchen' && kdsUnlocked) {
+    const isBill = newestUnseen.type === 'bill';
+    showCustomPushBanner({
+      ledClass: isBill ? 'led-received' : 'led-preparing',
+      kicker: isBill ? '🧾 SOLICITUD DE CUENTA EN MESA' : '🔔 LLAMADA DE MESERO EN MESA',
+      message: isBill
+        ? `${newestUnseen.table} pide la cuenta${newestUnseen.total ? ` ($${newestUnseen.total})` : ''}`
+        : `${newestUnseen.table} solicita al mesero en su mesa`,
+    });
+    playKitchenServiceAlertSound();
+  }
+}
+
+function showStatusPushNotification(newStatus, orderNum) {
+  const meta = STATUS_META[newStatus];
+  if (!meta) return;
+
+  showCustomPushBanner({
+    ledClass: meta.ledClass,
+    kicker: `ORDEN #${String(orderNum).padStart(3, '0')} · ${meta.pushTitle}`,
+    message: meta.pushMsg,
+  });
 
   // Sonido corto y agradable ÚNICAMENTE cuando alcanza "Listo"
   if (newStatus === 'ready') {
@@ -389,17 +483,116 @@ function notifyClientIfMyOrderChanged(orderId, prevStatus, newStatus, orderNum) 
 }
 
 // ══════════════════════════════════════════════
-//  MOTOR DE SINCRONIZACIÓN EN TIEMPO REAL (INTACTO)
+//  MOTOR MULTI-RESTAURANTE (MULTI-TENANT) + SINCRONIZACIÓN
 // ══════════════════════════════════════════════
-const localChannel = new BroadcastChannel('restaurant-kds');
+const urlParams = new URLSearchParams(window.location.search);
+
+function resolveTenantId() {
+  // 1. Parámetro explícito en URL (?restaurante=tacos-rey, ?r=tacos-rey, ?sucursal=tacos-rey)
+  const fromParam = (
+    urlParams.get('restaurante') ||
+    urlParams.get('r') ||
+    urlParams.get('tenant') ||
+    urlParams.get('sucursal') ||
+    ''
+  ).trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+
+  if (fromParam) {
+    return fromParam === 'escandon-main' ? 'escandon' : fromParam;
+  }
+
+  // 2. Subdominio dinámico (ej: tacosrey.restaurantos.com → 'tacosrey')
+  const host = (window.location.hostname || '').toLowerCase();
+  if (
+    host &&
+    host !== 'localhost' &&
+    host !== '127.0.0.1' &&
+    !host.endsWith('.github.io')
+  ) {
+    const parts = host.split('.');
+    if (parts.length >= 3 && parts[0] !== 'www') {
+      const sub = parts[0].replace(/[^a-z0-9_-]/g, '');
+      if (sub) return sub;
+    }
+  }
+
+  return 'escandon';
+}
+
+function formatSlugAsTitle(slug) {
+  return String(slug || 'Escandon')
+    .split(/[-_]+/)
+    .filter(Boolean)
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+}
+
+const tenantId  = resolveTenantId();
+const branchKey = tenantId; // Identificador aislado para toda la base de datos de este restaurante
+
+function getActiveTenantProfile() {
+  if (TENANT_PROFILES[tenantId]) return TENANT_PROFILES[tenantId];
+  return {
+    id: tenantId,
+    name: formatSlugAsTitle(tenantId),
+    accent: '#ff6b1a',
+    accentSoft: 'rgba(255, 107, 26, 0.12)',
+    pin: KDS_REQUIRED_PIN,
+    stripeAccountId: `acct_1Q_${tenantId}`,
+    deliveryFee: 25,
+  };
+}
+
+function applyTenantBranding() {
+  const profile = getActiveTenantProfile();
+  if (typeof document === 'undefined') return;
+  document.title = `${profile.name} — Pedidos en Tiempo Real`;
+  if (document.documentElement && document.documentElement.style) {
+    document.documentElement.style.setProperty('--brand-orange', profile.accent);
+    document.documentElement.style.setProperty('--brand-orange-soft', profile.accentSoft);
+  }
+  document.querySelectorAll('.brand-escandon').forEach(el => {
+    el.textContent = profile.name;
+  });
+  const acctEl = document.getElementById('pay-connect-acct-id');
+  if (acctEl) acctEl.textContent = profile.stripeAccountId || `acct_${profile.id}`;
+  document.querySelectorAll('#landing-tenant-pills .tenant-pill').forEach(btn => {
+    const slug = btn.dataset ? btn.dataset.tenant : '';
+    btn.classList.toggle('active', slug === tenantId);
+  });
+}
+
+function switchActiveTenantDemo(targetSlug) {
+  const clean = String(targetSlug || 'escandon').trim().toLowerCase();
+  const url = new URL(window.location.href);
+  if (clean === 'escandon') {
+    url.searchParams.delete('r');
+    url.searchParams.delete('restaurante');
+  } else {
+    url.searchParams.set('r', clean);
+  }
+  window.location.href = url.toString();
+}
+
+function storageKey(name) {
+  return `kds-${tenantId}-${name}`;
+}
+
+function getTenantQueryParam() {
+  const explicitParam = urlParams.get('restaurante') || urlParams.get('r') || urlParams.get('sucursal');
+  if (explicitParam || tenantId !== 'escandon') {
+    return `&r=${encodeURIComponent(tenantId)}`;
+  }
+  return '';
+}
+
+const localChannel = new BroadcastChannel(`restaurant-kds-${tenantId}`);
 let mqttClient       = null;
 let cloudConnected   = false;
 let currentBrokerIdx = 0;
 
-const urlParams    = new URLSearchParams(window.location.search);
-const branchKey    = (urlParams.get('sucursal') || 'escandon-main').replace(/[^a-zA-Z0-9_-]/g, '');
-const TOPIC_STATE  = `${CLOUD_CONFIG.channelNamespace}/${branchKey}/state`;
-const TOPIC_EVENTS = `${CLOUD_CONFIG.channelNamespace}/${branchKey}/events`;
+const TOPIC_STATE  = `${CLOUD_CONFIG.channelNamespace}/${tenantId}/state`;
+const TOPIC_EVENTS = `${CLOUD_CONFIG.channelNamespace}/${tenantId}/events`;
 
 function updateCloudStatusUI(isOnline) {
   cloudConnected = isOnline;
@@ -496,18 +689,18 @@ function handleIncomingEvent(type, payload, fromRemote = false) {
         renderDrinksSection();
         if (currentStation) renderBuilderWorkspace();
       }
-      if (kdsUnlocked && kdsSubView === 'stock') {
-        renderKDSStockPanel();
-      }
+      renderKDSStockPanel();
     }
   } else if (type === 'SERVICE_CALL') {
-    if (payload && payload.id && !serviceCalls.some(c => c.id === payload.id)) {
-      // Reemplazar llamada previa del mismo tipo y misma mesa para no duplicar
-      serviceCalls = serviceCalls.filter(c => !(c.table === payload.table && c.type === payload.type));
-      serviceCalls.push(payload);
-      persistOrders();
+    if (payload && payload.id) {
+      if (!serviceCalls.some(c => c.id === payload.id)) {
+        // Reemplazar llamada previa del mismo tipo y misma mesa para no duplicar
+        serviceCalls = serviceCalls.filter(c => !(c.table === payload.table && c.type === payload.type));
+        serviceCalls.push(payload);
+        persistOrders();
+      }
       renderKDSServiceAlerts();
-      if (fromRemote) playKitchenBell();
+      checkAndNotifyNewServiceCalls();
     }
   } else if (type === 'SERVICE_RESOLVE') {
     if (payload && payload.id) {
@@ -515,21 +708,55 @@ function handleIncomingEvent(type, payload, fromRemote = false) {
       persistOrders();
       renderKDSServiceAlerts();
     }
+  } else if (type === 'ORDER_PAYMENT') {
+    if (payload && Array.isArray(payload.orderIds)) {
+      let updatedAny = false;
+      orders.forEach(o => {
+        if (payload.orderIds.includes(o.id)) {
+          o.paid = true;
+          o.paymentMethod = payload.paymentMethod || 'apple_pay';
+          o.paymentLabel  = payload.paymentLabel || 'Apple Pay';
+          o.paidAt        = payload.paidAt || Date.now();
+          o.tipAmount     = payload.tipAmount || 0;
+          o.paidTotal     = payload.amountPaid || o.total;
+          updatedAny = true;
+        }
+      });
+      if (updatedAny) {
+        persistOrders();
+        renderKDS();
+        renderDailySales();
+        renderClientTracker();
+        if (fromRemote && currentView === 'kitchen' && kdsUnlocked) {
+          showCustomPushBanner({
+            ledClass: 'led-ready',
+            kicker: `💳 PAGO DIGITAL RECIBIDO · ${(payload.paymentLabel || 'APPLE PAY').toUpperCase()}`,
+            message: `${payload.table || 'Mesa'}${payload.guestName ? ` (${payload.guestName})` : ''} liquidó $${payload.amountPaid || 0}`,
+          });
+          playClientReadyDing();
+        }
+      }
+    }
   }
 }
 
+let lastStateUpdatedAt = 0;
+
 function mergeRemoteStateSnapshot(snapshot) {
   if (!snapshot || !Array.isArray(snapshot.orders)) return;
+  if (snapshot.updatedAt && snapshot.updatedAt < lastStateUpdatedAt) return;
+  if (snapshot.updatedAt) lastStateUpdatedAt = snapshot.updatedAt;
 
   // Detectar si alguna orden de este cliente cambió de estado en el snapshot
   const prevStatusMap = new Map(orders.map(o => [o.id, o.status]));
-  const prevCallsCount = serviceCalls.length;
 
+  const hasCallsInSnap = Array.isArray(snapshot.serviceCalls) && snapshot.serviceCalls.length > 0;
   const isShiftReset =
     snapshot.orders.length === 0 &&
     Array.isArray(snapshot.completedOrders) &&
     snapshot.completedOrders.length === 0 &&
-    snapshot.orderCounter === 0;
+    snapshot.orderCounter === 0 &&
+    !hasCallsInSnap;
 
   if (isShiftReset) {
     orderCounter = 0;
@@ -552,20 +779,18 @@ function mergeRemoteStateSnapshot(snapshot) {
   }
   if (Array.isArray(snapshot.serviceCalls)) {
     serviceCalls = snapshot.serviceCalls;
-    if (serviceCalls.length > prevCallsCount) playKitchenBell();
   }
 
   persistOrders();
   renderKDS();
   renderKDSServiceAlerts();
+  checkAndNotifyNewServiceCalls();
   renderDailySales();
   if (currentView === 'client') {
     renderDrinksSection();
     if (currentStation) renderBuilderWorkspace();
   }
-  if (kdsUnlocked && kdsSubView === 'stock') {
-    renderKDSStockPanel();
-  }
+  renderKDSStockPanel();
 
   orders.forEach(o => {
     const prev = prevStatusMap.get(o.id);
@@ -635,7 +860,13 @@ function initCloudWebSockets() {
 
 function normalizeFirebaseKdsSnapshot(raw) {
   if (!raw || typeof raw !== 'object') return null;
-  if (!('updatedAt' in raw) && !('orders' in raw) && !('orderCounter' in raw)) return null;
+  if (
+    !('updatedAt' in raw) &&
+    !('orders' in raw) &&
+    !('orderCounter' in raw) &&
+    !('soldOutItems' in raw) &&
+    !('serviceCalls' in raw)
+  ) return null;
   const toArr = (v) => Array.isArray(v)
     ? v.filter(Boolean)
     : (v && typeof v === 'object' ? Object.values(v).filter(Boolean) : []);
@@ -650,25 +881,41 @@ function normalizeFirebaseKdsSnapshot(raw) {
   };
 }
 
-function initFirebaseIfConfigured() {
-  const dbUrl = (CLOUD_CONFIG.firebaseDatabaseURL || '').trim().replace(/\/$/, '');
-  if (!dbUrl) return;
+let firebasePollTimer = null;
 
-  // 1. Carga inicial del estado activo desde Firebase
-  fetch(`${dbUrl}/escandon_kds.json`)
-    .then(res => (res.ok ? res.json() : null))
-    .then(raw => {
-      const snap = normalizeFirebaseKdsSnapshot(raw);
-      if (snap && snap.sender !== DEVICE_ID) {
-        mergeRemoteStateSnapshot(snap);
-        updateCloudStatusUI(true);
-      }
-    })
-    .catch(() => {});
+function firebaseKdsStateUrl() {
+  const dbUrl = (CLOUD_CONFIG.firebaseDatabaseURL || '').trim().replace(/\/$/, '');
+  if (!dbUrl) return '';
+  return `${dbUrl}/restaurantes/${tenantId}/kds_state.json`;
+}
+
+function initFirebaseIfConfigured() {
+  const stateUrl = firebaseKdsStateUrl();
+  if (!stateUrl) return;
+
+  const pullFirebaseState = () => {
+    fetch(`${stateUrl}?t=${Date.now()}`, { cache: 'no-store' })
+      .then(res => (res.ok ? res.json() : null))
+      .then(raw => {
+        const snap = normalizeFirebaseKdsSnapshot(raw);
+        if (snap) {
+          updateCloudStatusUI(true);
+          if (snap.sender !== DEVICE_ID || snap.updatedAt > lastStateUpdatedAt) {
+            mergeRemoteStateSnapshot(snap);
+          }
+        }
+      })
+      .catch(() => {});
+  };
+
+  // 1. Carga inicial + sondeo continuo cada 2 segundos (garantiza entrega en cualquier red móvil)
+  pullFirebaseState();
+  if (firebasePollTimer) clearInterval(firebasePollTimer);
+  firebasePollTimer = setInterval(pullFirebaseState, 2000);
 
   // 2. Suscripción en tiempo real (Server-Sent Events de Firebase)
   try {
-    const evtSource = new EventSource(`${dbUrl}/escandon_kds.json`);
+    const evtSource = new EventSource(stateUrl);
     evtSource.addEventListener('put', (e) => {
       try {
         const packet = JSON.parse(e.data);
@@ -685,6 +932,9 @@ function initFirebaseIfConfigured() {
 }
 
 function publishCloudSync(type, payload) {
+  const nowTs = Date.now();
+  lastStateUpdatedAt = nowTs;
+
   localChannel.postMessage({ type, payload, sender: DEVICE_ID });
 
   if (mqttClient && cloudConnected) {
@@ -692,35 +942,37 @@ function publishCloudSync(type, payload) {
       type,
       payload,
       sender: DEVICE_ID,
-      ts: Date.now(),
+      ts: nowTs,
     });
     const statePacket = JSON.stringify({
+      tenantId,
       orders,
       completedOrders,
       soldOutItems,
       serviceCalls,
       orderCounter,
       sender: DEVICE_ID,
-      updatedAt: Date.now(),
+      updatedAt: nowTs,
     });
 
     mqttClient.publish(TOPIC_EVENTS, eventPacket, { qos: 1 });
     mqttClient.publish(TOPIC_STATE, statePacket, { qos: 1, retain: true });
   }
 
-  const dbUrl = (CLOUD_CONFIG.firebaseDatabaseURL || '').trim().replace(/\/$/, '');
-  if (dbUrl) {
-    fetch(`${dbUrl}/escandon_kds.json`, {
+  const stateUrl = firebaseKdsStateUrl();
+  if (stateUrl) {
+    fetch(stateUrl, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        tenantId,
         orders,
         completedOrders,
         soldOutItems,
         serviceCalls,
         orderCounter,
         sender: DEVICE_ID,
-        updatedAt: Date.now(),
+        updatedAt: nowTs,
       }),
     }).catch(() => {});
   }
@@ -733,10 +985,10 @@ localChannel.onmessage = (e) => {
 
 window.addEventListener('storage', (e) => {
   if (
-    e.key === 'kds-orders' ||
-    e.key === 'kds-completed-orders' ||
-    e.key === 'kds-sold-out' ||
-    e.key === 'kds-service-calls'
+    e.key === storageKey('orders') ||
+    e.key === storageKey('completed-orders') ||
+    e.key === storageKey('sold-out') ||
+    e.key === storageKey('service-calls')
   ) {
     const prevMap = new Map(orders.map(o => [o.id, o.status]));
     loadPersistedOrders();
@@ -749,40 +1001,54 @@ window.addEventListener('storage', (e) => {
     });
     renderKDS();
     renderKDSServiceAlerts();
+    checkAndNotifyNewServiceCalls();
     renderDailySales();
     if (currentView === 'client') {
       renderDrinksSection();
       if (currentStation) renderBuilderWorkspace();
     }
-    if (kdsUnlocked && kdsSubView === 'stock') renderKDSStockPanel();
+    renderKDSStockPanel();
     renderClientTracker();
     updateHeaderTrackerPill();
   }
 });
 
 function persistOrders() {
-  localStorage.setItem('kds-orders', JSON.stringify(orders));
-  localStorage.setItem('kds-completed-orders', JSON.stringify(completedOrders));
-  localStorage.setItem('kds-sold-out', JSON.stringify(soldOutItems));
-  localStorage.setItem('kds-service-calls', JSON.stringify(serviceCalls));
-  localStorage.setItem('kds-counter', String(orderCounter));
-  localStorage.setItem('kds-my-orders', JSON.stringify(myOrderIds));
-  if (activeTrackedOrderId) {
-    localStorage.setItem('kds-tracked-id', String(activeTrackedOrderId));
-  } else {
-    localStorage.removeItem('kds-tracked-id');
+  localStorage.setItem(storageKey('orders'), JSON.stringify(orders));
+  localStorage.setItem(storageKey('completed-orders'), JSON.stringify(completedOrders));
+  localStorage.setItem(storageKey('sold-out'), JSON.stringify(soldOutItems));
+  localStorage.setItem(storageKey('service-calls'), JSON.stringify(serviceCalls));
+  localStorage.setItem(storageKey('counter'), String(orderCounter));
+  localStorage.setItem(storageKey('my-orders'), JSON.stringify(myOrderIds));
+  if (currentGuestName) {
+    localStorage.setItem(storageKey('guest-name'), currentGuestName);
   }
+  if (activeTrackedOrderId) {
+    localStorage.setItem(storageKey('tracked-id'), String(activeTrackedOrderId));
+  } else {
+    localStorage.removeItem(storageKey('tracked-id'));
+  }
+}
+
+function readTenantStorage(keyName) {
+  const val = localStorage.getItem(storageKey(keyName));
+  if (val !== null) return val;
+  if (tenantId === 'escandon') {
+    return localStorage.getItem(`kds-${keyName}`);
+  }
+  return null;
 }
 
 function loadPersistedOrders() {
   try {
-    const saved          = localStorage.getItem('kds-orders');
-    const savedCompleted = localStorage.getItem('kds-completed-orders');
-    const savedSoldOut   = localStorage.getItem('kds-sold-out');
-    const savedCalls     = localStorage.getItem('kds-service-calls');
-    const cnt            = localStorage.getItem('kds-counter');
-    const mine           = localStorage.getItem('kds-my-orders');
-    const tracked        = localStorage.getItem('kds-tracked-id');
+    const saved          = readTenantStorage('orders');
+    const savedCompleted = readTenantStorage('completed-orders');
+    const savedSoldOut   = readTenantStorage('sold-out');
+    const savedCalls     = readTenantStorage('service-calls');
+    const cnt            = readTenantStorage('counter');
+    const mine           = readTenantStorage('my-orders');
+    const tracked        = readTenantStorage('tracked-id');
+    const savedGuest     = readTenantStorage('guest-name');
 
     orders               = saved ? JSON.parse(saved) : [];
     completedOrders      = savedCompleted ? JSON.parse(savedCompleted) : [];
@@ -791,6 +1057,7 @@ function loadPersistedOrders() {
     orderCounter         = cnt ? (parseInt(cnt, 10) || 0) : 0;
     myOrderIds           = mine ? JSON.parse(mine) : [];
     activeTrackedOrderId = tracked ? (parseInt(tracked, 10) || null) : null;
+    if (savedGuest) currentGuestName = savedGuest;
   } catch (e) {
     orders = [];
     completedOrders = [];
@@ -839,9 +1106,10 @@ function verifyKDSPin() {
   const errEl   = document.getElementById('kds-pin-error');
   if (!inputEl) return;
 
-  if (inputEl.value.trim() === KDS_REQUIRED_PIN) {
+  const expectedPin = getActiveTenantProfile().pin || KDS_REQUIRED_PIN;
+  if (inputEl.value.trim() === expectedPin) {
     kdsUnlocked = true;
-    sessionStorage.setItem('escandon-kds-unlocked', '1');
+    sessionStorage.setItem(storageKey('unlocked'), '1');
     localStorage.setItem(KITCHEN_DEVICE_FLAG, '1'); // Este dispositivo guarda el historial de ventas
     inputEl.value = '';
     if (errEl) errEl.classList.add('hidden');
@@ -849,6 +1117,10 @@ function verifyKDSPin() {
     renderKitchenLockState();
     setKDSSubView('comandas');
     renderKDS();
+    renderKDSServiceAlerts();
+    renderKDSStockPanel();
+    initQRGeneratorView();
+    checkAndNotifyNewServiceCalls();
     renderDailySales();
     startClock();
     startTimers();
@@ -864,7 +1136,7 @@ function lockKDSAndExit() {
   closeCloseShiftModal();
   kdsUnlocked = false;
   kdsSubView = 'comandas';
-  sessionStorage.removeItem('escandon-kds-unlocked');
+  sessionStorage.removeItem(storageKey('unlocked'));
   renderKitchenLockState();
   showView('landing');
 }
@@ -889,8 +1161,8 @@ function renderKitchenLockState() {
 
 function copyCustomerLink() {
   const baseUrl = window.location.origin + window.location.pathname;
-  const branchParam = urlParams.get('sucursal') ? `&sucursal=${encodeURIComponent(urlParams.get('sucursal'))}` : '';
-  const customerUrl = `${baseUrl}?vista=cliente${branchParam}`;
+  const tenantParam = getTenantQueryParam();
+  const customerUrl = `${baseUrl}?vista=cliente${tenantParam}`;
 
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(customerUrl).then(() => {
@@ -909,6 +1181,7 @@ function copyCustomerLink() {
 function initClientView() {
   renderStationHeroIllustrations();
   renderDrinksSection();
+  updateClientContextBar();
 
   // Si el cliente tiene una orden activa en seguimiento, restaurar el modo correspondiente
   const trackedOrder = activeTrackedOrderId ? orders.find(o => o.id === activeTrackedOrderId) : null;
@@ -1069,10 +1342,20 @@ function selectStation(station) {
     tacoDraft.tortilla = availBase ? availBase.id : null;
   }
 
+  builderDraftQty = 1;
+  renderBuilderWorkspace();
+}
+
+let builderDraftQty = 1;
+
+function changeBuilderDraftQty(delta) {
+  builderDraftQty = Math.max(1, Math.min(30, (builderDraftQty || 1) + delta));
+  hapticTap(6);
   renderBuilderWorkspace();
 }
 
 function resetCurrentBuilder() {
+  builderDraftQty = 1;
   if (currentStation === 'taco') {
     const availBase = TACO_CONFIG.base.find(b => !isStockSoldOut(getStockKey('taco', 'base', b.id)));
     tacoDraft = { tortilla: availBase ? availBase.id : null, protein: null, toppings: [] };
@@ -1083,12 +1366,22 @@ function resetCurrentBuilder() {
 }
 
 // Selección directa por toque (Tap-to-Select)
+let lastTappedKey = null;
+
+function hapticTap(ms = 8) {
+  try {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(ms);
+  } catch (e) {}
+}
+
 function tapSelectIngredient(category, itemId) {
   const stockKey = getStockKey(currentStation, category, itemId);
   if (isStockSoldOut(stockKey)) {
     showToast('Ingrediente agotado por hoy');
     return;
   }
+  hapticTap();
+  lastTappedKey = `${category}:${itemId}`;
 
   if (currentStation === 'taco') {
     if (category === 'base') {
@@ -1251,27 +1544,52 @@ function renderBuilderWorkspace() {
   const priceEl    = document.getElementById('live-item-price');
   const addBtn     = document.getElementById('btn-add-built');
   const addLabelEl = document.getElementById('btn-add-built-label');
+  const qtyValEl   = document.getElementById('builder-qty-val');
+  const qtyMinusEl = document.getElementById('builder-qty-minus');
+  const qtyPlusEl  = document.getElementById('builder-qty-plus');
+
+  const draftQty = Math.max(1, builderDraftQty || 1);
+  if (qtyValEl)   qtyValEl.textContent = String(draftQty);
+  if (qtyMinusEl) qtyMinusEl.disabled = !summary.ready || draftQty <= 1;
+  if (qtyPlusEl)  qtyPlusEl.disabled  = !summary.ready;
+
+  let dynamicAddLabel = summary.addLabel;
+  if (summary.ready) {
+    if (currentStation === 'hotdog') {
+      dynamicAddLabel = draftQty > 1
+        ? `+ Agregar ${draftQty} Hot Dogs al pedido`
+        : '+ Agregar Hot Dog al pedido';
+    } else if (currentStation === 'taco') {
+      dynamicAddLabel = draftQty > 1
+        ? `+ Agregar ${draftQty} Tacos al pedido`
+        : '+ Agregar Taco al pedido';
+    }
+  }
 
   if (descEl)     descEl.textContent = summary.name;
-  if (priceEl)    priceEl.textContent = '$' + summary.price;
-  if (addLabelEl) addLabelEl.textContent = summary.addLabel;
+  if (priceEl)    priceEl.textContent = '$' + (summary.price * draftQty);
+  if (addLabelEl) addLabelEl.textContent = dynamicAddLabel;
   if (addBtn)     addBtn.disabled = !summary.ready;
 
+  lastTappedKey = null;
   renderCart();
 }
 
 function renderTapCard(category, item, isSelected) {
   const stockKey = getStockKey(currentStation, category, item.id);
   const isOut    = isStockSoldOut(stockKey);
+  const justTapped = lastTappedKey === `${category}:${item.id}`;
   return `
     <button type="button"
-            class="tap-card${isSelected && !isOut ? ' selected' : ''}${isOut ? ' sold-out' : ''}"
+            class="tap-card${isSelected && !isOut ? ' selected' : ''}${isOut ? ' sold-out' : ''}${justTapped ? ' just-tapped' : ''}"
             ${isOut ? 'disabled' : ''}
             onclick="tapSelectIngredient('${category}', '${item.id}')">
       <span class="tap-check">✓</span>
       <div class="tap-art">${item.art}</div>
-      <div class="tap-name">${item.name}</div>
-      <div class="tap-included">${isOut ? 'Agotado' : 'Incluido'}</div>
+      <div class="tap-texts">
+        <div class="tap-name">${item.name}</div>
+        <div class="tap-included">${isOut ? 'Agotado' : 'Incluido'}</div>
+      </div>
     </button>
   `;
 }
@@ -1279,8 +1597,9 @@ function renderTapCard(category, item, isSelected) {
 function renderDrinksSection() {
   const html = DRINKS_CONFIG.map(drink => {
     const isOut = isStockSoldOut(getStockKey(null, 'drink', drink.id));
+    const inCart = cartItems.find(it => it.key === drink.id);
     return `
-      <div class="drink-row${isOut ? ' sold-out' : ''}" onclick="addDrinkToCart('${drink.id}')">
+      <div class="drink-row${isOut ? ' sold-out' : ''}${inCart ? ' in-cart' : ''}" onclick="addDrinkToCart('${drink.id}')">
         <div class="drink-left">
           <span class="drink-emoji">${drink.emoji}</span>
           <div class="drink-info">
@@ -1289,7 +1608,7 @@ function renderDrinksSection() {
           </div>
         </div>
         <button type="button" class="btn-tap-drink" ${isOut ? 'disabled' : ''} onclick="event.stopPropagation(); addDrinkToCart('${drink.id}')">
-          ${isOut ? 'Agotado' : '+ Agregar'}
+          ${isOut ? 'Agotado' : (inCart ? `${inCart.qty} · +` : '+')}
         </button>
       </div>
     `;
@@ -1324,7 +1643,8 @@ function addDrinkToCart(drinkId) {
   }
 
   renderCart();
-  showToast(`${drink.name} agregada`);
+  hapticTap(10);
+  showToast(`${drink.emoji} ${drink.name} agregada`);
 }
 
 // ══════════════════════════════════════════════
@@ -1536,28 +1856,27 @@ function addBuiltItemToCart() {
   const summary = getCurrentDraftSummary();
   if (!summary.ready) return;
 
+  const qtyToAdd = Math.max(1, builderDraftQty || 1);
   const existing = cartItems.find(it => it.key === summary.key);
   if (existing) {
-    existing.qty += 1;
+    existing.qty += qtyToAdd;
   } else {
     cartItems.push({
       key: summary.key,
       name: summary.name,
       emoji: summary.emoji,
       price: summary.price,
-      qty: 1,
+      qty: qtyToAdd,
       station: currentStation,
     });
   }
 
-  if (currentStation === 'taco') {
-    tacoDraft = { tortilla: 'sencilla', protein: null, toppings: [] };
-  } else if (currentStation === 'hotdog') {
-    hotdogDraft = { toppings: [] };
-  }
+  // Conservamos la selección en el resumen visual (solo se limpia si el usuario toca "Limpiar")
+  builderDraftQty = 1;
 
   renderBuilderWorkspace();
-  showToast(`Agregado: ${summary.name}`);
+  hapticTap(12);
+  showToast(`${summary.emoji} ${qtyToAdd > 1 ? qtyToAdd + '× ' : ''}Agregado a tu pedido`);
 }
 
 function changeCartItemQty(index, delta) {
@@ -1611,17 +1930,25 @@ function renderCart() {
 
   const totalQty       = cartItems.reduce((sum, it) => sum + it.qty, 0);
   const confirmedTotal = getCartTotal();
-  const effectiveTotal = confirmedTotal > 0 ? confirmedTotal : (summary.ready ? summary.price : 0);
+  const baseFoodTotal  = confirmedTotal > 0 ? confirmedTotal : (summary.ready ? summary.price : 0);
+  const isDelivery     = currentFulfillmentMode === 'delivery';
+  const isPickup       = currentFulfillmentMode === 'pickup';
+  const deliveryFee    = (isDelivery && baseFoodTotal > 0) ? (getActiveTenantProfile().deliveryFee || 25) : 0;
+  const effectiveTotal = baseFoodTotal + deliveryFee;
   const canOrder       = (cartItems.length > 0 || summary.ready);
 
   if (bbCountEl)  bbCountEl.textContent  = totalQty;
   if (totalEl)    totalEl.textContent    = '$' + effectiveTotal;
   if (bbTotalEl)  bbTotalEl.textContent  = '$' + effectiveTotal;
 
+  const ctaLabel = isDelivery ? '🔒 Pagar Envío →' : (isPickup ? '🔒 Pagar Pickup →' : 'Pedir →');
+  if (pedirBar)   pedirBar.textContent   = ctaLabel;
+  if (pedirSheet) pedirSheet.textContent = ctaLabel;
+
   if (bbStatusTxt) {
     if (cartItems.length > 0) {
       const last = cartItems[cartItems.length - 1];
-      bbStatusTxt.textContent = `${last.emoji} ${last.name}`;
+      bbStatusTxt.textContent = `${last.qty > 1 ? last.qty + '× ' : ''}${last.emoji} ${last.name}`;
     } else if (summary.ready) {
       bbStatusTxt.textContent = `${summary.emoji} ${summary.name}`;
     } else {
@@ -1631,7 +1958,48 @@ function renderCart() {
 
   if (pedirSheet) pedirSheet.disabled = !canOrder;
   if (pedirBar)   pedirBar.disabled   = !canOrder;
+
+  // Micro-animación del contador cuando cambia la cantidad
+  if (bbCountEl && totalQty !== lastDockQty) {
+    bbCountEl.classList.remove('bump');
+    void bbCountEl.offsetWidth;
+    bbCountEl.classList.add('bump');
+    setTimeout(() => bbCountEl.classList.remove('bump'), 320);
+  }
+  lastDockQty = totalQty;
+
+  // Línea secundaria del dock: contexto de mesa, pickup o domicilio
+  const tableLineEl = document.getElementById('bb-table-line');
+  if (tableLineEl) {
+    if (isDelivery) {
+      const addr = readTenantStorage('delivery-address') || '';
+      tableLineEl.textContent = addr ? `🛵 Domicilio (+$25) · ${addr}` : '🛵 Envío a domicilio (+$25 MXN) · Pago anticipado';
+    } else if (isPickup) {
+      const pTime = readTenantStorage('pickup-time') || 'Lo antes posible';
+      tableLineEl.textContent = `🛍️ Pickup en sucursal · ${pTime} · Pago anticipado`;
+    } else {
+      const savedTable = presetTableFromURL || readTenantStorage('last-table') || '';
+      if (savedTable) {
+        const g = getTableGroupSummary(savedTable);
+        const others = g.diners.filter(d => !d.isMe).length;
+        tableLineEl.textContent = others > 0
+          ? `📍 ${savedTable} · ${g.diners.length} personas · Mesa $${g.tableTotal}`
+          : `📍 ${savedTable} · Cuenta individual`;
+      } else {
+        tableLineEl.textContent = totalQty > 0 ? `${totalQty} ${totalQty === 1 ? 'artículo' : 'artículos'} · Toca para revisar` : 'Toca para ver tu pedido';
+      }
+    }
+  }
+
+  const drinksInCart = cartItems.filter(it => it.station === 'drink').map(it => `${it.key}:${it.qty}`).join('|');
+  if (drinksInCart !== lastDrinksSignature) {
+    lastDrinksSignature = drinksInCart;
+    renderDrinksSection();
+  }
 }
+
+let lastDockQty = 0;
+let lastDrinksSignature = '';
 
 function toggleCart(forceState) {
   cartOpen = typeof forceState === 'boolean' ? forceState : !cartOpen;
@@ -1717,40 +2085,403 @@ function skipUpsellAndContinue() {
   openOrderModalDirect();
 }
 
-function openOrderModalDirect() {
+function selectQuickTableChip(tableName) {
   const inputEl = document.getElementById('table-input');
-  const savedTable = localStorage.getItem('kds-last-table') || '';
-  if (inputEl && !inputEl.value) {
-    inputEl.value = presetTableFromURL || savedTable;
+  if (inputEl) {
+    inputEl.value = tableName;
+  }
+  syncQuickTableChipSelection();
+  const guestEl = document.getElementById('guest-name-input');
+  if (guestEl && !guestEl.value.trim()) {
+    guestEl.focus();
+  }
+}
+
+function syncQuickTableChipSelection() {
+  const inputEl = document.getElementById('table-input');
+  const currentVal = (inputEl ? inputEl.value.trim() : '').toLowerCase();
+  document.querySelectorAll('#quick-table-chips .table-chip').forEach(btn => {
+    const chipTxt = (btn.textContent || '').trim().toLowerCase();
+    btn.classList.toggle('selected', Boolean(currentVal && chipTxt === currentVal));
+  });
+}
+
+let identityPreselectOnly = false;
+
+// ─── Avatares de comensales (presencia en la mesa) ──
+const DINER_STATUS_LABEL = {
+  pending: 'Pidió hace un momento',
+  received: 'Recibido en cocina',
+  preparing: 'Cocinando',
+  ready: 'Listo',
+};
+
+function dinerInitials(name) {
+  const parts = String(name || '?').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+}
+
+function dinerHue(name) {
+  let h = 0;
+  const s = String(name || '').toLowerCase();
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360;
+  return h;
+}
+
+function escapeHTML(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function renderDinerAvatar(name, { isMe = false, size = 'md', status = '' } = {}) {
+  const hue = dinerHue(name);
+  return `<span class="diner-avatar size-${size}${isMe ? ' is-me' : ''}${status ? ' st-' + status : ''}"
+    style="--av-h:${hue}" title="${escapeHTML(name)}">${escapeHTML(dinerInitials(name))}</span>`;
+}
+
+// ══════════════════════════════════════════════
+//  MODALIDADES: EN MESA (DINE-IN) · PICKUP · A DOMICILIO + PAGO ANTICIPADO
+// ══════════════════════════════════════════════
+let currentFulfillmentMode = 'dine_in'; // 'dine_in' | 'pickup' | 'delivery'
+let activePaymentSession   = null;      // { mode: 'prepay_order'|'pay_mine'|'pay_table', subtotal, deliveryFee, tipPct, tipAmount, grandTotal, draftOrder, orderIds, table, guestName }
+let selectedTipPercent     = 10;
+
+function openClientWithMode(mode) {
+  const valid = ['dine_in', 'pickup', 'delivery'].includes(mode) ? mode : 'dine_in';
+  currentFulfillmentMode = valid;
+  localStorage.setItem(storageKey('fulfillment-mode'), valid);
+  showView('client');
+  setFulfillmentMode(valid);
+}
+
+function setFulfillmentMode(mode) {
+  const valid = ['dine_in', 'pickup', 'delivery'].includes(mode) ? mode : 'dine_in';
+  currentFulfillmentMode = valid;
+  localStorage.setItem(storageKey('fulfillment-mode'), valid);
+
+  // 1. Actualizar tabs superiores en el menú del cliente
+  ['dine_in', 'pickup', 'delivery'].forEach(m => {
+    const tabEl = document.getElementById(`fmode-${m}`);
+    if (tabEl) tabEl.classList.toggle('active', m === valid);
+  });
+
+  // 2. Actualizar tabs dentro del modal de confirmación
+  document.querySelectorAll('#modal-fmode-tabs .mfmode-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.fmode === valid);
+  });
+
+  // 3. Mostrar/ocultar banner de Pago Anticipado y tarjeta de asistencia en mesa
+  const prepayBanner   = document.getElementById('prepay-mode-banner');
+  const prepayBadge    = document.getElementById('prepay-banner-badge');
+  const prepayDesc     = document.getElementById('prepay-banner-desc');
+  const menuAssistCard = document.getElementById('menu-table-assistance-card');
+
+  if (prepayBanner) {
+    if (valid === 'pickup') {
+      prepayBanner.classList.remove('hidden');
+      if (prepayBadge) prepayBadge.textContent = '🛍️ PICKUP EN SUCURSAL · PAGO ANTICIPADO';
+      if (prepayDesc)  prepayDesc.textContent  = 'Paga por adelantado con Apple Pay o Tarjeta para que cocina prepare tu orden al instante y recógela sin hacer fila.';
+    } else if (valid === 'delivery') {
+      prepayBanner.classList.remove('hidden');
+      if (prepayBadge) prepayBadge.textContent = '🛵 ENVÍO A DOMICILIO (+$25) · PAGO ANTICIPADO';
+      if (prepayDesc)  prepayDesc.textContent  = 'Ingresa tu dirección y realiza el pago anticipado seguro con Apple Pay o Stripe para procesar y enviar tu pedido.';
+    } else {
+      prepayBanner.classList.add('hidden');
+    }
   }
 
-  // Solicitar permiso opcional de notificaciones web sin bloquear el flujo
+  if (menuAssistCard) {
+    menuAssistCard.classList.toggle('hidden', valid !== 'dine_in');
+  }
+
+  // 4. Sincronizar campos dinámicos dentro de #order-modal
+  syncOrderModalFieldsForMode();
+  updateClientContextBar();
+  renderCart();
+}
+
+function selectPickupTimeChip(timeLabel) {
+  const inputEl = document.getElementById('pickup-time-input');
+  if (inputEl) inputEl.value = timeLabel;
+  document.querySelectorAll('#pickup-time-chips .table-chip').forEach(btn => {
+    btn.classList.toggle('selected', (btn.textContent || '').includes(timeLabel.slice(0, 8)));
+  });
+}
+
+function syncOrderModalFieldsForMode() {
+  const valid       = currentFulfillmentMode;
+  const kickerEl    = document.getElementById('order-modal-kicker');
+  const titleEl     = document.getElementById('order-modal-title');
+  const subEl       = document.getElementById('order-modal-sub');
+  const blockTable  = document.getElementById('modal-block-table');
+  const blockPhone  = document.getElementById('modal-block-phone');
+  const blockPickup = document.getElementById('modal-block-pickup');
+  const blockDeliv  = document.getElementById('modal-block-delivery');
+  const prepayNote  = document.getElementById('modal-prepay-note');
+  const guestLabel  = document.getElementById('guest-name-label');
+  const submitBtn   = document.getElementById('btn-submit-order');
+
+  if (blockTable)  blockTable.classList.toggle('hidden', valid !== 'dine_in');
+  if (blockPhone)  blockPhone.classList.toggle('hidden', valid === 'dine_in');
+  if (blockPickup) blockPickup.classList.toggle('hidden', valid !== 'pickup');
+  if (blockDeliv)  blockDeliv.classList.toggle('hidden', valid !== 'delivery');
+  if (prepayNote)  prepayNote.classList.toggle('hidden', valid === 'dine_in' || identityPreselectOnly);
+
+  if (valid === 'pickup') {
+    if (kickerEl)   kickerEl.textContent   = 'ORDEN PARA RECOGER (PICKUP) · PAGO ANTICIPADO';
+    if (titleEl)    titleEl.textContent    = 'Datos para entregar tu Pickup';
+    if (subEl)      subEl.textContent      = 'Te avisaremos en cuanto tu orden esté lista para recoger en mostrador.';
+    if (guestLabel) guestLabel.textContent = '1. TU NOMBRE (QUIEN RECOGE)';
+  } else if (valid === 'delivery') {
+    if (kickerEl)   kickerEl.textContent   = 'ENVÍO A DOMICILIO · PAGO ANTICIPADO';
+    if (titleEl)    titleEl.textContent    = '¿A dónde enviamos tu pedido?';
+    if (subEl)      subEl.textContent      = 'Requerimos pago anticipado para procesar y despachar tu orden a domicilio.';
+    if (guestLabel) guestLabel.textContent = '1. TU NOMBRE';
+  } else {
+    if (kickerEl)   kickerEl.textContent   = 'CUENTAS SEPARADAS POR MESA';
+    if (titleEl)    titleEl.textContent    = '¿Tu mesa y tu nombre?';
+    if (subEl)      subEl.textContent      = 'Si están en grupo en la misma mesa, cada quien tendrá su propia cuenta individual.';
+    if (guestLabel) guestLabel.textContent = '2. TU NOMBRE (COMENSAL)';
+  }
+
+  if (submitBtn) {
+    if (identityPreselectOnly) {
+      submitBtn.textContent = 'Guardar Datos';
+    } else if (valid === 'pickup' || valid === 'delivery') {
+      submitBtn.textContent = '🔒 Ir al Pago Anticipado →';
+    } else {
+      submitBtn.textContent = 'Confirmar y Pedir';
+    }
+  }
+}
+
+function updateClientContextBar() {
+  const tablePill = document.getElementById('ctx-table-pill');
+  const guestPill = document.getElementById('ctx-guest-pill');
+  const groupPill = document.getElementById('ctx-group-pill');
+  if (!tablePill || !guestPill || !groupPill) return;
+
+  const savedTable = presetTableFromURL || readTenantStorage('last-table') || '';
+  const savedGuest = currentGuestName || readTenantStorage('guest-name') || '';
+  const savedAddr  = readTenantStorage('delivery-address') || '';
+  const savedPTime = readTenantStorage('pickup-time') || '15-20 min';
+
+  if (currentFulfillmentMode === 'pickup') {
+    tablePill.textContent = `🛍️ Pickup (${savedPTime})`;
+    guestPill.textContent = savedGuest ? `👤 ${savedGuest}` : '👤 Tu nombre';
+    groupPill.textContent = '🔒 Pago Anticipado ✎';
+  } else if (currentFulfillmentMode === 'delivery') {
+    tablePill.textContent = savedAddr ? `🛵 ${savedAddr.slice(0, 22)}${savedAddr.length > 22 ? '…' : ''}` : '🛵 Ingresar dirección';
+    guestPill.textContent = savedGuest ? `👤 ${savedGuest}` : '👤 Tu nombre';
+    groupPill.textContent = '+$25 envío · Pagar ✎';
+  } else {
+    tablePill.textContent = savedTable ? `📍 ${savedTable}` : '📍 Elegir Mesa';
+    guestPill.textContent = savedGuest ? `👤 ${savedGuest}` : '👤 Tu nombre';
+  }
+
+  // Saludo personalizado
+  const heroTitle  = document.getElementById('menu-hero-title');
+  const heroKicker = document.getElementById('menu-hero-kicker');
+  if (heroTitle)  heroTitle.textContent = savedGuest ? `Hola ${savedGuest}, ¿qué se te antoja?` : '¿Qué se te antoja hoy?';
+  if (heroKicker) {
+    if (currentFulfillmentMode === 'pickup') {
+      heroKicker.textContent = 'MODO PICKUP · PAGO ANTICIPADO CON APPLE PAY / STRIPE';
+    } else if (currentFulfillmentMode === 'delivery') {
+      heroKicker.textContent = 'ENVÍO A DOMICILIO · PAGO ANTICIPADO CON APPLE PAY / STRIPE';
+    } else {
+      heroKicker.textContent = savedTable ? `${savedTable.toUpperCase()} · TOCA PARA ARMAR` : 'MENÚ · TOCA PARA ARMAR';
+    }
+  }
+
+  // Presencia: quién más está pidiendo en la misma mesa (solo aplica en modo En Mesa)
+  const stripEl   = document.getElementById('table-presence-strip');
+  const avatarsEl = document.getElementById('presence-avatars');
+  const textEl    = document.getElementById('presence-text');
+  let groupInfo = null;
+
+  if (currentFulfillmentMode === 'dine_in' && savedTable) {
+    groupInfo = getTableGroupSummary(savedTable);
+  }
+  const diners = groupInfo ? groupInfo.diners : [];
+  const others = diners.filter(d => !d.isMe);
+
+  if (stripEl && avatarsEl && textEl) {
+    if (currentFulfillmentMode === 'dine_in' && savedTable && others.length > 0) {
+      stripEl.classList.remove('hidden');
+      avatarsEl.innerHTML = diners.slice(0, 5).map(d =>
+        renderDinerAvatar(d.guestName, { isMe: d.isMe, size: 'sm', status: d.latestStatus })
+      ).join('') + (diners.length > 5 ? `<span class="diner-avatar size-sm more">+${diners.length - 5}</span>` : '');
+      const names = others.slice(0, 2).map(d => d.guestName);
+      const extra = others.length > 2 ? ` y ${others.length - 2} más` : '';
+      textEl.textContent = `${names.join(', ')}${extra} ${others.length === 1 ? 'también pide' : 'también piden'} en ${savedTable}`;
+    } else {
+      stripEl.classList.add('hidden');
+    }
+  }
+
+  if (currentFulfillmentMode === 'dine_in') {
+    if (savedTable && diners.length > 1) {
+      groupPill.textContent = `👥 ${diners.length} · $${groupInfo.tableTotal}`;
+      return;
+    }
+    groupPill.textContent = (savedTable && savedGuest) ? 'Cuenta individual ✎' : 'Cuentas separadas ✎';
+  }
+}
+
+function openIdentityPreselectModal() {
+  unlockAudioContext();
+  identityPreselectOnly = true;
+  openOrderModalDirect();
+}
+
+function openOrderModalDirect() {
+  const inputEl   = document.getElementById('table-input');
+  const guestEl   = document.getElementById('guest-name-input');
+  const phoneEl   = document.getElementById('customer-phone-input');
+  const pTimeEl   = document.getElementById('pickup-time-input');
+  const addrEl    = document.getElementById('delivery-address-input');
+  const notesEl   = document.getElementById('delivery-notes-input');
+
+  const savedTable = readTenantStorage('last-table') || '';
+  const savedGuest = currentGuestName || readTenantStorage('guest-name') || '';
+  const savedPhone = readTenantStorage('customer-phone') || '';
+  const savedPTime = readTenantStorage('pickup-time') || 'Lo antes posible (15-20 min)';
+  const savedAddr  = readTenantStorage('delivery-address') || '';
+  const savedNotes = readTenantStorage('delivery-notes') || '';
+
+  if (inputEl && !inputEl.value)   inputEl.value = presetTableFromURL || savedTable;
+  if (guestEl && !guestEl.value && savedGuest) guestEl.value = savedGuest;
+  if (phoneEl && !phoneEl.value && savedPhone) phoneEl.value = savedPhone;
+  if (pTimeEl && !pTimeEl.value)   pTimeEl.value = savedPTime;
+  if (addrEl  && !addrEl.value  && savedAddr)  addrEl.value  = savedAddr;
+  if (notesEl && !notesEl.value && savedNotes) notesEl.value = savedNotes;
+
+  syncOrderModalFieldsForMode();
+  syncQuickTableChipSelection();
+
   if ('Notification' in window && Notification.permission === 'default') {
     try { Notification.requestPermission(); } catch (e) {}
   }
 
   document.getElementById('modal-overlay').classList.add('open');
   document.getElementById('order-modal').classList.add('open');
-  setTimeout(() => { if (inputEl) inputEl.focus(); }, 50);
+  setTimeout(() => {
+    if (currentFulfillmentMode === 'dine_in' && inputEl && !inputEl.value.trim()) {
+      inputEl.focus();
+    } else if (guestEl && !guestEl.value.trim()) {
+      guestEl.focus();
+    } else if (currentFulfillmentMode === 'delivery' && addrEl && !addrEl.value.trim()) {
+      addrEl.focus();
+    }
+  }, 50);
 }
 
 function closeOrderModal() {
+  identityPreselectOnly = false;
+  syncOrderModalFieldsForMode();
   document.getElementById('modal-overlay').classList.remove('open');
   document.getElementById('order-modal').classList.remove('open');
 }
 
+function normalizeTableName(rawTable) {
+  return String(rawTable || 'Mostrador').trim().replace(/\s+/g, ' ');
+}
+
+function parseTableAndGuest(rawTableInput, rawGuestInput) {
+  let tableStr = String(rawTableInput || '').trim();
+  let guestStr = String(rawGuestInput || '').trim();
+
+  if (!guestStr && /[·\-]/.test(tableStr)) {
+    const parts = tableStr.split(/[·\-]/).map(s => s.trim()).filter(Boolean);
+    if (parts.length >= 2) {
+      tableStr = parts[0];
+      guestStr = parts.slice(1).join(' ');
+    }
+  }
+
+  const finalTable = normalizeTableName(tableStr || presetTableFromURL || 'Mostrador');
+  const finalGuest = guestStr || currentGuestName || 'Comensal 1';
+  return { table: finalTable, guestName: finalGuest };
+}
+
 function submitOrder() {
   unlockAudioContext();
-  const tableVal = document.getElementById('table-input').value.trim() || presetTableFromURL || 'Mostrador';
+
+  const tableInputEl = document.getElementById('table-input');
+  const guestInputEl = document.getElementById('guest-name-input');
+  const phoneInputEl = document.getElementById('customer-phone-input');
+  const pTimeInputEl = document.getElementById('pickup-time-input');
+  const addrInputEl  = document.getElementById('delivery-address-input');
+  const notesInputEl = document.getElementById('delivery-notes-input');
+
+  const rawTable = tableInputEl ? tableInputEl.value : '';
+  const rawGuest = guestInputEl ? guestInputEl.value : '';
+  const phoneVal = (phoneInputEl ? phoneInputEl.value.trim() : '') || '';
+  const pTimeVal = (pTimeInputEl ? pTimeInputEl.value.trim() : '') || 'Lo antes posible (15-20 min)';
+  const addrVal  = (addrInputEl  ? addrInputEl.value.trim()  : '') || '';
+  const notesVal = (notesInputEl ? notesInputEl.value.trim() : '') || '';
+
+  const parsed = parseTableAndGuest(rawTable, rawGuest);
+  const guestVal = parsed.guestName;
+  let tableVal = parsed.table;
+
+  if (currentFulfillmentMode === 'pickup') {
+    tableVal = 'Pickup';
+  } else if (currentFulfillmentMode === 'delivery') {
+    tableVal = 'A Domicilio';
+  }
+
+  currentGuestName = guestVal;
+
+  if (currentFulfillmentMode === 'dine_in') {
+    localStorage.setItem(storageKey('last-table'), tableVal);
+  }
+  localStorage.setItem(storageKey('guest-name'), guestVal);
+  if (phoneVal) localStorage.setItem(storageKey('customer-phone'), phoneVal);
+  if (pTimeVal) localStorage.setItem(storageKey('pickup-time'), pTimeVal);
+  if (addrVal)  localStorage.setItem(storageKey('delivery-address'), addrVal);
+  if (notesVal) localStorage.setItem(storageKey('delivery-notes'), notesVal);
+
+  updateClientContextBar();
+  renderCart();
+
+  if (identityPreselectOnly) {
+    closeOrderModal();
+    const label = currentFulfillmentMode === 'delivery'
+      ? `🛵 Domicilio · ${guestVal}`
+      : (currentFulfillmentMode === 'pickup' ? `🛍️ Pickup · ${guestVal}` : `${tableVal} · 👤 ${guestVal}`);
+    showToast(`✓ ${label} guardado`);
+    return;
+  }
+
   if (cartItems.length === 0) return;
 
-  localStorage.setItem('kds-last-table', tableVal);
+  // En modo A Domicilio, verificar que haya puesto dirección antes de pasar al pago
+  if (currentFulfillmentMode === 'delivery' && !addrVal) {
+    if (addrInputEl) addrInputEl.focus();
+    showToast('📍 Ingresa tu dirección de entrega para continuar');
+    return;
+  }
 
-  orderCounter++;
-  const order = {
-    id: Date.now() + Math.floor(Math.random() * 1000),
-    num: orderCounter,
+  const foodSubtotal = getCartTotal();
+  const deliveryFee  = currentFulfillmentMode === 'delivery' ? (getActiveTenantProfile().deliveryFee || 25) : 0;
+
+  const draftOrder = {
+    tenantId,
+    fulfillmentMode: currentFulfillmentMode,
     table: tableVal,
+    guestName: guestVal,
+    customerPhone: phoneVal,
+    pickupTime: currentFulfillmentMode === 'pickup' ? pTimeVal : '',
+    deliveryAddress: currentFulfillmentMode === 'delivery' ? addrVal : '',
+    deliveryNotes: currentFulfillmentMode === 'delivery' ? notesVal : '',
+    deviceId: DEVICE_ID,
+    foodSubtotal,
+    deliveryFee,
+    total: foodSubtotal + deliveryFee,
     items: cartItems.map((it, idx) => ({
       id: idx + 1,
       key: it.key || '',
@@ -1759,9 +2490,43 @@ function submitOrder() {
       emoji: it.emoji,
       price: it.price,
       qty: it.qty,
+      guestName: guestVal,
     })),
-    total: getCartTotal(),
-    status: 'pending', // Estado inicial: Pendiente (LED Gris)
+  };
+
+  closeOrderModal();
+  if (tableInputEl && currentFulfillmentMode === 'dine_in') tableInputEl.value = tableVal;
+
+  // Si es Pickup o A Domicilio, el pago anticipado es OBLIGATORIO antes de enviar a cocina
+  if (currentFulfillmentMode === 'pickup' || currentFulfillmentMode === 'delivery') {
+    openPaymentCheckoutModal({
+      mode: 'prepay_order',
+      draftOrder,
+      subtotal: foodSubtotal,
+      deliveryFee,
+      table: tableVal,
+      guestName: guestVal,
+    });
+    return;
+  }
+
+  // Modo En Mesa: enviar comanda a cocina de inmediato (puede pagar su cuenta separada desde el Tracker)
+  dispatchConfirmedOrderToKitchen({
+    ...draftOrder,
+    paid: false,
+    paymentMethod: null,
+    paymentLabel: '',
+    tipAmount: 0,
+  });
+}
+
+function dispatchConfirmedOrderToKitchen(orderData) {
+  orderCounter++;
+  const order = {
+    ...orderData,
+    id: Date.now() + Math.floor(Math.random() * 1000),
+    num: orderCounter,
+    status: 'pending',
     createdAt: Date.now(),
   };
 
@@ -1772,10 +2537,7 @@ function submitOrder() {
 
   publishCloudSync('NEW_ORDER', order);
 
-  closeOrderModal();
-  document.getElementById('table-input').value = '';
-
-  // Limpiar carrito y convertir pantalla del cliente en el Rastreador en Tiempo Real
+  // Limpiar carrito y abrir Rastreador en Tiempo Real
   cartItems = [];
   upsellOfferedForCart = false;
   const availBase = TACO_CONFIG.base.find(b => !isStockSoldOut(getStockKey('taco', 'base', b.id)));
@@ -1788,34 +2550,413 @@ function submitOrder() {
   if (scrollEl) scrollEl.scrollTo({ top: 0, behavior: 'instant' });
 }
 
-// ─── Llamar al Mesero / Pedir la Cuenta (Cliente → Cocina) ──
-function getDetectedCustomerTable() {
-  const activeOrder = activeTrackedOrderId ? orders.find(o => o.id === activeTrackedOrderId) : null;
-  if (activeOrder && activeOrder.table) return activeOrder.table;
+// ══════════════════════════════════════════════
+//  MOTOR DE PAGOS: STRIPE CONNECT + APPLE PAY / WALLET
+// ══════════════════════════════════════════════
+function openPaymentCheckoutModal({ mode, draftOrder = null, subtotal = 0, deliveryFee = 0, orderIds = [], table = '', guestName = '' }) {
+  const profile = getActiveTenantProfile();
+  selectedTipPercent = 10;
+
+  activePaymentSession = {
+    mode, // 'prepay_order' | 'pay_mine' | 'pay_table'
+    draftOrder,
+    orderIds,
+    table,
+    guestName,
+    subtotal: Number(subtotal) || 0,
+    deliveryFee: Number(deliveryFee) || 0,
+    tipPct: selectedTipPercent,
+    tipAmount: 0,
+    grandTotal: 0,
+  };
+
+  const acctEl  = document.getElementById('pay-connect-acct-id');
+  const titleEl = document.getElementById('pay-modal-title');
+  const subEl   = document.getElementById('pay-modal-subtitle');
+  const bioBox  = document.getElementById('apple-pay-biometric-box');
+  const errEl   = document.getElementById('stripe-error-msg');
+
+  if (acctEl) acctEl.textContent = profile.stripeAccountId || `acct_${profile.id}`;
+  if (bioBox) bioBox.classList.add('hidden');
+  if (errEl)  errEl.classList.add('hidden');
+
+  if (mode === 'prepay_order' && draftOrder) {
+    const isDeliv = draftOrder.fulfillmentMode === 'delivery';
+    if (titleEl) {
+      titleEl.textContent = isDeliv
+        ? 'Pago Anticipado · Envío a Domicilio'
+        : 'Pago Anticipado · Pickup Para Llevar';
+    }
+    if (subEl) {
+      subEl.textContent = isDeliv
+        ? `Tu pedido se enviará a ${draftOrder.deliveryAddress} al confirmar tu pago`
+        : `Tu orden pasará directo a cocina de ${profile.name} al confirmar tu pago`;
+    }
+  } else if (mode === 'pay_table') {
+    if (titleEl) titleEl.textContent = `Pagar Toda la Mesa (${table})`;
+    if (subEl)   subEl.textContent   = `Liquida el total grupal de ${table} en ${profile.name}`;
+  } else {
+    if (titleEl) titleEl.textContent = `Pagar Mi Cuenta (${guestName || table})`;
+    if (subEl)   subEl.textContent   = `Cuenta individual en ${table} · ${profile.name}`;
+  }
+
+  selectPaymentTipPct(10);
+
+  const ov = document.getElementById('payment-modal-overlay');
+  const md = document.getElementById('payment-modal');
+  if (ov) ov.classList.add('open');
+  if (md) md.classList.add('open');
+}
+
+function closePaymentModal() {
+  const ov = document.getElementById('payment-modal-overlay');
+  const md = document.getElementById('payment-modal');
+  const bioBox = document.getElementById('apple-pay-biometric-box');
+  if (ov) ov.classList.remove('open');
+  if (md) md.classList.remove('open');
+  if (bioBox) bioBox.classList.add('hidden');
+}
+
+function selectPaymentTipPct(pct) {
+  selectedTipPercent = Number(pct) || 0;
+  document.querySelectorAll('#pay-tip-pills .tip-pill').forEach(btn => {
+    btn.classList.toggle('active', Number(btn.dataset.tip) === selectedTipPercent);
+  });
+
+  if (!activePaymentSession) return;
+  const sub   = activePaymentSession.subtotal;
+  const deliv = activePaymentSession.deliveryFee;
+  const tip   = Math.round((sub * selectedTipPercent) / 100);
+  const grand = sub + deliv + tip;
+
+  activePaymentSession.tipPct     = selectedTipPercent;
+  activePaymentSession.tipAmount  = tip;
+  activePaymentSession.grandTotal = grand;
+
+  const subEl      = document.getElementById('pay-sum-subtotal');
+  const delivRow   = document.getElementById('pay-sum-delivery-row');
+  const delivEl    = document.getElementById('pay-sum-delivery');
+  const tipLblEl   = document.getElementById('pay-sum-tip-label');
+  const tipEl      = document.getElementById('pay-sum-tip');
+  const grandEl    = document.getElementById('pay-sum-grand-total');
+  const apSubEl    = document.getElementById('btn-apple-pay-amount-label');
+  const stripeBtn  = document.getElementById('btn-stripe-submit');
+
+  if (subEl)    subEl.textContent   = `$${sub.toFixed(2)}`;
+  if (delivRow) delivRow.classList.toggle('hidden', deliv <= 0);
+  if (delivEl)  delivEl.textContent = `$${deliv.toFixed(2)}`;
+  if (tipLblEl) tipLblEl.textContent = `Propina (${selectedTipPercent}%)`;
+  if (tipEl)    tipEl.textContent   = `$${tip.toFixed(2)}`;
+  if (grandEl)  grandEl.textContent = `$${grand.toFixed(2)} MXN`;
+  if (apSubEl)  apSubEl.textContent = `Pagar $${grand.toFixed(2)} MXN`;
+  if (stripeBtn) stripeBtn.textContent = `🔒 Pagar $${grand.toFixed(2)} con Tarjeta`;
+}
+
+function openTrackerPaymentModal(scope) {
+  unlockAudioContext();
+  const order = activeTrackedOrderId ? orders.find(o => o.id === activeTrackedOrderId) : null;
+  if (!order) return;
+
+  const groupInfo = getTableGroupSummary(order.table, order);
+  const isTable   = scope === 'table';
+  const normTable = normalizeTableName(order.table).toLowerCase();
+  const tableOrders = orders.filter(o => o && normalizeTableName(o.table).toLowerCase() === normTable);
+
+  const targetOrders = isTable
+    ? tableOrders
+    : tableOrders.filter(o => myOrderIds.includes(o.id) || o.deviceId === DEVICE_ID || (o.guestName || '').toLowerCase() === (groupInfo.myDiner.guestName || '').toLowerCase());
+
+  const subtotal = isTable ? groupInfo.tableTotal : groupInfo.myTotal;
+
+  openPaymentCheckoutModal({
+    mode: isTable ? 'pay_table' : 'pay_mine',
+    subtotal,
+    deliveryFee: 0,
+    orderIds: targetOrders.length > 0 ? targetOrders.map(o => o.id) : [order.id],
+    table: order.table,
+    guestName: isTable ? `Toda la Mesa (${groupInfo.diners.length})` : groupInfo.myDiner.guestName,
+  });
+}
+
+function payWithApplePayWallet() {
+  if (!activePaymentSession) return;
+  unlockAudioContext();
+  hapticTap(14);
+
+  const bioBox   = document.getElementById('apple-pay-biometric-box');
+  const ringEl   = document.getElementById('ap-faceid-ring');
+  const statusEl = document.getElementById('ap-faceid-status');
+
+  if (bioBox) bioBox.classList.remove('hidden');
+  if (ringEl) ringEl.textContent = '☺';
+  if (statusEl) statusEl.textContent = 'Verificando Face ID con Apple Wallet...';
+
+  setTimeout(() => {
+    if (ringEl) ringEl.textContent = '✓';
+    if (statusEl) statusEl.textContent = '¡Pago Autorizado con Apple Pay!';
+    playClientReadyDing();
+    setTimeout(() => {
+      completeDigitalPayment({
+        paymentMethod: 'apple_pay',
+        paymentLabel: 'Apple Pay',
+        paymentRef: 'ap_' + Date.now().toString(36),
+      });
+    }, 520);
+  }, 650);
+}
+
+function fillStripeDemoCard() {
+  const numEl = document.getElementById('stripe-card-num');
+  const expEl = document.getElementById('stripe-card-exp');
+  const cvcEl = document.getElementById('stripe-card-cvc');
+  const errEl = document.getElementById('stripe-error-msg');
+  if (numEl) numEl.value = '4242 4242 4242 4242';
+  if (expEl) expEl.value = '12/29';
+  if (cvcEl) cvcEl.value = '888';
+  if (errEl) errEl.classList.add('hidden');
+  hapticTap(8);
+}
+
+function formatStripeCardInput(input) {
+  const digits = String(input.value || '').replace(/\D/g, '').slice(0, 16);
+  input.value = digits.replace(/(\d{4})(?=\d)/g, '$1 ');
+}
+
+function formatStripeExpInput(input) {
+  const digits = String(input.value || '').replace(/\D/g, '').slice(0, 4);
+  input.value = digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
+}
+
+function payWithStripeCard() {
+  if (!activePaymentSession) return;
+  unlockAudioContext();
+
+  const numEl = document.getElementById('stripe-card-num');
+  const expEl = document.getElementById('stripe-card-exp');
+  const cvcEl = document.getElementById('stripe-card-cvc');
+  const errEl = document.getElementById('stripe-error-msg');
+  const btnEl = document.getElementById('btn-stripe-submit');
+
+  const rawNum = (numEl ? numEl.value : '').replace(/\D/g, '');
+  const rawExp = (expEl ? expEl.value : '').trim();
+  const rawCvc = (cvcEl ? cvcEl.value : '').replace(/\D/g, '');
+
+  if (rawNum.length < 12 || rawExp.length < 4 || rawCvc.length < 3) {
+    if (errEl) {
+      errEl.textContent = 'Completa tu tarjeta o toca "⚡ Autocompletar Demo (4242)" arriba';
+      errEl.classList.remove('hidden');
+    }
+    return;
+  }
+
+  if (errEl) errEl.classList.add('hidden');
+  const last4 = rawNum.slice(-4);
+  if (btnEl) {
+    btnEl.disabled = true;
+    btnEl.textContent = '🔒 Procesando con Stripe...';
+  }
+
+  setTimeout(() => {
+    if (btnEl) btnEl.disabled = false;
+    playClientReadyDing();
+    completeDigitalPayment({
+      paymentMethod: 'stripe_card',
+      paymentLabel: `Stripe (•••• ${last4})`,
+      paymentRef: 'pi_' + Date.now().toString(36),
+    });
+  }, 550);
+}
+
+function completeDigitalPayment({ paymentMethod, paymentLabel, paymentRef }) {
+  if (!activePaymentSession) return;
+  const session = activePaymentSession;
+  activePaymentSession = null;
+  closePaymentModal();
+
+  // Caso 1: Pago Anticipado de una orden de Pickup o A Domicilio
+  if (session.mode === 'prepay_order' && session.draftOrder) {
+    const paidOrderData = {
+      ...session.draftOrder,
+      paid: true,
+      paidAt: Date.now(),
+      paymentMethod,
+      paymentLabel,
+      paymentRef,
+      tipAmount: session.tipAmount,
+      paidTotal: session.grandTotal,
+      total: session.grandTotal,
+    };
+    dispatchConfirmedOrderToKitchen(paidOrderData);
+    showCustomPushBanner({
+      ledClass: 'led-ready',
+      kicker: `✓ PAGO ANTICIPADO CONFIRMADO · ${paymentLabel.toUpperCase()}`,
+      message: `Tu orden (${paidOrderData.table} · $${session.grandTotal}) fue enviada directo a cocina`,
+    });
+    return;
+  }
+
+  // Caso 2: Pago en Mesa desde el Rastreador (Mi Cuenta Individual o Toda la Mesa)
+  const targetIds = Array.isArray(session.orderIds) ? session.orderIds : [];
+  orders.forEach(o => {
+    if (targetIds.includes(o.id)) {
+      o.paid = true;
+      o.paidAt = Date.now();
+      o.paymentMethod = paymentMethod;
+      o.paymentLabel = paymentLabel;
+      o.paymentRef = paymentRef;
+      o.tipAmount = session.tipAmount;
+      o.paidTotal = session.grandTotal;
+    }
+  });
+
+  persistOrders();
+  publishCloudSync('ORDER_PAYMENT', {
+    orderIds: targetIds,
+    paymentMethod,
+    paymentLabel,
+    paymentRef,
+    paidAt: Date.now(),
+    tipAmount: session.tipAmount,
+    amountPaid: session.grandTotal,
+    table: session.table,
+    guestName: session.guestName,
+    scope: session.mode,
+  });
+
+  renderClientTracker();
+  renderKDS();
+  renderDailySales();
+
+  showCustomPushBanner({
+    ledClass: 'led-ready',
+    kicker: `✓ CUENTA PAGADA CON ${paymentLabel.toUpperCase()}`,
+    message: `Pago de $${session.grandTotal} MXN confirmado para ${session.table} (${session.guestName})`,
+  });
+  showToast(`✓ Pagado con ${paymentLabel} ($${session.grandTotal})`);
+}
+
+// ─── Sistema de Grupos por Mesa y Cuentas Separadas (Split Bill) ──
+function getTableGroupSummary(tableName, referenceOrder = null) {
+  const normTable = normalizeTableName(tableName).toLowerCase();
+  const tableOrders = orders.filter(
+    o => o && normalizeTableName(o.table).toLowerCase() === normTable
+  );
+
+  // Determinar el nombre del comensal actual
+  const refGuest = (referenceOrder && referenceOrder.guestName)
+    ? referenceOrder.guestName
+    : (currentGuestName || readTenantStorage('guest-name') || 'Comensal 1');
+  const normRefGuest = refGuest.trim().toLowerCase();
+
+  const dinersMap = new Map();
+  let tableTotal = 0;
+
+  tableOrders.forEach(o => {
+    const gName = (o.guestName || 'Comensal 1').trim();
+    const gKey  = gName.toLowerCase();
+    const isMe  = myOrderIds.includes(o.id) || o.deviceId === DEVICE_ID || gKey === normRefGuest;
+
+    if (!dinersMap.has(gKey)) {
+      dinersMap.set(gKey, {
+        key: gKey,
+        guestName: gName,
+        isMe: false,
+        total: 0,
+        ordersCount: 0,
+        orderNums: [],
+        latestStatus: o.status || 'pending',
+        items: [],
+      });
+    }
+
+    const bucket = dinersMap.get(gKey);
+    if (isMe) bucket.isMe = true;
+    bucket.ordersCount += 1;
+    bucket.orderNums.push(o.num);
+    bucket.latestStatus = o.status || bucket.latestStatus;
+
+    const orderAmt = Number(o.total) || 0;
+    bucket.total += orderAmt;
+    tableTotal   += orderAmt;
+
+    (o.items || []).forEach(it => {
+      bucket.items.push({
+        ...it,
+        orderNum: o.num,
+        orderStatus: o.status,
+      });
+    });
+  });
+
+  // Si aún no había órdenes en la lista para este comensal pero sí referenceOrder
+  const diners = Array.from(dinersMap.values()).sort((a, b) => (a.isMe === b.isMe ? 0 : a.isMe ? -1 : 1));
+  const myDiner = diners.find(d => d.isMe) || (referenceOrder ? {
+    key: normRefGuest,
+    guestName: refGuest,
+    isMe: true,
+    total: Number(referenceOrder.total) || 0,
+    ordersCount: 1,
+    orderNums: [referenceOrder.num],
+    latestStatus: referenceOrder.status || 'pending',
+    items: referenceOrder.items || [],
+  } : {
+    key: normRefGuest,
+    guestName: refGuest,
+    isMe: true,
+    total: getCartTotal(),
+    ordersCount: 0,
+    orderNums: [],
+    latestStatus: 'pending',
+    items: [],
+  });
+
+  return {
+    table: normalizeTableName(tableName),
+    tableOrdersCount: tableOrders.length,
+    diners,
+    myDiner,
+    myTotal: myDiner.total,
+    tableTotal: tableTotal || myDiner.total,
+  };
+}
+
+function setTrackerSplitView(mode) {
+  trackerSplitMode = mode === 'table' ? 'table' : 'mine';
+  renderClientTracker();
+}
+
+// ─── Llamar al Mesero / Pedir la Cuenta (Individual o Grupal) ──
+function getConfirmedSessionTable() {
   if (presetTableFromURL) return presetTableFromURL;
-  const saved = localStorage.getItem('kds-last-table');
-  if (saved) return saved;
+  const activeOrder = activeTrackedOrderId ? orders.find(o => o.id === activeTrackedOrderId) : null;
+  if (clientMode === 'tracker' && activeOrder && activeOrder.table) return activeOrder.table;
   return '';
 }
 
 function requestTableService(type) {
   unlockAudioContext();
-  const table = getDetectedCustomerTable();
-  if (!table) {
+  const confirmedTable = getConfirmedSessionTable();
+  if (!confirmedTable) {
     pendingServiceType = type;
     const titleEl = document.getElementById('service-modal-title');
     if (titleEl) {
-      titleEl.textContent = type === 'bill'
+      titleEl.textContent = type.startsWith('bill')
         ? '¿De qué mesa pides la cuenta?'
         : '¿En qué mesa necesitas al mesero?';
     }
     const inputEl = document.getElementById('service-table-input');
-    document.getElementById('service-modal-overlay').classList.add('open');
-    document.getElementById('service-table-modal').classList.add('open');
-    setTimeout(() => { if (inputEl) inputEl.focus(); }, 50);
+    const savedTable = readTenantStorage('last-table') || '';
+    if (inputEl && !inputEl.value) {
+      inputEl.value = savedTable;
+    }
+    const ov = document.getElementById('service-modal-overlay');
+    const md = document.getElementById('service-table-modal');
+    if (ov) ov.classList.add('open');
+    if (md) md.classList.add('open');
+    setTimeout(() => { if (inputEl) { inputEl.focus(); inputEl.select(); } }, 50);
     return;
   }
-  dispatchServiceCall(type, table);
+  dispatchServiceCall(type, confirmedTable);
 }
 
 function closeServiceTableModal() {
@@ -1830,42 +2971,83 @@ function confirmServiceTableModal() {
   const inputEl = document.getElementById('service-table-input');
   const tableVal = (inputEl ? inputEl.value.trim() : '') || 'Mostrador';
   const type = pendingServiceType || 'waiter';
-  localStorage.setItem('kds-last-table', tableVal);
-  if (inputEl) inputEl.value = '';
+  localStorage.setItem(storageKey('last-table'), tableVal);
   closeServiceTableModal();
   dispatchServiceCall(type, tableVal);
 }
 
 function dispatchServiceCall(type, table) {
   const activeOrder = activeTrackedOrderId ? orders.find(o => o.id === activeTrackedOrderId) : null;
+  const groupInfo   = getTableGroupSummary(table, activeOrder);
+  const isBill      = type === 'bill' || type === 'bill_individual' || type === 'bill_table';
+  const billScope   = type === 'bill_table' ? 'table' : 'individual';
+  const guestName   = groupInfo.myDiner.guestName || currentGuestName || '';
+
+  const callTotal = billScope === 'table'
+    ? groupInfo.tableTotal
+    : (groupInfo.myTotal || (activeOrder ? activeOrder.total : getCartTotal()));
+
+  const breakdownText = groupInfo.diners.length > 1
+    ? groupInfo.diners.map(d => `${d.guestName}: $${d.total}`).join(' · ')
+    : '';
+
+  const callKey = isBill ? `${table}::bill::${billScope}::${guestName}` : `${table}::waiter`;
+
   const callObj = {
     id: Date.now() + Math.floor(Math.random() * 1000),
-    type: type === 'bill' ? 'bill' : 'waiter',
+    callKey,
+    type: isBill ? 'bill' : 'waiter',
+    billScope: isBill ? billScope : null,
     table,
+    guestName: isBill && billScope === 'individual' ? guestName : '',
+    dinersCount: groupInfo.diners.length || 1,
+    breakdownText,
     orderNum: activeOrder ? activeOrder.num : null,
-    total: activeOrder ? activeOrder.total : getCartTotal(),
+    total: callTotal,
     createdAt: Date.now(),
   };
 
-  serviceCalls = serviceCalls.filter(c => !(c.table === callObj.table && c.type === callObj.type));
+  serviceCalls = serviceCalls.filter(c => (c.callKey || `${c.table}::${c.type}`) !== callKey);
   serviceCalls.push(callObj);
   persistOrders();
   publishCloudSync('SERVICE_CALL', callObj);
   renderKDSServiceAlerts();
 
-  const feedbackEl = document.getElementById('tracker-service-feedback');
-  if (feedbackEl) {
-    feedbackEl.textContent = type === 'bill' ? '✓ Cuenta solicitada' : '✓ Mesero avisado';
-  }
-  showToast(type === 'bill'
-    ? `🧾 Cuenta solicitada para ${table}`
+  const statusText = isBill
+    ? (billScope === 'table'
+        ? `✓ Cuenta grupal pedida ($${callTotal})`
+        : `✓ Tu cuenta pedida ($${callTotal})`)
+    : `✓ Mesero avisado (${table})`;
+
+  const trackerFeedback = document.getElementById('tracker-service-feedback');
+  const menuFeedback    = document.getElementById('menu-service-feedback');
+  if (trackerFeedback) trackerFeedback.textContent = statusText;
+  if (menuFeedback)    menuFeedback.textContent    = statusText;
+
+  showCustomPushBanner({
+    ledClass: isBill ? 'led-received' : 'led-ready',
+    kicker: isBill
+      ? (billScope === 'table' ? '👥 CUENTA GRUPAL SOLICITADA' : '👤 TU CUENTA INDIVIDUAL SOLICITADA')
+      : '🔔 MESERO NOTIFICADO EN COCINA',
+    message: isBill
+      ? (billScope === 'table'
+          ? `Llevarán la cuenta completa de ${table} ($${callTotal})`
+          : `Llevarán tu cuenta individual (${guestName || table} · $${callTotal})`)
+      : `El personal ya recibió tu aviso para ${table}`,
+  });
+  playClientReadyDing();
+
+  showToast(isBill
+    ? `🧾 Cuenta solicitada (${billScope === 'table' ? 'Mesa completa' : guestName || table}: $${callTotal})`
     : `🔔 Mesero notificado para ${table}`);
 }
 
 function renderClientTracker() {
+  updateClientContextBar();
   if (clientMode !== 'tracker') return;
 
   const order = activeTrackedOrderId ? orders.find(o => o.id === activeTrackedOrderId) : null;
+  const heroEl    = document.getElementById('tracker-hero-card');
   const numEl     = document.getElementById('tracker-order-num');
   const tableEl   = document.getElementById('tracker-table-name');
   const mainLedEl = document.getElementById('tracker-main-led');
@@ -1873,23 +3055,91 @@ function renderClientTracker() {
   const descEl    = document.getElementById('tracker-status-desc');
   const totalEl   = document.getElementById('tracker-order-total');
   const itemsEl   = document.getElementById('tracker-items-list');
+  const headingEl = document.getElementById('tracker-summary-heading');
+  const progressEl = document.getElementById('tracker-progress-fill');
+  const receiptMetaEl = document.getElementById('receipt-meta');
 
   if (!order) {
     // Si la orden ya fue entregada/cerrada en cocina, mostrar confirmación final limpia
-    if (mainLedEl) mainLedEl.className = 'led-dot led-ready';
-    if (titleEl)   titleEl.textContent = 'Entregado';
-    if (descEl)    descEl.textContent  = 'Tu pedido fue entregado. ¡Buen provecho!';
+    if (heroEl)     heroEl.dataset.status = 'ready';
+    if (mainLedEl)  mainLedEl.className = 'led-dot led-ready';
+    if (titleEl)    titleEl.textContent = 'Entregado';
+    if (descEl)     descEl.textContent  = 'Tu pedido fue entregado. ¡Buen provecho!';
+    if (progressEl) progressEl.style.width = '100%';
+    document.querySelectorAll('#tracker-steps .tracker-step').forEach(stepEl => {
+      stepEl.classList.add('done');
+      stepEl.classList.remove('current');
+    });
     return;
   }
 
-  const meta = STATUS_META[order.status] || STATUS_META.pending;
+  const meta      = STATUS_META[order.status] || STATUS_META.pending;
+  const fMode     = order.fulfillmentMode || 'dine_in';
+  const isRemote  = fMode === 'pickup' || fMode === 'delivery';
+  const groupInfo = getTableGroupSummary(order.table, order);
+  const myDiner   = groupInfo.myDiner;
+  const hasGroup  = !isRemote && groupInfo.diners.length > 1;
 
+  if (heroEl)    heroEl.dataset.status = order.status;
   if (numEl)     numEl.textContent   = `ORDEN #${String(order.num).padStart(3, '0')}`;
-  if (tableEl)   tableEl.textContent = order.table;
+  if (tableEl) {
+    if (fMode === 'pickup') {
+      tableEl.textContent = `🛍️ Pickup · ${order.guestName || 'Cliente'}`;
+    } else if (fMode === 'delivery') {
+      tableEl.textContent = `🛵 A Domicilio · ${order.guestName || 'Cliente'}`;
+    } else {
+      tableEl.textContent = myDiner.guestName ? `${order.table} · ${myDiner.guestName}` : order.table;
+    }
+  }
   if (mainLedEl) mainLedEl.className = `led-dot ${meta.ledClass}`;
   if (titleEl)   titleEl.textContent = meta.label;
   if (descEl)    descEl.textContent  = meta.desc;
-  if (totalEl)   totalEl.textContent = `$${order.total}`;
+  if (progressEl) {
+    const pct = [12, 40, 70, 100][meta.stepIndex] || 12;
+    progressEl.style.width = `${pct}%`;
+  }
+  if (receiptMetaEl) {
+    receiptMetaEl.textContent = `#${String(order.num).padStart(3, '0')} · ${localTimeLabel(order.createdAt || Date.now())}`;
+  }
+
+  // Personalizar el nodo 4 ("Listo") según modalidad
+  const readyStepTitle = document.getElementById('tracker-step-ready-title');
+  const readyStepSub   = document.getElementById('tracker-step-ready-sub');
+  if (readyStepTitle && readyStepSub) {
+    if (fMode === 'delivery') {
+      readyStepTitle.textContent = 'En camino';
+      readyStepSub.textContent   = 'A tu puerta';
+    } else if (fMode === 'pickup') {
+      readyStepTitle.textContent = 'Listo';
+      readyStepSub.textContent   = 'Para recoger';
+    } else {
+      readyStepTitle.textContent = 'Listo';
+      readyStepSub.textContent   = '¡Buen provecho!';
+    }
+  }
+
+  // Detalles de Pickup / A Domicilio
+  const fulfillBox = document.getElementById('tracker-fulfillment-box');
+  if (fulfillBox) {
+    if (fMode === 'pickup') {
+      fulfillBox.classList.remove('hidden');
+      fulfillBox.innerHTML = `
+        <div class="tf-row"><span class="tf-label">Modalidad</span><span class="tf-val">🛍️ Pickup (Para Llevar)</span></div>
+        <div class="tf-row"><span class="tf-label">Recolección</span><span class="tf-val">${escapeHTML(order.pickupTime || 'Lo antes posible')}</span></div>
+        ${order.customerPhone ? `<div class="tf-row"><span class="tf-label">WhatsApp / Tel</span><span class="tf-val">${escapeHTML(order.customerPhone)}</span></div>` : ''}
+      `;
+    } else if (fMode === 'delivery') {
+      fulfillBox.classList.remove('hidden');
+      fulfillBox.innerHTML = `
+        <div class="tf-row"><span class="tf-label">Modalidad</span><span class="tf-val">🛵 Envío a Domicilio (+$${order.deliveryFee || 25})</span></div>
+        <div class="tf-row"><span class="tf-label">Dirección</span><span class="tf-val">${escapeHTML(order.deliveryAddress || '—')}</span></div>
+        ${order.deliveryNotes ? `<div class="tf-row"><span class="tf-label">Referencias</span><span class="tf-val">${escapeHTML(order.deliveryNotes)}</span></div>` : ''}
+        ${order.customerPhone ? `<div class="tf-row"><span class="tf-label">WhatsApp / Tel</span><span class="tf-val">${escapeHTML(order.customerPhone)}</span></div>` : ''}
+      `;
+    } else {
+      fulfillBox.classList.add('hidden');
+    }
+  }
 
   // Actualizar los 4 nodos del rastreador
   document.querySelectorAll('#tracker-steps .tracker-step').forEach(stepEl => {
@@ -1899,15 +3149,142 @@ function renderClientTracker() {
     stepEl.classList.toggle('current', idx === meta.stepIndex);
   });
 
-  if (itemsEl) {
-    itemsEl.innerHTML = order.items.map(it => `
-      <div class="tracker-item-row">
-        <span><span class="tracker-item-qty">${it.qty}x</span>${it.emoji} ${it.name}</span>
-        <span>$${it.price * it.qty}</span>
-      </div>
-    `).join('');
+  // Presencia en la mesa (avatares + estado de cada comensal)
+  const presenceCard  = document.getElementById('tracker-presence-card');
+  const presenceList  = document.getElementById('tracker-presence-list');
+  const presenceTitle = document.getElementById('tracker-presence-title');
+  const presenceCount = document.getElementById('tracker-presence-count');
+  if (presenceCard && presenceList) {
+    if (hasGroup) {
+      presenceCard.classList.remove('hidden');
+      if (presenceTitle) presenceTitle.textContent = `EN ${order.table.toUpperCase()}`;
+      if (presenceCount) presenceCount.textContent = `${groupInfo.diners.length} personas`;
+      presenceList.innerHTML = groupInfo.diners.map(d => `
+        <div class="presence-row${d.isMe ? ' is-me' : ''}">
+          ${renderDinerAvatar(d.guestName, { isMe: d.isMe, size: 'md', status: d.latestStatus })}
+          <div class="presence-info">
+            <span class="presence-name">${escapeHTML(d.guestName)}${d.isMe ? ' <em>(tú)</em>' : ''}</span>
+            <span class="presence-status st-${d.latestStatus}">${DINER_STATUS_LABEL[d.latestStatus] || 'Pidiendo'}</span>
+          </div>
+          <span class="presence-amount">$${d.total}</span>
+        </div>
+      `).join('');
+    } else {
+      presenceCard.classList.add('hidden');
+    }
+  }
+
+  // Pestañas de Cuentas Separadas ("Mi Cuenta" vs "Toda la Mesa")
+  const tabsWrap      = document.getElementById('tracker-split-tabs');
+  const tabMineBtn    = document.getElementById('tab-split-mine');
+  const tabTableBtn   = document.getElementById('tab-split-table');
+  const tabMineLabel  = document.getElementById('tab-split-mine-label');
+  const tabMineTotal  = document.getElementById('tab-split-mine-total');
+  const tabTableLabel = document.getElementById('tab-split-table-label');
+  const tabTableTotal = document.getElementById('tab-split-table-total');
+
+  if (tabsWrap) {
+    tabsWrap.dataset.active = trackerSplitMode;
+    tabsWrap.classList.toggle('hidden', isRemote);
+  }
+  if (tabMineBtn)    tabMineBtn.classList.toggle('active', trackerSplitMode === 'mine');
+  if (tabTableBtn)   tabTableBtn.classList.toggle('active', trackerSplitMode === 'table');
+  if (tabMineLabel)  tabMineLabel.textContent  = 'Mi cuenta';
+  if (tabMineTotal)  tabMineTotal.textContent  = `$${groupInfo.myTotal}`;
+  if (tabTableLabel) tabTableLabel.textContent = hasGroup ? `Toda la mesa · ${groupInfo.diners.length}` : 'Toda la mesa';
+  if (tabTableTotal) tabTableTotal.textContent = `$${groupInfo.tableTotal}`;
+
+  // Estado de Pago Digital (Apple Pay / Stripe Connect)
+  const paidStatusPill = document.getElementById('tracker-paid-status-pill');
+  const payCard        = document.getElementById('tracker-digital-pay-card');
+  const paidBanner     = document.getElementById('tracker-paid-confirmation-banner');
+  const paidConfTitle  = document.getElementById('paid-conf-title');
+  const paidConfSub    = document.getElementById('paid-conf-sub');
+  const payMyBtnText   = document.getElementById('btn-pay-my-share-text');
+  const payMyBtnAmt    = document.getElementById('btn-pay-my-share-amt');
+  const payFullBtn     = document.getElementById('btn-pay-full-table');
+  const payFullBtnText = document.getElementById('btn-pay-full-table-text');
+  const payFullBtnAmt  = document.getElementById('btn-pay-full-table-amt');
+  const assistCard     = document.getElementById('tracker-table-assistance-card');
+
+  const isPaid = Boolean(order.paid);
+  const payMethodLabel = order.paymentLabel || (order.paymentMethod === 'apple_pay' ? 'Apple Pay' : 'Stripe');
+
+  if (paidStatusPill) {
+    paidStatusPill.textContent = isPaid ? `✓ PAGADO · ${payMethodLabel.toUpperCase()}` : 'POR PAGAR';
+    paidStatusPill.classList.toggle('is-paid', isPaid);
+  }
+
+  if (payCard)    payCard.classList.toggle('hidden', isPaid);
+  if (paidBanner) paidBanner.classList.toggle('hidden', !isPaid);
+  if (assistCard) assistCard.classList.toggle('hidden', isRemote);
+
+  if (isPaid && paidConfTitle && paidConfSub) {
+    paidConfTitle.textContent = `✓ Pagado con ${payMethodLabel} ($${order.paidTotal || order.total} MXN)`;
+    paidConfSub.textContent   = order.tipAmount
+      ? `Incluye $${order.tipAmount} de propina · Folio Stripe ${order.paymentRef || 'verificado'}`
+      : `Transacción verificada · Folio ${order.paymentRef || 'activo'}`;
+  }
+
+  if (payMyBtnText) payMyBtnText.textContent = hasGroup ? `Pagar Mi Cuenta (${myDiner.guestName})` : 'Pagar Mi Cuenta';
+  if (payMyBtnAmt)  payMyBtnAmt.textContent  = `$${groupInfo.myTotal}`;
+  if (payFullBtn)   payFullBtn.classList.toggle('hidden', !hasGroup);
+  if (payFullBtnText && hasGroup) payFullBtnText.textContent = `Pagar Toda la Mesa (${groupInfo.diners.length} personas)`;
+  if (payFullBtnAmt  && hasGroup) payFullBtnAmt.textContent  = `$${groupInfo.tableTotal}`;
+
+  // Botones de "Pedir Mi Cuenta" y "Pedir Cuenta de Toda la Mesa" al mesero
+  const myBillBtnLabel   = document.getElementById('btn-bill-my-share-label');
+  const fullBillBtn      = document.getElementById('btn-bill-full-table');
+  const fullBillBtnLabel = document.getElementById('btn-bill-full-table-label');
+
+  if (myBillBtnLabel) {
+    myBillBtnLabel.textContent = hasGroup
+      ? `Cuenta física · $${groupInfo.myTotal}`
+      : `Pedir cuenta · $${groupInfo.myTotal}`;
+  }
+  if (fullBillBtn) fullBillBtn.classList.toggle('hidden', !hasGroup);
+  if (fullBillBtnLabel && hasGroup) {
+    fullBillBtnLabel.textContent = `Cuenta física de toda la mesa · $${groupInfo.tableTotal}`;
+  }
+
+  const itemRow = (it) => `
+    <div class="tracker-item-row">
+      <span class="ti-left"><span class="tracker-item-qty">${it.qty}×</span><span class="ti-name">${it.emoji || ''} ${escapeHTML(it.name)}</span></span>
+      <span class="ti-amount">$${it.price * it.qty}</span>
+    </div>
+  `;
+
+  // Desglose según la pestaña activa ('mine' vs 'table')
+  if (trackerSplitMode === 'table') {
+    if (headingEl) headingEl.textContent = `CUENTAS SEPARADAS · ${order.table.toUpperCase()}`;
+    if (totalEl)   totalEl.textContent   = `$${groupInfo.tableTotal}`;
+
+    if (itemsEl) {
+      itemsEl.innerHTML = groupInfo.diners.map(d => `
+        <div class="group-diner-card ${d.isMe ? 'is-me' : ''}">
+          <div class="group-diner-header">
+            <div class="group-diner-left">
+              ${renderDinerAvatar(d.guestName, { isMe: d.isMe, size: 'sm', status: d.latestStatus })}
+              <span class="group-diner-name">${escapeHTML(d.guestName)}</span>
+              ${d.isMe ? '<span class="group-diner-tag">TÚ</span>' : ''}
+            </div>
+            <span class="group-diner-total">$${d.total}</span>
+          </div>
+          <div class="group-diner-items">
+            ${d.items.map(itemRow).join('')}
+          </div>
+        </div>
+      `).join('');
+    }
+  } else {
+    if (headingEl) headingEl.textContent = `CUENTA DE ${String(myDiner.guestName || 'TI').toUpperCase()}`;
+    if (totalEl)   totalEl.textContent   = `$${groupInfo.myTotal}`;
+
+    const myItems = myDiner.items && myDiner.items.length > 0 ? myDiner.items : order.items;
+    if (itemsEl) itemsEl.innerHTML = myItems.map(itemRow).join('');
   }
 }
+
 
 function showToast(msg) {
   const toast = document.getElementById('order-toast');
@@ -1926,13 +3303,18 @@ let timerInterval = null;
 
 function initKitchenView() {
   loadPersistedOrders();
-  kdsUnlocked = sessionStorage.getItem('escandon-kds-unlocked') === '1';
+  kdsUnlocked =
+    sessionStorage.getItem(storageKey('unlocked')) === '1' ||
+    (tenantId === 'escandon' && sessionStorage.getItem('escandon-kds-unlocked') === '1');
   renderKitchenLockState();
+  renderKDSStockPanel();
+  initQRGeneratorView();
 
   if (kdsUnlocked) {
     setKDSSubView(kdsSubView);
     renderKDS();
     renderKDSServiceAlerts();
+    checkAndNotifyNewServiceCalls();
     renderDailySales();
     startClock();
     startTimers();
@@ -1991,9 +3373,8 @@ function setKDSSubView(subView) {
   }
 }
 
-// ─── Alertas en Vivo de Mesa (Llamar Mesero / Pedir Cuenta) en KDS ──
+// ─── Alertas en Vivo de Mesa (Llamar Mesero / Pedir Cuenta Individual o Grupal) en KDS ──
 function renderKDSServiceAlerts() {
-  if (!kdsUnlocked) return;
   const container = document.getElementById('kds-service-alerts');
   if (!container) return;
 
@@ -2006,12 +3387,28 @@ function renderKDSServiceAlerts() {
   container.classList.remove('hidden');
   container.innerHTML = serviceCalls.map(call => {
     const isBill = call.type === 'bill';
-    const title  = isBill
-      ? `🧾 ${call.table} · PIDE LA CUENTA`
-      : `🔔 ${call.table} · LLAMA AL MESERO`;
+    let title = `🔔 ${call.table} · LLAMA AL MESERO`;
+    if (isBill) {
+      if (call.billScope === 'table') {
+        title = `👥 ${call.table} · PIDE CUENTA DE TODA LA MESA`;
+      } else if (call.guestName) {
+        title = `👤 ${call.table} (${call.guestName}) · PIDE SU CUENTA INDIVIDUAL`;
+      } else {
+        title = `🧾 ${call.table} · PIDE LA CUENTA`;
+      }
+    }
+
     const subParts = [];
-    if (call.orderNum) subParts.push(`Orden #${String(call.orderNum).padStart(3, '0')}`);
-    if (isBill && call.total) subParts.push(`Total: $${call.total}`);
+    if (isBill && call.total) {
+      subParts.push(call.billScope === 'table'
+        ? `Total Mesa: $${call.total}`
+        : `Cobrar a ${call.guestName || call.table}: $${call.total}`);
+    }
+    if (isBill && call.billScope === 'table' && call.breakdownText) {
+      subParts.push(`(${call.breakdownText})`);
+    } else if (call.orderNum) {
+      subParts.push(`Orden #${String(call.orderNum).padStart(3, '0')}`);
+    }
     subParts.push(localTimeLabel(call.createdAt || Date.now()));
 
     return `
@@ -2080,7 +3477,6 @@ function getKDSStockGroups() {
 }
 
 function renderKDSStockPanel() {
-  if (!kdsUnlocked) return;
   const listEl = document.getElementById('kds-stock-list');
   if (!listEl) return;
 
@@ -2177,19 +3573,17 @@ function buildQRGraphicHTML(targetUrl) {
   return `<img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=6&data=${encoded}" alt="QR" loading="lazy" />`;
 }
 
-async function renderTableQRCards() {
-  if (!kdsUnlocked) return;
+function renderTableQRCardsSync() {
   const gridEl      = document.getElementById('qr-cards-grid');
   const countInput  = document.getElementById('qr-table-count');
   const urlInput    = document.getElementById('qr-base-url');
   const barraChk    = document.getElementById('qr-include-barra');
   if (!gridEl) return;
 
-  await ensureQRLib();
-
-  const count = Math.max(1, Math.min(50, parseInt(countInput ? countInput.value : '8', 10) || 8));
-  const baseUrl = (urlInput && urlInput.value.trim()) ? urlInput.value.trim() : getDefaultCustomerBaseUrl();
-  const branchParam = urlParams.get('sucursal') ? `&sucursal=${encodeURIComponent(urlParams.get('sucursal'))}` : '';
+  const profile     = getActiveTenantProfile();
+  const count       = Math.max(1, Math.min(50, parseInt(countInput ? countInput.value : '8', 10) || 8));
+  const baseUrl     = (urlInput && urlInput.value.trim()) ? urlInput.value.trim() : getDefaultCustomerBaseUrl();
+  const tenantParam = getTenantQueryParam();
 
   const tables = [];
   for (let i = 1; i <= count; i++) {
@@ -2200,23 +3594,32 @@ async function renderTableQRCards() {
   }
 
   gridEl.innerHTML = tables.map(t => {
-    const fullUrl = `${baseUrl}?vista=cliente&mesa=${encodeURIComponent(t.param)}${branchParam}`;
+    const fullUrl = `${baseUrl}?vista=cliente&mesa=${encodeURIComponent(t.param)}${tenantParam}`;
     return `
       <div class="qr-print-card">
-        <div class="qr-card-brand">◈ Escandon</div>
+        <div class="qr-card-brand" style="color:${profile.accent}">◈ ${profile.name}</div>
         <div class="qr-card-table">${t.label}</div>
         <div class="qr-card-box">${buildQRGraphicHTML(fullUrl)}</div>
-        <div class="qr-card-cta">Escanea para ordenar desde tu celular</div>
+        <div class="qr-card-cta">Escanea para ordenar y separar tu cuenta</div>
         <div class="qr-card-url">${fullUrl}</div>
       </div>
     `;
   }).join('');
 }
 
+function renderTableQRCards() {
+  renderTableQRCardsSync();
+  if (typeof window.qrcode !== 'function') {
+    ensureQRLib().then(lib => {
+      if (lib) renderTableQRCardsSync();
+    });
+  }
+  return Promise.resolve();
+}
+
 function printTableQRCards() {
-  renderTableQRCards().then(() => {
-    setTimeout(() => window.print(), 120);
-  });
+  renderTableQRCardsSync();
+  setTimeout(() => window.print(), 120);
 }
 
 function startClock() {
@@ -2281,6 +3684,31 @@ function renderKDS() {
     const elapsed = Math.floor((Date.now() - order.createdAt) / 60000);
     const timerClass = elapsed >= 20 ? 'alert' : elapsed >= 10 ? 'warn' : '';
     const timerTxt = elapsed < 1 ? '< 1 min' : `${elapsed} min`;
+    const fMode = order.fulfillmentMode || 'dine_in';
+    const isRemote = fMode === 'pickup' || fMode === 'delivery';
+    const tableGroup = getTableGroupSummary(order.table, order);
+    const hasTableGroup = !isRemote && (tableGroup.diners.length > 1 || tableGroup.tableOrdersCount > 1);
+    const payBadgeHtml = order.paid
+      ? `<span class="kds-pay-badge">✓ PAGADO · ${(order.paymentLabel || 'APPLE PAY').toUpperCase()}</span>`
+      : '';
+
+    let fulfillmentBannerHtml = '';
+    if (fMode === 'pickup') {
+      fulfillmentBannerHtml = `
+        <div class="kds-fulfillment-banner mode-pickup">
+          <span>🛍️ PICKUP (PARA LLEVAR) · 🕒 ${escapeHTML(order.pickupTime || 'Lo antes posible')}</span>
+          ${order.customerPhone ? `<span class="kds-fulfillment-sub">📞 Tel: ${escapeHTML(order.customerPhone)}</span>` : ''}
+        </div>
+      `;
+    } else if (fMode === 'delivery') {
+      fulfillmentBannerHtml = `
+        <div class="kds-fulfillment-banner mode-delivery">
+          <span>🛵 ENVÍO A DOMICILIO (+$${order.deliveryFee || 25})</span>
+          <span class="kds-fulfillment-sub">📍 ${escapeHTML(order.deliveryAddress || 'Sin dirección')}${order.deliveryNotes ? ` · (${escapeHTML(order.deliveryNotes)})` : ''}</span>
+          ${order.customerPhone ? `<span class="kds-fulfillment-sub">📞 Tel: ${escapeHTML(order.customerPhone)}</span>` : ''}
+        </div>
+      `;
+    }
 
     const actionsBtns = (() => {
       if (order.status === 'pending') return `
@@ -2305,17 +3733,27 @@ function renderKDS() {
       <div class="order-card status-${order.status}" id="order-${order.id}">
         <div class="order-card-header">
           <div>
-            <div style="display:flex;align-items:center;gap:6px">
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
               <span class="order-num">#${String(order.num).padStart(3, '0')}</span>
               <span class="order-timer ${timerClass}" data-order-id="${order.id}">${timerTxt}</span>
+              ${payBadgeHtml}
             </div>
-            <div class="order-table">${order.table}</div>
+            <div class="order-table-row">
+              <span class="order-table">${escapeHTML(order.table)}</span>
+              ${order.guestName ? `<span class="kds-diner-badge">👤 ${escapeHTML(order.guestName)}</span>` : ''}
+            </div>
           </div>
           <span class="status-badge">
             <span class="led-dot ${meta.ledClass}"></span>
             <span>${meta.label}</span>
           </span>
         </div>
+        ${fulfillmentBannerHtml}
+        ${hasTableGroup ? `
+          <div class="kds-table-group-pill">
+            👥 Grupo ${escapeHTML(order.table)} (${tableGroup.diners.length} ${tableGroup.diners.length === 1 ? 'comensal' : 'comensales'}) · Total mesa: $${tableGroup.tableTotal}
+          </div>
+        ` : ''}
         <div class="order-items-list">
           ${order.items.map(it => `
             <div class="order-item-row">
@@ -2323,7 +3761,7 @@ function renderKDS() {
               <span class="order-item-name">${it.emoji} ${it.name}</span>
             </div>`).join('')}
         </div>
-        <div class="order-total">Total: $${order.total}</div>
+        <div class="order-total">Total individual${order.guestName ? ` (${order.guestName})` : ''}: $${order.total}</div>
         <div class="order-actions">${actionsBtns}</div>
       </div>`;
   }).join('');
@@ -2467,16 +3905,22 @@ function renderDailySales() {
   const totalMoneyEl  = document.getElementById('sales-total-money');
   const ordersCountEl = document.getElementById('sales-orders-count');
   const totalUnitsEl  = document.getElementById('sales-total-units');
+  const avgTicketEl   = document.getElementById('sales-avg-ticket');
+  const topProdEl     = document.getElementById('sales-top-product');
 
   const qtyTacosEl   = document.getElementById('sales-qty-tacos');
   const amtTacosEl   = document.getElementById('sales-amt-tacos');
+  const barTacosEl   = document.getElementById('sales-bar-tacos');
   const qtyHotdogsEl = document.getElementById('sales-qty-hotdogs');
   const amtHotdogsEl = document.getElementById('sales-amt-hotdogs');
+  const barHotdogsEl = document.getElementById('sales-bar-hotdogs');
   const qtyAguasEl   = document.getElementById('sales-qty-aguas');
   const amtAguasEl   = document.getElementById('sales-amt-aguas');
   const subAguasEl   = document.getElementById('sales-sub-aguas');
+  const barAguasEl   = document.getElementById('sales-bar-aguas');
   const qtyCocasEl   = document.getElementById('sales-qty-cocas');
   const amtCocasEl   = document.getElementById('sales-amt-cocas');
+  const barCocasEl   = document.getElementById('sales-bar-cocas');
 
   if (totalMoneyEl)  totalMoneyEl.textContent = formatMoney(stats.totalRevenue);
   if (ordersCountEl) {
@@ -2490,14 +3934,33 @@ function renderDailySales() {
       : `${stats.totalUnits} vendidos`;
   }
 
+  const avgTicket = stats.ordersCount > 0 ? Math.round(stats.totalRevenue / stats.ordersCount) : 0;
+  if (avgTicketEl) avgTicketEl.textContent = formatMoney(avgTicket);
+
+  if (topProdEl) {
+    const candidates = [
+      { label: '🌮 Tacos', qty: stats.breakdown.tacos.qty },
+      { label: '🌭 Hot Dogs', qty: stats.breakdown.hotdogs.qty },
+      { label: '💧 Aguas', qty: stats.breakdown.aguas.qty },
+      { label: '🥤 Coca-Cola', qty: stats.breakdown.cocas.qty },
+    ].sort((a, b) => b.qty - a.qty);
+    topProdEl.textContent = candidates[0].qty > 0 ? `${candidates[0].label} (${candidates[0].qty})` : '—';
+  }
+
+  const rev = Math.max(1, stats.totalRevenue);
+  const pct = (amt) => stats.totalRevenue > 0 ? Math.min(100, Math.round((amt / rev) * 100)) : 0;
+
   if (qtyTacosEl)   qtyTacosEl.textContent   = stats.breakdown.tacos.qty;
   if (amtTacosEl)   amtTacosEl.textContent   = formatMoney(stats.breakdown.tacos.amount);
+  if (barTacosEl)   barTacosEl.style.width   = `${pct(stats.breakdown.tacos.amount)}%`;
 
   if (qtyHotdogsEl) qtyHotdogsEl.textContent = stats.breakdown.hotdogs.qty;
   if (amtHotdogsEl) amtHotdogsEl.textContent = formatMoney(stats.breakdown.hotdogs.amount);
+  if (barHotdogsEl) barHotdogsEl.style.width = `${pct(stats.breakdown.hotdogs.amount)}%`;
 
   if (qtyAguasEl)   qtyAguasEl.textContent   = stats.breakdown.aguas.qty;
   if (amtAguasEl)   amtAguasEl.textContent   = formatMoney(stats.breakdown.aguas.amount);
+  if (barAguasEl)   barAguasEl.style.width   = `${pct(stats.breakdown.aguas.amount)}%`;
   if (subAguasEl) {
     subAguasEl.textContent = stats.breakdown.aguas.qty > 0
       ? `$25 c/u · Jamaica: ${stats.breakdown.aguas.jamaica} · Horchata: ${stats.breakdown.aguas.horchata}`
@@ -2506,6 +3969,9 @@ function renderDailySales() {
 
   if (qtyCocasEl)   qtyCocasEl.textContent   = stats.breakdown.cocas.qty;
   if (amtCocasEl)   amtCocasEl.textContent   = formatMoney(stats.breakdown.cocas.amount);
+  if (barCocasEl)   barCocasEl.style.width   = `${pct(stats.breakdown.cocas.amount)}%`;
+
+  renderExecutiveExcelPreview();
 }
 
 function openCloseShiftModal() {
@@ -2587,7 +4053,8 @@ const AUTO_EXPORT_PREF_KEY  = 'escandon-auto-export';
 const LEDGER_DB_NAME        = 'escandon-ledger';
 const LEDGER_STORE          = 'sales';
 const LEDGER_FALLBACK_KEY   = 'escandon-ledger-fallback';
-const XLSX_CDN_URL          = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
+const XLSX_CDN_URL          = 'https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js';
+const XLSX_FALLBACK_CDN_URL = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
 const MONTH_KEY_RE          = /^\d{4}-\d{2}$/;
 const DAY_KEY_RE            = /^\d{4}-\d{2}-\d{2}$/;
 const MONTH_NAMES_ES        = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -2677,6 +4144,7 @@ function buildSaleRecord(order) {
     branch: branchKey,
     num: Number(order.num) || 0,
     table: String(order.table || ''),
+    guestName: String(order.guestName || ''),
     ts,
     createdAt: order.createdAt || ts,
     month: localMonthKey(ts),
@@ -2836,7 +4304,14 @@ async function ledgerGetAll() {
   } catch (e) {
     all = Object.values(fallbackReadAll());
   }
-  return all.filter(r => r && (r.branch || 'escandon-main') === branchKey && MONTH_KEY_RE.test(r.month));
+  return all.filter(r => {
+    if (!r || !MONTH_KEY_RE.test(r.month)) return false;
+    const recordBranch = r.branch || 'escandon';
+    if (tenantId === 'escandon') {
+      return recordBranch === 'escandon' || recordBranch === 'escandon-main';
+    }
+    return recordBranch === tenantId;
+  });
 }
 
 // ─── Nube opcional: Firebase Realtime Database (REST) ──
@@ -2845,7 +4320,7 @@ function firebaseBaseUrl() {
 }
 
 function cloudSalesUrl(suffix) {
-  return `${firebaseBaseUrl()}/escandon_ventas/${branchKey}${suffix}.json`;
+  return `${firebaseBaseUrl()}/restaurantes/${tenantId}/ventas${suffix}.json`;
 }
 
 function stripLocalFields(record) {
@@ -3043,7 +4518,7 @@ async function paintMonthlyHistory() {
         </div>`).join('');
 }
 
-// ─── Exportación a Excel (.xlsx) ───────────────
+// ─── Exportación a Excel Ejecutivo (.xlsx con estilos contables) ───
 let xlsxLoadPromise = null;
 
 function ensureXLSX() {
@@ -3054,7 +4529,14 @@ function ensureXLSX() {
     s.src = XLSX_CDN_URL;
     s.async = true;
     s.onload = () => resolve(window.XLSX && window.XLSX.utils ? window.XLSX : null);
-    s.onerror = () => { xlsxLoadPromise = null; resolve(null); };
+    s.onerror = () => {
+      const fb = document.createElement('script');
+      fb.src = XLSX_FALLBACK_CDN_URL;
+      fb.async = true;
+      fb.onload = () => resolve(window.XLSX && window.XLSX.utils ? window.XLSX : null);
+      fb.onerror = () => { xlsxLoadPromise = null; resolve(null); };
+      document.head.appendChild(fb);
+    };
     document.head.appendChild(s);
   });
   return xlsxLoadPromise;
@@ -3066,77 +4548,236 @@ function buildSalesSheetsData(records, periodLabel, includeMonthly) {
   const aguasQty = agg.jamaica.qty + agg.horchata.qty + agg.agua.qty;
   const aguasAmt = agg.jamaica.amount + agg.horchata.amount + agg.agua.amount;
   const generated = new Date().toLocaleString('es-MX');
+  const totalRev = agg.total || 0;
+  const shareOf = (amt) => (totalRev > 0 ? Math.round((amt / totalRev) * 1000) / 1000 : 0);
 
+  const profile = getActiveTenantProfile();
   const resumen = [
-    ['Escandon — Reporte de Ventas'],
-    ['Periodo', periodLabel],
-    ['Generado', generated],
+    [`${profile.name.toUpperCase()} — REPORTE EJECUTIVO DE VENTAS`, '', '', ''],
+    ['Periodo', periodLabel, 'Sucursal ID', profile.id],
+    ['Generado', generated, 'Moneda', 'MXN ($)'],
     [],
-    ['Concepto', 'Cantidad', 'Importe'],
-    ['Tacos ($28)', agg.taco.qty, agg.taco.amount],
-    ['Hot Dogs ($35)', agg.hotdog.qty, agg.hotdog.amount],
-    ['Agua de Jamaica ($25)', agg.jamaica.qty, agg.jamaica.amount],
-    ['Agua de Horchata ($25)', agg.horchata.qty, agg.horchata.amount],
+    ['Concepto / Producto', 'Unidades', 'Importe ($ MXN)', '% Participación'],
+    ['Tacos ($28.00)', agg.taco.qty, agg.taco.amount, shareOf(agg.taco.amount)],
+    ['Hot Dogs ($35.00)', agg.hotdog.qty, agg.hotdog.amount, shareOf(agg.hotdog.amount)],
+    ['Agua de Jamaica ($25.00)', agg.jamaica.qty, agg.jamaica.amount, shareOf(agg.jamaica.amount)],
+    ['Agua de Horchata ($25.00)', agg.horchata.qty, agg.horchata.amount, shareOf(agg.horchata.amount)],
   ];
-  if (agg.agua.qty > 0) resumen.push(['Otras aguas', agg.agua.qty, agg.agua.amount]);
-  resumen.push(['Coca-Cola ($30)', agg.coca.qty, agg.coca.amount]);
-  if (agg.otro.qty > 0) resumen.push(['Otros', agg.otro.qty, agg.otro.amount]);
+  if (agg.agua.qty > 0) resumen.push(['Otras aguas', agg.agua.qty, agg.agua.amount, shareOf(agg.agua.amount)]);
+  resumen.push(['Coca-Cola ($30.00)', agg.coca.qty, agg.coca.amount, shareOf(agg.coca.amount)]);
+  if (agg.otro.qty > 0) resumen.push(['Otros productos', agg.otro.qty, agg.otro.amount, shareOf(agg.otro.amount)]);
   resumen.push(
     [],
-    ['Total Aguas', aguasQty, aguasAmt],
-    ['Pedidos', agg.orders, ''],
-    ['Días con venta', daysWithSales, ''],
-    ['Ticket promedio', '', agg.orders ? Math.round((agg.total / agg.orders) * 100) / 100 : 0],
-    ['Promedio por día', '', daysWithSales ? Math.round((agg.total / daysWithSales) * 100) / 100 : 0],
-    ['TOTAL DE GANANCIAS', '', agg.total],
+    ['Subtotal Aguas Frescas', aguasQty, aguasAmt, shareOf(aguasAmt)],
+    ['Total de Pedidos Completados', agg.orders, '', ''],
+    ['Días Operativos con Venta', daysWithSales, '', ''],
+    ['Ticket Promedio por Orden', '', agg.orders ? Math.round((agg.total / agg.orders) * 100) / 100 : 0, ''],
+    ['Promedio de Venta Diaria', '', daysWithSales ? Math.round((agg.total / daysWithSales) * 100) / 100 : 0, ''],
+    ['TOTAL DE GANANCIAS ($ MXN)', '', agg.total, 1],
   );
 
-  const sheets = [{ name: 'Resumen', rows: resumen, cols: [26, 12, 14], moneyCols: [2], headerRow: 4 }];
+  const sheets = [{
+    name: 'Resumen',
+    sheetType: 'resumen',
+    rows: resumen,
+    cols: [30, 14, 18, 16],
+    moneyCols: [2],
+    pctCols: [3],
+    headerRow: 4,
+  }];
 
   if (includeMonthly) {
     const monthRows = Array.from(agg.months.values()).sort((a, b) => (a.key > b.key ? 1 : -1));
     sheets.push({
       name: 'Por Mes',
+      sheetType: 'table',
       rows: [
-        ['Mes', 'Pedidos', 'Tacos', 'Hot Dogs', 'Aguas', 'Coca-Colas', 'Total ($)'],
+        ['Mes', 'Pedidos', 'Tacos', 'Hot Dogs', 'Aguas', 'Coca-Colas', 'Total ($ MXN)'],
         ...monthRows.map(m => [monthLabel(m.key), m.orders, m.tacos, m.hotdogs, m.aguas, m.cocas, m.total]),
-        ['TOTAL', agg.orders, agg.taco.qty, agg.hotdog.qty, aguasQty, agg.coca.qty, agg.total],
+        ['TOTAL ACUMULADO', agg.orders, agg.taco.qty, agg.hotdog.qty, aguasQty, agg.coca.qty, agg.total],
       ],
-      cols: [18, 10, 10, 10, 10, 12, 14],
+      cols: [20, 12, 11, 12, 11, 13, 18],
       moneyCols: [6],
       headerRow: 0,
+      hasTotalFooter: true,
     });
   }
 
   const dayRows = Array.from(agg.days.values()).sort((a, b) => (a.key > b.key ? 1 : -1));
   sheets.push({
     name: 'Por Día',
+    sheetType: 'table',
     rows: [
-      ['Fecha', 'Pedidos', 'Tacos', 'Hot Dogs', 'Aguas', 'Coca-Colas', 'Total ($)'],
-      ...dayRows.map(d => [d.key, d.orders, d.tacos, d.hotdogs, d.aguas, d.cocas, d.total]),
-      ['TOTAL', agg.orders, agg.taco.qty, agg.hotdog.qty, aguasQty, agg.coca.qty, agg.total],
+      ['Fecha', 'Pedidos', 'Tacos', 'Hot Dogs', 'Aguas', 'Coca-Colas', 'Ticket Promedio', 'Total ($ MXN)'],
+      ...dayRows.map(d => [
+        d.key,
+        d.orders,
+        d.tacos,
+        d.hotdogs,
+        d.aguas,
+        d.cocas,
+        d.orders ? Math.round((d.total / d.orders) * 100) / 100 : 0,
+        d.total,
+      ]),
+      [
+        'TOTAL',
+        agg.orders,
+        agg.taco.qty,
+        agg.hotdog.qty,
+        aguasQty,
+        agg.coca.qty,
+        agg.orders ? Math.round((agg.total / agg.orders) * 100) / 100 : 0,
+        agg.total,
+      ],
     ],
-    cols: [12, 10, 10, 10, 10, 12, 14],
-    moneyCols: [6],
+    cols: [14, 11, 10, 11, 10, 12, 16, 18],
+    moneyCols: [6, 7],
     headerRow: 0,
+    hasTotalFooter: true,
   });
 
+  const sortedRecords = records.slice().sort((a, b) => a.ts - b.ts);
   sheets.push({
     name: 'Detalle',
+    sheetType: 'table',
     rows: [
-      ['Fecha', 'Hora', 'Folio', 'Mesa / Cliente', 'Tacos', 'Hot Dogs', 'Aguas', 'Coca-Colas', 'Productos', 'Total ($)'],
-      ...records.slice().sort((a, b) => a.ts - b.ts).map(r => {
+      ['Fecha', 'Hora', 'Folio', 'Mesa / Comensal', 'Tacos', 'Hot Dogs', 'Aguas', 'Coca-Colas', 'Detalle de Productos', 'Total ($ MXN)'],
+      ...sortedRecords.map(r => {
         const c = countRecordProducts(r);
         const productos = (r.items || []).map(it => `${it.qty}x ${it.name}`).join(' · ');
-        return [r.day, localTimeLabel(r.ts), `#${String(r.num).padStart(3, '0')}`, r.table, c.tacos, c.hotdogs, c.aguas, c.cocas, productos, Number(r.total) || 0];
+        const tableAndGuest = r.guestName ? `${r.table} (${r.guestName})` : r.table;
+        return [r.day, localTimeLabel(r.ts), `#${String(r.num).padStart(3, '0')}`, tableAndGuest, c.tacos, c.hotdogs, c.aguas, c.cocas, productos, Number(r.total) || 0];
       }),
+      ['TOTAL', '', `${sortedRecords.length} órdenes`, '', agg.taco.qty, agg.hotdog.qty, aguasQty, agg.coca.qty, 'SUMA CONTABLE VERIFICADA', agg.total],
     ],
-    cols: [12, 8, 8, 20, 8, 10, 8, 11, 60, 12],
+    cols: [13, 9, 10, 24, 9, 11, 9, 12, 58, 16],
     moneyCols: [9],
     headerRow: 0,
+    hasTotalFooter: true,
   });
 
   return sheets;
+}
+
+function applyExecutiveWorksheetStyles(ws, sheet, XLSXlib) {
+  ws['!cols'] = sheet.cols.map(wch => ({ wch }));
+  const totalRows = sheet.rows.length;
+  const totalCols = sheet.cols.length;
+
+  const thinBorder = {
+    top:    { style: 'thin', color: { rgb: 'E2E8F0' } },
+    bottom: { style: 'thin', color: { rgb: 'E2E8F0' } },
+    left:   { style: 'thin', color: { rgb: 'E2E8F0' } },
+    right:  { style: 'thin', color: { rgb: 'E2E8F0' } },
+  };
+
+  const headerStyle = {
+    font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+    fill: { patternType: 'solid', fgColor: { rgb: '1E293B' } },
+    alignment: { vertical: 'center', horizontal: 'center' },
+    border: {
+      top:    { style: 'medium', color: { rgb: '0F172A' } },
+      bottom: { style: 'medium', color: { rgb: '0F172A' } },
+      left:   { style: 'thin',   color: { rgb: '334155' } },
+      right:  { style: 'thin',   color: { rgb: '334155' } },
+    },
+  };
+
+  const totalRowStyle = {
+    font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: '065F46' } },
+    fill: { patternType: 'solid', fgColor: { rgb: 'ECFDF5' } },
+    alignment: { vertical: 'center' },
+    border: {
+      top:    { style: 'medium', color: { rgb: '059669' } },
+      bottom: { style: 'double', color: { rgb: '059669' } },
+      left:   { style: 'thin',   color: { rgb: 'A7F3D0' } },
+      right:  { style: 'thin',   color: { rgb: 'A7F3D0' } },
+    },
+  };
+
+  // Alturas de fila ejecutivas para lectura limpia
+  const rowHeights = [];
+  for (let r = 0; r < totalRows; r++) {
+    if (sheet.sheetType === 'resumen' && r === 0) rowHeights.push({ hpt: 32 });
+    else if (r === sheet.headerRow) rowHeights.push({ hpt: 25 });
+    else if (r === totalRows - 1) rowHeights.push({ hpt: 24 });
+    else rowHeights.push({ hpt: 20 });
+  }
+  ws['!rows'] = rowHeights;
+
+  if (sheet.sheetType === 'resumen') {
+    ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 3 } }];
+  }
+
+  for (let r = 0; r < totalRows; r++) {
+    const isHeader = r === sheet.headerRow;
+    const isLastTotal = (sheet.hasTotalFooter && r === totalRows - 1) || (sheet.sheetType === 'resumen' && r === totalRows - 1);
+    const isZebra = r > sheet.headerRow && !isLastTotal && ((r - sheet.headerRow) % 2 === 0);
+
+    for (let c = 0; c < totalCols; c++) {
+      const addr = XLSXlib.utils.encode_cell({ r, c });
+      let cell = ws[addr];
+      if (!cell) {
+        cell = { t: 's', v: '' };
+        ws[addr] = cell;
+      }
+
+      const isMoney = (sheet.moneyCols || []).includes(c) && cell.t === 'n';
+      const isPct   = (sheet.pctCols || []).includes(c) && cell.t === 'n';
+      const numFmt  = isMoney ? '"$"#,##0.00' : (isPct ? '0.0%' : undefined);
+      if (numFmt) cell.z = numFmt;
+
+      if (sheet.sheetType === 'resumen' && r === 0) {
+        cell.s = {
+          font: { name: 'Calibri', sz: 14, bold: true, color: { rgb: 'FFFFFF' } },
+          fill: { patternType: 'solid', fgColor: { rgb: '0F172A' } },
+          alignment: { vertical: 'center', horizontal: 'left' },
+          border: {
+            bottom: { style: 'medium', color: { rgb: 'FF6B1A' } },
+          },
+        };
+      } else if (sheet.sheetType === 'resumen' && (r === 1 || r === 2)) {
+        const isLabel = c === 0 || c === 2;
+        cell.s = {
+          font: { name: 'Calibri', sz: 10.5, bold: isLabel, color: { rgb: isLabel ? '475569' : '0F172A' } },
+          fill: { patternType: 'solid', fgColor: { rgb: 'F1F5F9' } },
+          alignment: { vertical: 'center', horizontal: 'left' },
+          border: thinBorder,
+        };
+      } else if (isHeader) {
+        cell.s = {
+          ...headerStyle,
+          alignment: { vertical: 'center', horizontal: c === 0 ? 'left' : 'center' },
+        };
+      } else if (isLastTotal) {
+        cell.s = {
+          ...totalRowStyle,
+          alignment: { vertical: 'center', horizontal: (isMoney || isPct || cell.t === 'n') ? 'right' : 'left' },
+          ...(numFmt ? { numFmt } : {}),
+        };
+      } else if (r > sheet.headerRow) {
+        const rowArr = sheet.rows[r] || [];
+        const isEmptySep = rowArr.length === 0 || rowArr.every(v => v === '' || v === null || v === undefined);
+        if (isEmptySep) continue;
+
+        cell.s = {
+          font: {
+            name: 'Calibri',
+            sz: 10.5,
+            bold: c === 0 && sheet.sheetType === 'resumen' && r > 10,
+            color: { rgb: '1E293B' },
+          },
+          fill: { patternType: 'solid', fgColor: { rgb: isZebra ? 'F8FAFC' : 'FFFFFF' } },
+          alignment: {
+            vertical: 'center',
+            horizontal: (isMoney || isPct) ? 'right' : (cell.t === 'n' ? 'center' : 'left'),
+          },
+          border: thinBorder,
+          ...(numFmt ? { numFmt } : {}),
+        };
+      }
+    }
+  }
 }
 
 function downloadBlob(blob, filename) {
@@ -3168,18 +4809,11 @@ async function exportSalesWorkbook({ records, periodLabel, filename, includeMont
     const wb = XLSXlib.utils.book_new();
     sheets.forEach(sheet => {
       const ws = XLSXlib.utils.aoa_to_sheet(sheet.rows);
-      ws['!cols'] = sheet.cols.map(wch => ({ wch }));
-      // Formato de moneda en las columnas de dinero
-      for (let r = sheet.headerRow + 1; r < sheet.rows.length; r++) {
-        sheet.moneyCols.forEach(c => {
-          const cell = ws[XLSXlib.utils.encode_cell({ r, c })];
-          if (cell && cell.t === 'n') cell.z = '"$"#,##0.00';
-        });
-      }
+      applyExecutiveWorksheetStyles(ws, sheet, XLSXlib);
       XLSXlib.utils.book_append_sheet(wb, ws, sheet.name);
     });
     XLSXlib.writeFile(wb, `${filename}.xlsx`);
-    showKDSToast('Reporte de Excel descargado');
+    showKDSToast('📥 Excel Ejecutivo (.xlsx) descargado');
   } else {
     // Sin internet para cargar la librería: exportar CSV compatible con Excel
     const detalle = sheets.find(s => s.name === 'Detalle');
@@ -3187,6 +4821,256 @@ async function exportSalesWorkbook({ records, periodLabel, filename, includeMont
     downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8' }), `${filename}.csv`);
     showKDSToast('Reporte descargado en CSV (abre en Excel)');
   }
+}
+
+// Obtiene los registros activos del turno o del mes para la vista previa de Excel y exportación rápida
+function getActivePreviewSaleRecords() {
+  const readyMap = new Map();
+  completedOrders.forEach(o => { if (o && o.id) readyMap.set(o.id, o); });
+  orders.forEach(o => { if (o && o.id && o.status === 'ready') readyMap.set(o.id, o); });
+  let list = Array.from(readyMap.values());
+  if (list.length === 0 && orders.length > 0) {
+    list = orders.slice();
+  }
+  return list.map(buildSaleRecord).sort((a, b) => a.ts - b.ts);
+}
+
+function renderExecutiveExcelPreview() {
+  const wrapEl = document.getElementById('excel-sheet-preview-wrap');
+  if (!wrapEl) return;
+
+  const profile = getActiveTenantProfile();
+  const records = getActivePreviewSaleRecords();
+  const agg     = aggregateSaleRecords(records);
+  const avgTicket = agg.orders > 0 ? Math.round(agg.total / agg.orders) : 0;
+  const aguasQty  = agg.jamaica.qty + agg.horchata.qty + agg.agua.qty;
+  const aguasAmt  = agg.jamaica.amount + agg.horchata.amount + agg.agua.amount;
+  const pct = (amt) => (agg.total > 0 ? ((amt / agg.total) * 100).toFixed(1) + '%' : '0.0%');
+
+  const sampleRowsHtml = records.length > 0
+    ? records.slice(-5).map(r => {
+        const tableGuest = r.guestName ? `${r.table} · 👤 ${r.guestName}` : r.table;
+        const prods = (r.items || []).map(it => `${it.qty}x ${it.name}`).join(', ');
+        return `
+          <tr>
+            <td><strong>#${String(r.num).padStart(3, '0')}</strong></td>
+            <td>${localTimeLabel(r.ts)}</td>
+            <td><span class="xl-badge">${tableGuest}</span></td>
+            <td>${prods}</td>
+            <td class="xl-num">$${Number(r.total || 0).toFixed(2)}</td>
+          </tr>
+        `;
+      }).join('')
+    : `
+      <tr>
+        <td colspan="5" style="text-align:center;color:#64748b;padding:12px;">
+          Sin órdenes listas en este turno · Presiona <strong>"✨ Cargar Datos Demo"</strong> arriba para previsualizar y descargar un Excel completo con cuentas separadas.
+        </td>
+      </tr>
+    `;
+
+  wrapEl.innerHTML = `
+    <div class="xl-banner" style="border-bottom-color:${profile.accent}">
+      <div>
+        <div class="xl-banner-title">◈ ${profile.name.toUpperCase()} — REPORTE EJECUTIVO DE VENTAS (.XLSX)</div>
+        <div class="xl-banner-sub">Sucursal: ${profile.id} · Moneda: MXN ($) · Hojas: Resumen, Por Día, Detalle de Comandas</div>
+      </div>
+      <span class="xl-badge">EXCEL CONTABLE</span>
+    </div>
+    <div class="xl-kpi-strip">
+      <div class="xl-kpi-cell">
+        <span class="xl-kpi-k">Ventas Totales</span>
+        <span class="xl-kpi-v green">$${Number(agg.total || 0).toFixed(2)}</span>
+      </div>
+      <div class="xl-kpi-cell">
+        <span class="xl-kpi-k">Ticket Promedio</span>
+        <span class="xl-kpi-v">$${Number(avgTicket).toFixed(2)}</span>
+      </div>
+      <div class="xl-kpi-cell">
+        <span class="xl-kpi-k">Órdenes</span>
+        <span class="xl-kpi-v">${agg.orders}</span>
+      </div>
+      <div class="xl-kpi-cell">
+        <span class="xl-kpi-k">Tacos / Dogs / Beb.</span>
+        <span class="xl-kpi-v">${agg.taco.qty} / ${agg.hotdog.qty} / ${aguasQty + agg.coca.qty}</span>
+      </div>
+    </div>
+    <div class="xl-table-scroll">
+      <table class="xl-table">
+        <thead>
+          <tr>
+            <th>Concepto / Categoría</th>
+            <th style="text-align:center">Unidades</th>
+            <th style="text-align:right">Importe ($ MXN)</th>
+            <th style="text-align:right">% Venta</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>🌮 Tacos ($28.00)</td>
+            <td style="text-align:center">${agg.taco.qty}</td>
+            <td class="xl-num">$${agg.taco.amount.toFixed(2)}</td>
+            <td class="xl-num">${pct(agg.taco.amount)}</td>
+          </tr>
+          <tr>
+            <td>🌭 Hot Dogs ($35.00)</td>
+            <td style="text-align:center">${agg.hotdog.qty}</td>
+            <td class="xl-num">$${agg.hotdog.amount.toFixed(2)}</td>
+            <td class="xl-num">${pct(agg.hotdog.amount)}</td>
+          </tr>
+          <tr>
+            <td>💧 Aguas Frescas ($25.00)</td>
+            <td style="text-align:center">${aguasQty}</td>
+            <td class="xl-num">$${aguasAmt.toFixed(2)}</td>
+            <td class="xl-num">${pct(aguasAmt)}</td>
+          </tr>
+          <tr>
+            <td>🥤 Coca-Cola ($30.00)</td>
+            <td style="text-align:center">${agg.coca.qty}</td>
+            <td class="xl-num">$${agg.coca.amount.toFixed(2)}</td>
+            <td class="xl-num">${pct(agg.coca.amount)}</td>
+          </tr>
+          <tr class="xl-total-row">
+            <td>TOTAL DE GANANCIAS</td>
+            <td style="text-align:center">${agg.taco.qty + agg.hotdog.qty + aguasQty + agg.coca.qty} uds</td>
+            <td class="xl-num">$${Number(agg.total || 0).toFixed(2)}</td>
+            <td class="xl-num">100.0%</td>
+          </tr>
+        </tbody>
+      </table>
+      <table class="xl-table" style="border-top:2px solid #0f172a">
+        <thead>
+          <tr>
+            <th>Folio</th>
+            <th>Hora</th>
+            <th>Mesa / Comensal</th>
+            <th>Detalle de Productos</th>
+            <th style="text-align:right">Total ($)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${sampleRowsHtml}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+async function seedDemoSalesForExcel() {
+  const now = Date.now();
+  const demoOrders = [
+    {
+      id: now - 3600000,
+      tenantId,
+      num: ++orderCounter,
+      table: 'Mesa 4',
+      guestName: 'Ana',
+      status: 'ready',
+      createdAt: now - 3600000,
+      readyAt: now - 3400000,
+      deliveredAt: now - 3300000,
+      total: 81,
+      items: [
+        { key: 'taco:doble:bistec:cilantro,cebolla', station: 'taco', name: 'Taco doble de bistec con cilantro, cebolla', emoji: '🌮', price: 28, qty: 2 },
+        { key: 'drink_jamaica', station: 'drink', name: 'Agua de Jamaica (500ml)', emoji: '🌺', price: 25, qty: 1 },
+      ],
+    },
+    {
+      id: now - 3500000,
+      tenantId,
+      num: ++orderCounter,
+      table: 'Mesa 4',
+      guestName: 'Carlos',
+      status: 'ready',
+      createdAt: now - 3500000,
+      readyAt: now - 3250000,
+      deliveredAt: now - 3200000,
+      total: 100,
+      items: [
+        { key: 'hotdog:ketchup,mostaza,chiles', station: 'hotdog', name: 'Hot Dog con ketchup, mostaza, chiles', emoji: '🌭', price: 35, qty: 2 },
+        { key: 'drink_coca', station: 'drink', name: 'Coca-Cola (Retornable 500ml)', emoji: '🥤', price: 30, qty: 1 },
+      ],
+    },
+    {
+      id: now - 2800000,
+      tenantId,
+      num: ++orderCounter,
+      table: 'Mesa 4',
+      guestName: 'Sofía',
+      status: 'ready',
+      createdAt: now - 2800000,
+      readyAt: now - 2600000,
+      deliveredAt: now - 2500000,
+      total: 109,
+      items: [
+        { key: 'taco:sencilla:longaniza:cilantro,salsa_roja', station: 'taco', name: 'Taco sencillo de longaniza con cilantro, salsa roja', emoji: '🌮', price: 28, qty: 3 },
+        { key: 'drink_horchata', station: 'drink', name: 'Agua de Horchata (500ml)', emoji: '🥛', price: 25, qty: 1 },
+      ],
+    },
+    {
+      id: now - 1900000,
+      tenantId,
+      num: ++orderCounter,
+      table: 'Mesa 1',
+      guestName: 'Diego',
+      status: 'ready',
+      createdAt: now - 1900000,
+      readyAt: now - 1700000,
+      deliveredAt: now - 1600000,
+      total: 142,
+      items: [
+        { key: 'taco:doble:bistec:cilantro,cebolla,salsa_roja', station: 'taco', name: 'Taco doble de bistec con todo', emoji: '🌮', price: 28, qty: 4 },
+        { key: 'drink_coca', station: 'drink', name: 'Coca-Cola (Retornable 500ml)', emoji: '🥤', price: 30, qty: 1 },
+      ],
+    },
+    {
+      id: now - 900000,
+      tenantId,
+      num: ++orderCounter,
+      table: 'Mesa 2',
+      guestName: 'Valeria',
+      status: 'ready',
+      createdAt: now - 900000,
+      readyAt: now - 700000,
+      deliveredAt: now - 600000,
+      total: 88,
+      items: [
+        { key: 'hotdog:mayonesa,tomate,cebolla', station: 'hotdog', name: 'Hot Dog con mayonesa, tomate, cebolla', emoji: '🌭', price: 35, qty: 1 },
+        { key: 'taco:sencilla:bistec:cilantro', station: 'taco', name: 'Taco sencillo de bistec', emoji: '🌮', price: 28, qty: 1 },
+        { key: 'drink_jamaica', station: 'drink', name: 'Agua de Jamaica (500ml)', emoji: '🌺', price: 25, qty: 1 },
+      ],
+    },
+  ];
+
+  demoOrders.forEach(o => {
+    completedOrders.push(o);
+  });
+  persistOrders();
+  await recordSalesForOrders(demoOrders, { cloud: true });
+  renderDailySales();
+  await renderMonthlyHistory();
+  showKDSToast('✨ 5 órdenes demo cargadas · Descarga tu Excel Ejecutivo');
+}
+
+async function exportCurrentShiftOrMonthExcel() {
+  if (!kdsUnlocked) return;
+  let records = getActivePreviewSaleRecords();
+  if (records.length === 0) {
+    const month = historySelectedMonth || localMonthKey(Date.now());
+    records = (await ledgerGetAll()).filter(r => r.month === month);
+  }
+  if (records.length === 0) {
+    await seedDemoSalesForExcel();
+    records = getActivePreviewSaleRecords();
+  }
+  const profile = getActiveTenantProfile();
+  const stamp = localDayKey(Date.now());
+  await exportSalesWorkbook({
+    records,
+    periodLabel: `Corte Ejecutivo · ${formatDayLabel(stamp)}`,
+    filename: `${profile.name.replace(/\s+/g, '_')}_Reporte_Ejecutivo_${stamp}`,
+    includeMonthly: false,
+  });
 }
 
 async function exportSelectedMonthExcel() {
@@ -3198,15 +5082,19 @@ async function exportSelectedMonthExcel() {
       await ledgerUpsert(remote.map(r => ({ ...r, cloudSynced: true })), { overwrite: true });
     }
   }
-  const records = (await ledgerGetAll()).filter(r => r.month === month);
+  let records = (await ledgerGetAll()).filter(r => r.month === month);
+  if (records.length === 0) {
+    records = getActivePreviewSaleRecords();
+  }
   if (records.length === 0) {
     showKDSToast(`Sin ventas registradas en ${monthLabel(month)}`);
     return;
   }
+  const profile = getActiveTenantProfile();
   await exportSalesWorkbook({
     records,
     periodLabel: monthLabel(month),
-    filename: `Escandon_Ventas_${month}`,
+    filename: `${profile.name.replace(/\s+/g, '_')}_Ventas_${month}`,
     includeMonthly: false,
   });
 }
@@ -3226,15 +5114,19 @@ async function exportAllHistoryExcel() {
     }
   }
 
-  const records = await ledgerGetAll();
+  let records = await ledgerGetAll();
+  if (records.length === 0) {
+    records = getActivePreviewSaleRecords();
+  }
   if (records.length === 0) {
     showKDSToast('Aún no hay ventas en el historial');
     return;
   }
+  const profile = getActiveTenantProfile();
   await exportSalesWorkbook({
     records,
     periodLabel: 'Historial completo',
-    filename: `Escandon_Historial_${localDayKey(Date.now())}`,
+    filename: `${profile.name.replace(/\s+/g, '_')}_Historial_${localDayKey(Date.now())}`,
     includeMonthly: true,
   });
 }
@@ -3245,6 +5137,7 @@ async function exportAllHistoryExcel() {
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     closeOrderModal();
+    closePaymentModal();
     closeUpsellModal();
     closeServiceTableModal();
     closeCloseShiftModal();
@@ -3259,23 +5152,38 @@ document.addEventListener('keydown', (e) => {
 });
 
 (function init() {
+  applyTenantBranding();
   loadPersistedOrders();
   initCloudWebSockets();
   initFirebaseIfConfigured();
 
   const vistaParam = (urlParams.get('vista') || urlParams.get('view') || window.location.hash.replace('#', '')).toLowerCase();
   const mesaParam  = urlParams.get('mesa') || '';
+  const modoParam  = (urlParams.get('modo') || urlParams.get('mode') || '').toLowerCase();
   if (mesaParam) presetTableFromURL = mesaParam;
 
-  // Si el cliente recarga la página mientras espera su pedido activo, mostrar el rastreador directo
+  if (modoParam === 'pickup' || modoParam === 'llevar') {
+    setFulfillmentMode('pickup');
+  } else if (modoParam === 'domicilio' || modoParam === 'delivery' || modoParam === 'envio') {
+    setFulfillmentMode('delivery');
+  } else {
+    const savedMode = readTenantStorage('fulfillment-mode');
+    if (savedMode && !mesaParam) {
+      setFulfillmentMode(savedMode);
+    } else {
+      setFulfillmentMode('dine_in');
+    }
+  }
+
+  // Si el cliente recarga la página mientras espera su pedido activo y no pidió modo específico nuevo, mostrar el rastreador directo
   const activeOrder = activeTrackedOrderId ? orders.find(o => o.id === activeTrackedOrderId) : null;
-  if (activeOrder && vistaParam !== 'cocina' && vistaParam !== 'kitchen' && vistaParam !== 'kds') {
+  if (activeOrder && !modoParam && vistaParam !== 'cocina' && vistaParam !== 'kitchen' && vistaParam !== 'kds') {
     clientMode = 'tracker';
     showView('client');
     return;
   }
 
-  if (vistaParam === 'cliente' || vistaParam === 'client') {
+  if (vistaParam === 'cliente' || vistaParam === 'client' || modoParam) {
     showView('client');
   } else if (vistaParam === 'cocina' || vistaParam === 'kitchen' || vistaParam === 'kds') {
     showView('kitchen');
