@@ -39,6 +39,44 @@
   --font-mono: 'JetBrains Mono', monospace;
   --nav-h: 60px;
   --transition: 160ms cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* ═══════════════════════════════════════════════════
+     PASO 1 · APPLE WARM MINIMALIST DESIGN SYSTEM TOKENS
+     (Inspirado en Apple HIG + Worktail Warm Minimalist)
+  ═══════════════════════════════════════════════════ */
+  --apple-canvas: #f3f0e8;
+  --apple-canvas-top: #f8f6f0;
+  --apple-surface: #ffffff;
+  --apple-surface-soft: #faf8f3;
+  --apple-ink-0: #161618;
+  --apple-ink-1: #4e4d54;
+  --apple-ink-2: #8a8890;
+  --apple-hairline: rgba(26, 24, 21, 0.075);
+  --apple-hairline-strong: rgba(26, 24, 21, 0.14);
+  --apple-shadow-card: 0 4px 20px rgba(28, 25, 23, 0.035), 0 1px 2px rgba(28, 25, 23, 0.025);
+  --apple-shadow-hover: 0 10px 28px rgba(28, 25, 23, 0.065), 0 2px 6px rgba(28, 25, 23, 0.03);
+  --apple-radius-card: 22px;
+  --apple-radius-inner: 14px;
+  --apple-radius-pill: 999px;
+
+  --apple-sage-bg: #ddf0d7;
+  --apple-sage-ink: #1e7a46;
+  --apple-sky-bg: #e2ebfc;
+  --apple-sky-ink: #2b5bc4;
+  --apple-amber-bg: #fbf0d9;
+  --apple-amber-ink: #b36b06;
+  --apple-plum-bg: #efe5fb;
+  --apple-plum-ink: #723bc0;
+  --apple-orange-bg: #fdece4;
+  --apple-red-bg: #fde8e8;
+  --apple-red-ink: #cc2b2b;
+  --apple-hatch-bg: repeating-linear-gradient(
+    -45deg,
+    rgba(154, 149, 140, 0.26) 0px,
+    rgba(154, 149, 140, 0.26) 2px,
+    transparent 2px,
+    transparent 6px
+  );
 }
 
 html, body {
@@ -4320,4 +4358,3726 @@ button, input {
   background: rgba(34, 229, 102, 0.15);
   color: var(--led-green);
   border: 1px solid rgba(34, 229, 102, 0.4);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   PASO 2 · DASHBOARD KDS & GERENCIA — APPLE WARM MINIMALIST THEME
+   Scoped a #view-kitchen.kds-apple-theme (no altera la vista cliente)
+═══════════════════════════════════════════════════════════════════ */
+
+#view-kitchen.kds-apple-theme {
+  background: linear-gradient(180deg, var(--apple-canvas-top) 0%, var(--apple-canvas) 100%);
+  color: var(--apple-ink-0);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+#view-kitchen.kds-apple-theme ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+#view-kitchen.kds-apple-theme ::-webkit-scrollbar-thumb {
+  background: rgba(26, 24, 21, 0.14);
+  border-radius: 99px;
+}
+
+/* ─── 1. PANTALLA DE BLOQUEO PIN (ESTILO APPLE CARD) ───────────── */
+.kds-apple-theme .kds-lock-screen {
+  background: linear-gradient(180deg, var(--apple-canvas-top) 0%, var(--apple-canvas) 100%);
+  padding: 24px;
+}
+
+.kds-apple-theme .kds-lock-box {
+  max-width: 370px;
+  background: var(--apple-surface);
+  border: 1px solid var(--apple-hairline);
+  border-radius: 28px;
+  padding: 36px 30px 28px;
+  box-shadow: 0 20px 50px rgba(28, 25, 23, 0.07), 0 2px 6px rgba(28, 25, 23, 0.03);
+  gap: 10px;
+}
+
+.kds-apple-theme .kds-lock-emblem {
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  background: var(--apple-orange-bg);
+  border: 1px solid rgba(255, 107, 26, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.kds-apple-theme .kds-lock-kicker {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--apple-ink-2);
+}
+
+.kds-apple-theme .kds-lock-title {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.6px;
+  color: var(--apple-ink-0);
+}
+
+.kds-apple-theme .kds-lock-sub {
+  font-size: 13px;
+  color: var(--apple-ink-1);
+  line-height: 1.45;
+  margin-bottom: 8px;
+}
+
+.kds-apple-theme .kds-pin-input {
+  height: 54px;
+  background: var(--apple-surface-soft);
+  border: 1.5px solid var(--apple-hairline-strong);
+  border-radius: 14px;
+  color: var(--apple-ink-0);
+  font-size: 22px;
+  letter-spacing: 10px;
+  transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
+}
+
+.kds-apple-theme .kds-pin-input:focus {
+  background: var(--apple-surface);
+  border-color: var(--brand-orange);
+  box-shadow: 0 0 0 4px rgba(255, 107, 26, 0.12);
+}
+
+.kds-apple-theme .btn-kds-unlock {
+  height: 48px;
+  background: var(--apple-ink-0);
+  color: #ffffff;
+  border-radius: var(--apple-radius-pill);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.1px;
+  transition: transform var(--transition), opacity var(--transition), background var(--transition);
+}
+
+.kds-apple-theme .btn-kds-unlock:hover {
+  background: #2b2b30;
+  transform: translateY(-1px);
+}
+
+.kds-apple-theme .kds-lock-hint {
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--apple-ink-2);
+  background: var(--apple-surface-soft);
+  border: 1px solid var(--apple-hairline);
+  padding: 4px 12px;
+  border-radius: var(--apple-radius-pill);
+}
+
+.kds-apple-theme .btn-kds-back {
+  color: var(--apple-ink-1);
+  font-size: 12.5px;
+  margin-top: 4px;
+}
+.kds-apple-theme .btn-kds-back:hover {
+  color: var(--apple-ink-0);
+}
+
+/* ─── 2. BARRA SUPERIOR FLOTANTE (APPLE / WORKTAIL HEADER) ─────── */
+.kds-apple-theme .kds-nav {
+  height: 68px;
+  padding: 0 24px;
+  background: rgba(248, 246, 240, 0.85);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-bottom: 1px solid var(--apple-hairline);
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.kds-apple-theme .kds-nav-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.kds-apple-theme .kds-brand {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+}
+
+.kds-apple-theme .kds-brand-mark {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: var(--apple-orange-bg);
+  color: var(--brand-orange);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+}
+
+.kds-apple-theme .kds-status {
+  margin-left: 2px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--apple-sage-ink);
+  background: var(--apple-sage-bg);
+  padding: 4px 9px;
+  border-radius: var(--apple-radius-pill);
+  letter-spacing: 0.3px;
+}
+
+/* Navegación central en píldora blanca flotante */
+.kds-apple-theme .kds-nav-pills {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--apple-surface);
+  border: 1px solid var(--apple-hairline);
+  border-radius: var(--apple-radius-pill);
+  padding: 4px;
+  box-shadow: var(--apple-shadow-card);
+  flex-shrink: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.kds-apple-theme .kds-nav-pills::-webkit-scrollbar {
+  display: none;
+}
+
+.kds-apple-theme .btn-kds-sales {
+  background: transparent;
+  border: none;
+  color: var(--apple-ink-1);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: var(--apple-radius-pill);
+  transition: all var(--transition);
+}
+
+.kds-apple-theme .btn-kds-sales:hover {
+  color: var(--apple-ink-0);
+  background: var(--apple-surface-soft);
+}
+
+.kds-apple-theme .btn-kds-sales.active {
+  background: var(--apple-ink-0);
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(22, 22, 24, 0.16);
+}
+
+.kds-apple-theme .kds-right-tools {
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.kds-apple-theme .btn-copy-link {
+  background: var(--apple-surface);
+  border: 1px solid var(--apple-hairline);
+  color: var(--apple-ink-0);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 13px;
+  border-radius: var(--apple-radius-pill);
+  box-shadow: var(--apple-shadow-card);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all var(--transition);
+}
+
+.kds-apple-theme .btn-copy-link:hover {
+  border-color: var(--brand-orange);
+  color: var(--brand-orange);
+  transform: translateY(-1px);
+}
+
+.kds-apple-theme .kds-clock {
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--apple-ink-1);
+  background: var(--apple-surface);
+  border: 1px solid var(--apple-hairline);
+  padding: 7px 12px;
+  border-radius: var(--apple-radius-pill);
+}
+
+.kds-apple-theme .kds-lock-trigger {
+  background: var(--apple-surface);
+  border: 1px solid var(--apple-hairline);
+  color: var(--apple-ink-1);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 12px;
+  border-radius: var(--apple-radius-pill);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all var(--transition);
+}
+.kds-apple-theme .kds-lock-trigger:hover {
+  color: var(--apple-red-ink);
+  border-color: rgba(204, 43, 43, 0.25);
+  background: var(--apple-red-bg);
+}
+
+/* ─── 3. ALERTAS EN VIVO DE MESA (BANNER SUAVE) ────────────────── */
+.kds-apple-theme .kds-service-alerts {
+  background: rgba(251, 240, 217, 0.72);
+  border-bottom: 1px solid rgba(179, 107, 6, 0.18);
+  padding: 10px 24px;
+  gap: 10px;
+}
+
+.kds-apple-theme .service-alert-pill {
+  background: var(--apple-surface);
+  border: 1px solid rgba(255, 107, 26, 0.28);
+  border-left: 4px solid var(--brand-orange);
+  border-radius: 16px;
+  padding: 10px 14px;
+  box-shadow: var(--apple-shadow-card);
+}
+
+.kds-apple-theme .service-alert-pill.type-bill {
+  border-color: rgba(179, 107, 6, 0.28);
+  border-left-color: #d99b16;
+}
+
+.kds-apple-theme .service-alert-title {
+  color: var(--apple-ink-0);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.kds-apple-theme .service-alert-sub {
+  color: var(--apple-ink-1);
+  font-size: 11.5px;
+}
+
+.kds-apple-theme .btn-resolve-alert {
+  background: var(--apple-ink-0);
+  color: #ffffff;
+  border-radius: var(--apple-radius-pill);
+  padding: 7px 14px;
+  font-weight: 700;
+}
+
+/* ─── 4. SHELL DEL TABLERO KDS + CABECERA + BENTO KPI STRIP ────── */
+.kds-apple-theme .kds-comandas-section {
+  overflow-y: auto;
+  padding: 24px 24px 56px;
+}
+
+.kds-apple-theme .kds-workspace-shell {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.kds-apple-theme .kds-top-header-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.kds-apple-theme .kds-page-title {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.7px;
+  color: var(--apple-ink-0);
+  line-height: 1.15;
+}
+
+.kds-apple-theme .kds-page-subtitle {
+  font-size: 13.5px;
+  color: var(--apple-ink-2);
+  margin-top: 3px;
+}
+
+.kds-apple-theme .kds-header-utilities {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.kds-apple-theme .kds-search-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--apple-surface);
+  border: 1px solid var(--apple-hairline);
+  border-radius: var(--apple-radius-pill);
+  padding: 0 14px;
+  height: 38px;
+  min-width: 230px;
+  box-shadow: var(--apple-shadow-card);
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.kds-apple-theme .kds-search-pill:focus-within {
+  border-color: var(--brand-orange);
+  box-shadow: 0 0 0 3px rgba(255, 107, 26, 0.1);
+}
+
+.kds-apple-theme .kds-search-icon {
+  color: var(--apple-ink-2);
+  font-size: 14px;
+}
+
+.kds-apple-theme .kds-search-input {
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--apple-ink-0);
+  font-size: 12.5px;
+  width: 100%;
+}
+
+.kds-apple-theme .kds-search-input::placeholder {
+  color: var(--apple-ink-2);
+}
+
+.kds-apple-theme .kds-date-chip {
+  height: 38px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  background: var(--apple-surface);
+  border: 1px solid var(--apple-hairline);
+  border-radius: var(--apple-radius-pill);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--apple-ink-1);
+  box-shadow: var(--apple-shadow-card);
+  white-space: nowrap;
+}
+
+.kds-apple-theme .btn-kds-demo-pill {
+  height: 38px;
+  padding: 0 15px;
+  border-radius: var(--apple-radius-pill);
+  border: 1px solid rgba(255, 107, 26, 0.25);
+  background: var(--apple-orange-bg);
+  color: var(--brand-orange);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition);
+}
+
+.kds-apple-theme .btn-kds-demo-pill:hover {
+  background: var(--brand-orange);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+/* ─── TARJETAS KPI BENTO (ESTILO APPLE / WORKTAIL) ─────────────── */
+.kds-apple-theme .kds-bento-kpi-row,
+.kds-apple-theme .sales-bento-top-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.kds-apple-theme .apple-kpi-card {
+  background: var(--apple-surface);
+  border: 1px solid var(--apple-hairline);
+  border-radius: var(--apple-radius-card);
+  padding: 18px 20px;
+  box-shadow: var(--apple-shadow-card);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 14px;
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+
+.kds-apple-theme .apple-kpi-card[onclick] {
+  cursor: pointer;
+}
+.kds-apple-theme .apple-kpi-card[onclick]:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--apple-shadow-hover);
+}
+
+.kds-apple-theme .apple-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.kds-apple-theme .apple-card-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--apple-ink-1);
+}
+
+.kds-apple-theme .apple-corner-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--apple-hairline);
+  background: var(--apple-surface-soft);
+  color: var(--apple-ink-1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.kds-apple-theme .apple-corner-btn:hover {
+  background: var(--apple-ink-0);
+  color: #ffffff;
+  border-color: var(--apple-ink-0);
+}
+
+.kds-apple-theme .apple-corner-btn.subtle {
+  cursor: default;
+  color: var(--apple-ink-2);
+}
+.kds-apple-theme .apple-corner-btn.subtle:hover {
+  background: var(--apple-surface-soft);
+  color: var(--apple-ink-2);
+  border-color: var(--apple-hairline);
+}
+
+.kds-apple-theme .apple-kpi-split {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.kds-apple-theme .apple-kpi-body {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.kds-apple-theme .apple-kpi-number {
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.9px;
+  line-height: 1.05;
+  color: var(--apple-ink-0);
+  font-variant-numeric: tabular-nums;
+}
+
+.kds-apple-theme .apple-kpi-number.compact {
+  font-size: 20px;
+  letter-spacing: -0.4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kds-apple-theme .apple-kpi-caption {
+  font-size: 11.5px;
+  color: var(--apple-ink-2);
+  font-weight: 500;
+}
+
+.kds-apple-theme .apple-trend-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: var(--apple-radius-pill);
+  width: fit-content;
+}
+
+.kds-apple-theme .apple-trend-pill.positive {
+  background: var(--apple-sage-bg);
+  color: var(--apple-sage-ink);
+}
+
+/* Dot Matrix Visual (Imagen 5: Employees on Leave) */
+.kds-apple-theme .apple-dot-matrix {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  padding-bottom: 2px;
+}
+
+.kds-apple-theme .adm-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kds-apple-theme .adm-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #eae6de;
+}
+
+.kds-apple-theme .adm-dot.lit {
+  background: var(--brand-orange);
+}
+
+/* Canales Activos Pills */
+.kds-apple-theme .apple-channel-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.kds-apple-theme .channel-chip {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 9px;
+  font-variant-numeric: tabular-nums;
+}
+.kds-apple-theme .channel-chip.mesa {
+  background: var(--apple-surface-soft);
+  color: var(--apple-ink-0);
+  border: 1px solid var(--apple-hairline);
+}
+.kds-apple-theme .channel-chip.pickup {
+  background: var(--apple-sky-bg);
+  color: var(--apple-sky-ink);
+}
+.kds-apple-theme .channel-chip.delivery {
+  background: var(--apple-plum-bg);
+  color: var(--apple-plum-ink);
+}
+
+/* Barra Naranja + Rayado Diagonal (Imagen 5: Open Positions 32%) */
+.kds-apple-theme .apple-hatch-meter-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  min-width: 82px;
+}
+
+.kds-apple-theme .apple-hatch-pct {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--apple-ink-1);
+}
+
+.kds-apple-theme .apple-hatch-meter {
+  width: 84px;
+  height: 24px;
+  border-radius: 8px;
+  background-color: #f4f2ec;
+  background-image: var(--apple-hatch-bg);
+  overflow: hidden;
+  border: 1px solid var(--apple-hairline);
+}
+
+.kds-apple-theme .apple-hatch-fill {
+  height: 100%;
+  background: var(--brand-orange);
+  border-radius: 6px;
+  transition: width 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ─── 5. FILTROS SEGMENTADOS + GRID DE COMANDAS ────────────────── */
+.kds-apple-theme .kds-filters-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.kds-apple-theme .kds-filters {
+  background: transparent;
+  border-bottom: none;
+  padding: 0;
+  gap: 8px;
+}
+
+.kds-apple-theme .kds-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 15px;
+  border-radius: var(--apple-radius-pill);
+  border: 1px solid var(--apple-hairline);
+  background: var(--apple-surface);
+  color: var(--apple-ink-1);
+  font-size: 12.5px;
+  font-weight: 600;
+  box-shadow: var(--apple-shadow-card);
+  transition: all var(--transition);
+}
+
+.kds-apple-theme .kds-filter:hover {
+  border-color: var(--apple-hairline-strong);
+  color: var(--apple-ink-0);
+}
+
+.kds-apple-theme .kds-filter.active {
+  background: var(--apple-ink-0);
+  border-color: var(--apple-ink-0);
+  color: #ffffff;
+}
+
+.kds-apple-theme .filter-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 99px;
+  background: var(--apple-surface-soft);
+  color: var(--apple-ink-1);
+}
+
+.kds-apple-theme .kds-filter.active .filter-count {
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+}
+
+.kds-apple-theme .filter-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+.kds-apple-theme .filter-dot.dot-pending { background: #9ca3af; }
+.kds-apple-theme .filter-dot.dot-received { background: #eab308; }
+.kds-apple-theme .filter-dot.dot-preparing { background: var(--brand-orange); }
+.kds-apple-theme .filter-dot.dot-ready { background: #16a34a; }
+
+/* Grid de Tarjetas de Comandas */
+.kds-apple-theme .kds-board {
+  padding: 2px 0 24px;
+  overflow: visible;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.kds-apple-theme .kds-empty {
+  grid-column: 1 / -1;
+  background: var(--apple-surface);
+  border: 1px dashed var(--apple-hairline-strong);
+  border-radius: var(--apple-radius-card);
+  padding: 56px 24px;
+  margin-top: 8px;
+  gap: 8px;
+}
+
+.kds-apple-theme .kds-empty-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: var(--apple-surface-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  margin-bottom: 4px;
+}
+
+.kds-apple-theme .kds-empty-title {
+  color: var(--apple-ink-0);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.kds-apple-theme .kds-empty-sub {
+  color: var(--apple-ink-2);
+  font-size: 13px;
+  max-width: 380px;
+}
+
+.kds-apple-theme .btn-kds-empty-demo,
+.kds-apple-theme .btn-kds-empty-action {
+  margin-top: 10px;
+  background: var(--apple-ink-0);
+  color: #ffffff;
+  border: none;
+  padding: 10px 18px;
+  border-radius: var(--apple-radius-pill);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform var(--transition), background var(--transition);
+}
+.kds-apple-theme .btn-kds-empty-demo:hover,
+.kds-apple-theme .btn-kds-empty-action:hover {
+  background: #2b2b30;
+  transform: translateY(-1px);
+}
+
+/* Tarjeta Individual de Comanda (Apple Surface Card) */
+.kds-apple-theme .order-card {
+  width: 100%;
+  background: var(--apple-surface);
+  border: 1px solid var(--apple-hairline);
+  border-left: 1px solid var(--apple-hairline);
+  border-radius: var(--apple-radius-card);
+  box-shadow: var(--apple-shadow-card);
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+
+.kds-apple-theme .order-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--apple-shadow-hover);
+}
+
+.kds-apple-theme .order-card-header {
+  padding: 15px 18px 12px;
+  border-bottom: 1px solid var(--apple-hairline);
+}
+
+.kds-apple-theme .order-card-id-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kds-apple-theme .order-num {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  color: var(--apple-ink-0);
+  font-variant-numeric: tabular-nums;
+}
+
+.kds-apple-theme .order-timer {
+  margin-left: 0;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: var(--apple-radius-pill);
+  background: var(--apple-surface-soft);
+  color: var(--apple-ink-2);
+}
+.kds-apple-theme .order-timer.warn {
+  background: var(--apple-amber-bg);
+  color: var(--apple-amber-ink);
+}
+.kds-apple-theme .order-timer.alert {
+  background: var(--apple-red-bg);
+  color: var(--apple-red-ink);
+}
+
+.kds-apple-theme .status-badge {
+  background: var(--apple-surface-soft);
+  color: var(--apple-ink-1);
+  border: 1px solid var(--apple-hairline);
+  padding: 4px 10px;
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.kds-apple-theme .status-badge.badge-pending {
+  background: #f3f2ee;
+  color: var(--apple-ink-1);
+}
+.kds-apple-theme .status-badge.badge-received {
+  background: var(--apple-amber-bg);
+  color: var(--apple-amber-ink);
+  border-color: transparent;
+}
+.kds-apple-theme .status-badge.badge-preparing {
+  background: var(--apple-orange-bg);
+  color: var(--brand-orange);
+  border-color: transparent;
+}
+.kds-apple-theme .status-badge.badge-ready {
+  background: var(--apple-sage-bg);
+  color: var(--apple-sage-ink);
+  border-color: transparent;
+}
+
+/* Fila de Comensal con Avatar (Estilo Pending Leave Requests After) */
+.kds-apple-theme .order-guest-strip {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 13px 18px;
+  border-bottom: 1px solid var(--apple-hairline);
+}
+
+.kds-apple-theme .order-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.kds-apple-theme .order-avatar.tone-orange { background: var(--apple-orange-bg); color: var(--brand-orange); }
+.kds-apple-theme .order-avatar.tone-sage   { background: var(--apple-sage-bg); color: var(--apple-sage-ink); }
+.kds-apple-theme .order-avatar.tone-sky    { background: var(--apple-sky-bg); color: var(--apple-sky-ink); }
+.kds-apple-theme .order-avatar.tone-amber  { background: var(--apple-amber-bg); color: var(--apple-amber-ink); }
+.kds-apple-theme .order-avatar.tone-plum   { background: var(--apple-plum-bg); color: var(--apple-plum-ink); }
+
+.kds-apple-theme .order-guest-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.kds-apple-theme .order-table {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--apple-ink-0);
+  max-width: none;
+}
+
+.kds-apple-theme .order-guest-sub {
+  font-size: 12px;
+  color: var(--apple-ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kds-apple-theme .order-price-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.kds-apple-theme .order-price-val {
+  font-family: var(--font-display);
+  font-size: 15.5px;
+  font-weight: 800;
+  color: var(--apple-ink-0);
+  font-variant-numeric: tabular-nums;
+}
+
+.kds-apple-theme .kds-pay-badge {
+  background: var(--apple-sage-bg);
+  color: var(--apple-sage-ink);
+  border: none;
+  font-family: var(--font);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+}
+
+.kds-apple-theme .kds-unpaid-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--apple-ink-2);
+  background: var(--apple-surface-soft);
+  padding: 2px 7px;
+  border-radius: var(--apple-radius-pill);
+}
+
+/* Banners Pickup / Domicilio / Grupo Mesa en Pastel Limpio */
+.kds-apple-theme .kds-fulfillment-banner {
+  margin: 10px 18px 0;
+  padding: 9px 12px;
+  border-radius: 12px;
+  border-bottom: none;
+  font-size: 11.5px;
+}
+
+.kds-apple-theme .kds-fulfillment-banner.mode-pickup {
+  background: var(--apple-sky-bg);
+  color: var(--apple-sky-ink);
+}
+
+.kds-apple-theme .kds-fulfillment-banner.mode-delivery {
+  background: var(--apple-plum-bg);
+  color: var(--apple-plum-ink);
+}
+
+.kds-apple-theme .kds-fulfillment-sub {
+  color: var(--apple-ink-1);
+  font-weight: 500;
+}
+
+.kds-apple-theme .kds-table-group-pill {
+  margin: 10px 18px 0;
+  padding: 7px 11px;
+  border-radius: 10px;
+  background: var(--apple-surface-soft);
+  border: 1px solid var(--apple-hairline);
+  color: var(--apple-ink-1);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+/* Lista de Platillos de la Comanda */
+.kds-apple-theme .order-items-list {
+  padding: 14px 18px;
+  gap: 9px;
+}
+
+.kds-apple-theme .order-item-row {
+  align-items: flex-start;
+  gap: 9px;
+}
+
+.kds-apple-theme .order-item-qty {
+  min-width: 26px;
+  height: 22px;
+  border-radius: 7px;
+  background: var(--apple-orange-bg);
+  color: var(--brand-orange);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11.5px;
+  font-weight: 800;
+}
+
+.kds-apple-theme .order-item-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--apple-ink-0);
+  line-height: 1.4;
+}
+
+/* Footer de Botones Redondeados */
+.kds-apple-theme .order-actions {
+  border-top: 1px solid var(--apple-hairline);
+  padding: 12px 16px;
+  gap: 8px;
+  background: var(--apple-surface-soft);
+}
+
+.kds-apple-theme .order-btn {
+  border-radius: var(--apple-radius-pill);
+  padding: 9px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: none;
+  background: var(--apple-surface);
+  border: 1px solid var(--apple-hairline-strong);
+  color: var(--apple-ink-1);
+  transition: all var(--transition);
+}
+
+.kds-apple-theme .order-btn:not(:last-child) {
+  border-right: 1px solid var(--apple-hairline-strong);
+}
+
+.kds-apple-theme .order-btn:hover {
+  background: #efede8;
+  color: var(--apple-ink-0);
+}
+
+.kds-apple-theme .order-btn.btn-primary-step {
+  background: var(--apple-ink-0);
+  border-color: var(--apple-ink-0);
+  color: #ffffff;
+}
+.kds-apple-theme .order-btn.btn-primary-step:hover {
+  background: #2b2b30;
+}
+
+.kds-apple-theme .order-btn.btn-ready {
+  background: var(--apple-sage-ink);
+  border-color: var(--apple-sage-ink);
+  color: #ffffff;
+}
+.kds-apple-theme .order-btn.btn-ready:hover {
+  background: #176639;
+}
+
+.kds-apple-theme .order-btn.btn-delete {
+  color: var(--apple-red-ink);
+  border-color: rgba(204, 43, 43, 0.22);
+  background: var(--apple-surface);
+}
+.kds-apple-theme .order-btn.btn-delete:hover {
+  background: var(--apple-red-bg);
+}
+
+/* ─── 6. DASHBOARD EJECUTIVO & VENTAS DEL DÍA (BENTO WORKTAIL) ─── */
+.kds-apple-theme .kds-sales-section {
+  padding: 24px 24px 64px;
+}
+
+.kds-apple-theme .sales-container {
+  max-width: 1020px;
+  gap: 18px;
+}
+
+.kds-apple-theme .sales-bento-container {
+  max-width: 1240px;
+}
+
+.kds-apple-theme .step-label {
+  color: var(--apple-ink-2);
+  font-size: 10.5px;
+  letter-spacing: 0.9px;
+}
+
+.kds-apple-theme .sales-title {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.7px;
+  color: var(--apple-ink-0);
+}
+
+.kds-apple-theme .sales-tenant-badge {
+  background: var(--apple-surface);
+  border: 1px solid var(--apple-hairline);
+  color: var(--apple-ink-1);
+  padding: 7px 13px;
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: var(--apple-shadow-card);
+}
+
+.kds-apple-theme .btn-seed-demo {
+  background: var(--apple-surface);
+  border: 1px solid var(--apple-hairline-strong);
+  color: var(--apple-ink-0);
+  padding: 8px 14px;
+  border-radius: var(--apple-radius-pill);
+  font-size: 12.5px;
+  font-weight: 600;
+  box-shadow: var(--apple-shadow-card);
+}
+.kds-apple-theme .btn-seed-demo:hover {
+  border-color: var(--brand-orange);
+  color: var(--brand-orange);
+}
+
+.kds-apple-theme .btn-export-quick,
+.kds-apple-theme .btn-export-excel-sm,
+.kds-apple-theme .btn-export-excel {
+  background: var(--apple-ink-0);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--apple-radius-pill);
+  padding: 9px 16px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform var(--transition), background var(--transition);
+}
+.kds-apple-theme .btn-export-quick:hover,
+.kds-apple-theme .btn-export-excel-sm:hover,
+.kds-apple-theme .btn-export-excel:hover {
+  background: #2b2b30;
+  transform: translateY(-1px);
+}
+
+.kds-apple-theme .btn-sales-back,
+.kds-apple-theme .btn-export-secondary {
+  background: var(--apple-surface);
+  border: 1px solid var(--apple-hairline-strong);
+  color: var(--apple-ink-1);
+  border-radius: var(--apple-radius-pill);
+  padding: 8px 15px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.kds-apple-theme .btn-sales-back:hover,
+.kds-apple-theme .btn-export-secondary:hover {
+  color: var(--apple-ink-0);
+  border-color: var(--apple-ink-0);
+}
+
+.kds-apple-theme .sales-hero-amount {
+  font-family: var(--font-display);
+  font-size: 36px;
+  font-weight: 800;
+  letter-spacing: -1.1px;
+  color: var(--apple-ink-0);
+  font-variant-numeric: tabular-nums;
+  margin-top: 0;
+}
+
+.kds-apple-theme .sales-hero-meta {
+  color: var(--apple-ink-1);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Superficie Blanca Base de Tarjetas Bento */
+.kds-apple-theme .apple-surface-card,
+.kds-apple-theme .sales-breakdown-card {
+  background: var(--apple-surface);
+  border: 1px solid var(--apple-hairline);
+  border-radius: var(--apple-radius-card);
+  padding: 22px 24px;
+  box-shadow: var(--apple-shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.kds-apple-theme .apple-surface-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.kds-apple-theme .apple-surface-title {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: var(--apple-ink-0);
+}
+
+.kds-apple-theme .apple-surface-sub {
+  font-size: 12px;
+  color: var(--apple-ink-2);
+  margin-top: 2px;
+}
+
+.kds-apple-theme .apple-select-pill {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--apple-ink-1);
+  background: var(--apple-surface-soft);
+  border: 1px solid var(--apple-hairline);
+  padding: 6px 12px;
+  border-radius: var(--apple-radius-pill);
+  white-space: nowrap;
+}
+
+/* ─── FILA 2: GRÁFICAS (IMAGEN 1 & IMAGEN 2) ───────────────────── */
+.kds-apple-theme .sales-charts-bento-grid,
+.kds-apple-theme .sales-lists-bento-grid,
+.kds-apple-theme .sales-bottom-bento-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+/* Gráfica 1: Ritmo de Ventas (Attendance Rate After) */
+.kds-apple-theme .apple-bar-chart-grid {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  gap: 10px;
+  align-items: stretch;
+  padding-top: 14px;
+}
+
+.kds-apple-theme .apple-bar-yaxis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding-bottom: 24px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--apple-ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.kds-apple-theme .apple-bar-cols {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 10px;
+  align-items: end;
+}
+
+.kds-apple-theme .apple-bar-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.kds-apple-theme .apple-bar-track {
+  width: 100%;
+  max-width: 34px;
+  height: 158px;
+  border-radius: 10px;
+  background-color: #f6f4ef;
+  background-image: var(--apple-hatch-bg);
+  display: flex;
+  align-items: flex-end;
+  position: relative;
+}
+
+.kds-apple-theme .apple-bar-fill {
+  width: 100%;
+  border-radius: 10px;
+  background: var(--apple-sage-bg);
+  position: relative;
+  transition: height 340ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.kds-apple-theme .apple-bar-fill.is-ghost {
+  opacity: 0.72;
+}
+
+.kds-apple-theme .apple-bar-fill.is-peak {
+  background: var(--brand-orange);
+  box-shadow: 0 6px 16px rgba(255, 107, 26, 0.28);
+}
+
+.kds-apple-theme .apple-peak-tooltip {
+  position: absolute;
+  top: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--apple-ink-0);
+  color: #ffffff;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: var(--apple-radius-pill);
+  white-space: nowrap;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.14);
+}
+
+.kds-apple-theme .apple-peak-tooltip::after {
+  content: '';
+  position: absolute;
+  bottom: -3px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 6px;
+  height: 6px;
+  background: var(--apple-ink-0);
+}
+
+.kds-apple-theme .apple-bar-xlabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--apple-ink-2);
+}
+
+/* Gráfica 2: Flujo de Demanda (Workforce Summary After) */
+.kds-apple-theme .apple-spline-chart-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+}
+
+.kds-apple-theme .apple-spline-svg {
+  width: 100%;
+  height: 158px;
+  display: block;
+}
+
+.kds-apple-theme .apple-spline-xlabels {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--apple-ink-2);
+}
+
+/* ─── FILA 3: RENDIMIENTO POR CATEGORÍA (PAYROLL STATUS AFTER) ─── */
+.kds-apple-theme .sales-product-row {
+  padding: 13px 0;
+  border-bottom: 1px solid var(--apple-hairline);
+}
+
+.kds-apple-theme .sales-prod-icon-circle {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  flex-shrink: 0;
+}
+.kds-apple-theme .sales-prod-icon-circle.tone-orange { background: var(--apple-orange-bg); }
+.kds-apple-theme .sales-prod-icon-circle.tone-amber  { background: var(--apple-amber-bg); }
+.kds-apple-theme .sales-prod-icon-circle.tone-sage   { background: var(--apple-sage-bg); }
+.kds-apple-theme .sales-prod-icon-circle.tone-sky    { background: var(--apple-sky-bg); }
+
+.kds-apple-theme .sales-prod-name {
+  color: var(--apple-ink-0);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.kds-apple-theme .sales-prod-sub {
+  color: var(--apple-ink-2);
+  font-size: 11.5px;
+}
+
+.kds-apple-theme .sales-prod-qty {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--apple-ink-1);
+  background: var(--apple-surface-soft);
+  padding: 3px 9px;
+  border-radius: var(--apple-radius-pill);
+  min-width: auto;
+}
+
+.kds-apple-theme .sales-prod-subtotal {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--apple-ink-0);
+  font-variant-numeric: tabular-nums;
+  min-width: 68px;
+}
+
+.kds-apple-theme .sales-prod-bar-track {
+  height: 6px;
+  background: #f2efe9;
+  border-radius: var(--apple-radius-pill);
+}
+
+.kds-apple-theme .sales-prod-bar-fill {
+  background: linear-gradient(90deg, var(--brand-orange) 0%, #f59e0b 100%);
+}
+
+/* Pie Área + Rayado de Meta (Payroll Status After) */
+.kds-apple-theme .payroll-mini-footer {
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid var(--apple-hairline);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.kds-apple-theme .payroll-area-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.kds-apple-theme .payroll-area-caption {
+  color: var(--apple-ink-2);
+}
+
+.kds-apple-theme .payroll-area-pct-text {
+  color: var(--apple-ink-0);
+  font-variant-numeric: tabular-nums;
+}
+
+.kds-apple-theme .payroll-area-svg {
+  width: 100%;
+  height: 68px;
+  display: block;
+}
+
+/* Actividad Reciente de Comensales (Pending Leave Requests After) */
+.kds-apple-theme .recent-diners-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.kds-apple-theme .recent-diner-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--apple-hairline);
+}
+.kds-apple-theme .recent-diner-row:last-child {
+  border-bottom: none;
+  padding-bottom: 2px;
+}
+
+.kds-apple-theme .recent-diner-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.kds-apple-theme .recent-diner-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--apple-ink-0);
+}
+
+.kds-apple-theme .recent-diner-sub {
+  font-size: 11.5px;
+  color: var(--apple-ink-2);
+}
+
+.kds-apple-theme .recent-diner-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.kds-apple-theme .recent-diner-amt {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--apple-ink-0);
+  font-variant-numeric: tabular-nums;
+}
+
+.kds-apple-theme .recent-diner-time {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--apple-ink-2);
+}
+
+.kds-apple-theme .recent-empty-wrap {
+  padding: 36px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.kds-apple-theme .recent-empty-msg {
+  font-size: 13px;
+  color: var(--apple-ink-2);
+}
+
+/* ─── VISTA PREVIA EXCEL + HISTORIAL + CIERRE DE TURNO ─────────── */
+.kds-apple-theme .excel-preview-card {
+  background: var(--apple-surface);
+  border: 1px solid var(--apple-hairline);
+}
+
+.kds-apple-theme .excel-preview-title {
+  color: var(--apple-ink-0);
+  font-size: 18px;
+}
+
+.kds-apple-theme .excel-preview-desc {
+  color: var(--apple-ink-1);
+}
+
+.kds-apple-theme .excel-sheet-preview-wrap {
+  border: 1px solid var(--apple-hairline-strong);
+  border-radius: 14px;
+  box-shadow: 0 6px 20px rgba(28, 25, 23, 0.06);
+}
+
+.kds-apple-theme .history-card {
+  margin-top: 0;
+}
+
+.kds-apple-theme .history-month-select {
+  height: 44px;
+  min-height: 44px;
+  max-height: 44px;
+  flex: 0 0 auto;
+  background: var(--apple-surface-soft);
+  border: 1px solid var(--apple-hairline-strong);
+  color: var(--apple-ink-0);
+  border-radius: 12px;
+}
+
+.kds-apple-theme .history-stat {
+  background: var(--apple-surface-soft);
+  border: 1px solid var(--apple-hairline);
+  border-radius: 14px;
+}
+
+.kds-apple-theme .history-stat-label {
+  color: var(--apple-ink-2);
+}
+
+.kds-apple-theme .history-stat-value {
+  color: var(--apple-ink-0);
+}
+
+.kds-apple-theme .history-stat-value.accent {
+  color: var(--apple-sage-ink);
+}
+
+.kds-apple-theme .history-products-line,
+.kds-apple-theme .history-day-date {
+  color: var(--apple-ink-0);
+}
+
+.kds-apple-theme .history-day-row {
+  border-bottom-color: var(--apple-hairline);
+}
+
+.kds-apple-theme .history-day-orders,
+.kds-apple-theme .history-empty {
+  color: var(--apple-ink-2);
+}
+
+.kds-apple-theme .apple-status-circle {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+}
+.kds-apple-theme .apple-status-circle.tone-amber {
+  background: var(--apple-amber-bg);
+  color: var(--apple-amber-ink);
+}
+
+.kds-apple-theme .shift-close-card {
+  justify-content: space-between;
+}
+
+.kds-apple-theme .shift-close-explain {
+  font-size: 13px;
+  color: var(--apple-ink-1);
+  line-height: 1.55;
+}
+
+.kds-apple-theme .auto-export-toggle {
+  color: var(--apple-ink-1);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.kds-apple-theme .btn-close-shift {
+  background: var(--apple-red-bg);
+  border: 1px solid rgba(204, 43, 43, 0.25);
+  color: var(--apple-red-ink);
+  border-radius: var(--apple-radius-pill);
+  font-weight: 700;
+}
+.kds-apple-theme .btn-close-shift:hover {
+  background: var(--apple-red-ink);
+  color: #ffffff;
+}
+
+.kds-apple-theme .sales-close-hint {
+  color: var(--apple-ink-2);
+}
+
+/* ─── 7. STOCK (MODO 86) & GENERADOR DE QRS EN ESTILO APPLE ────── */
+.kds-apple-theme .stock-helper-text {
+  color: var(--apple-ink-1);
+  font-size: 13.5px;
+}
+
+.kds-apple-theme .kds-stock-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.kds-apple-theme .stock-group-card {
+  background: var(--apple-surface);
+  border: 1px solid var(--apple-hairline);
+  border-radius: var(--apple-radius-card);
+  padding: 20px 22px;
+  box-shadow: var(--apple-shadow-card);
+}
+
+.kds-apple-theme .stock-group-card .minimal-group-title {
+  color: var(--apple-ink-2);
+  font-size: 11px;
+  letter-spacing: 0.7px;
+}
+
+.kds-apple-theme .stock-item-row {
+  border-bottom-color: var(--apple-hairline);
+}
+
+.kds-apple-theme .stock-item-name {
+  color: var(--apple-ink-0);
+  font-weight: 600;
+}
+
+.kds-apple-theme .stock-item-row.is-sold-out .stock-item-name {
+  color: var(--apple-ink-2);
+}
+
+.kds-apple-theme .stock-status-pill.available {
+  background: var(--apple-sage-bg);
+  color: var(--apple-sage-ink);
+  border: none;
+}
+
+.kds-apple-theme .stock-status-pill.exhausted {
+  background: var(--apple-red-bg);
+  color: var(--apple-red-ink);
+  border: none;
+}
+
+.kds-apple-theme .qr-field label {
+  color: var(--apple-ink-1);
+}
+
+.kds-apple-theme .qr-field .modal-input {
+  background: var(--apple-surface-soft);
+  border: 1px solid var(--apple-hairline-strong);
+  color: var(--apple-ink-0);
+  border-radius: 12px;
+}
+
+.kds-apple-theme .qr-print-card {
+  border: 1px solid var(--apple-hairline-strong);
+  border-radius: var(--apple-radius-card);
+  box-shadow: var(--apple-shadow-card);
+}
+
+/* ─── 8. MODAL CERRAR TURNO & TOAST EN ESTILO APPLE ────────────── */
+.kds-apple-theme .modal-overlay {
+  background: rgba(22, 22, 24, 0.32);
+  backdrop-filter: blur(6px);
+}
+
+.kds-apple-theme .modal {
+  background: var(--apple-surface);
+  border: 1px solid var(--apple-hairline);
+  border-radius: 26px;
+  box-shadow: 0 24px 60px rgba(22, 22, 24, 0.16);
+  color: var(--apple-ink-0);
+}
+
+.kds-apple-theme .modal-title {
+  color: var(--apple-ink-0);
+}
+
+.kds-apple-theme .modal-sub {
+  color: var(--apple-ink-1);
+}
+
+.kds-apple-theme .btn-cancel {
+  background: var(--apple-surface-soft);
+  border: 1px solid var(--apple-hairline-strong);
+  color: var(--apple-ink-1);
+  border-radius: var(--apple-radius-pill);
+}
+
+.kds-apple-theme .btn-confirm-danger {
+  background: var(--apple-red-ink);
+  color: #ffffff;
+  border-radius: var(--apple-radius-pill);
+}
+
+.kds-apple-theme .toast {
+  top: auto;
+  bottom: 24px;
+  background: var(--apple-ink-0);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--apple-radius-pill);
+  box-shadow: 0 12px 32px rgba(22, 22, 24, 0.22);
+}
+
+/* ─── 9. RESPONSIVE (TABLET & MÓVIL) ───────────────────────────── */
+@media (max-width: 1080px) {
+  .kds-apple-theme .kds-nav {
+    height: auto;
+    flex-wrap: wrap;
+    padding: 12px 20px;
+    gap: 10px;
+  }
+  .kds-apple-theme .kds-nav-pills {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+  }
+  .kds-apple-theme .kds-bento-kpi-row,
+  .kds-apple-theme .sales-bento-top-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .kds-apple-theme .sales-charts-bento-grid,
+  .kds-apple-theme .sales-lists-bento-grid,
+  .kds-apple-theme .sales-bottom-bento-grid,
+  .kds-apple-theme .kds-stock-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .kds-apple-theme .kds-nav {
+    height: auto;
+    flex-wrap: wrap;
+    padding: 10px 14px;
+    gap: 10px;
+  }
+  .kds-apple-theme .kds-nav-pills {
+    order: 3;
+    width: 100%;
+    justify-content: space-between;
+  }
+  .kds-apple-theme .btn-kds-sales {
+    flex: 1;
+    padding: 7px 8px;
+    font-size: 11.5px;
+    text-align: center;
+  }
+  .kds-apple-theme .kds-clock,
+  .kds-apple-theme .lock-btn-label {
+    display: none;
+  }
+  .kds-apple-theme .kds-comandas-section,
+  .kds-apple-theme .kds-sales-section {
+    padding: 16px 14px 48px;
+  }
+  .kds-apple-theme .kds-bento-kpi-row,
+  .kds-apple-theme .sales-bento-top-grid {
+    grid-template-columns: 1fr;
+  }
+  .kds-apple-theme .kds-search-pill {
+    min-width: 0;
+    flex: 1;
+  }
+  .kds-apple-theme .kds-board {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   PASO 3 · PORTAL & INTERFAZ DEL COMENSAL — APPLE WARM MINIMALIST
+   Scoped a body.apple-warm-theme (Armonía total con KDS & Dashboard)
+═══════════════════════════════════════════════════════════════════ */
+
+html:has(body.apple-warm-theme),
+body.apple-warm-theme {
+  background: linear-gradient(180deg, var(--apple-canvas-top) 0%, var(--apple-canvas) 100%);
+  background-attachment: fixed;
+  color: var(--apple-ink-0);
+}
+
+body.apple-warm-theme ::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+body.apple-warm-theme ::-webkit-scrollbar-thumb {
+  background: rgba(26, 24, 21, 0.14);
+  border-radius: 99px;
+}
+
+/* Notificación Push In-App (Cápsula Blanca Flotante) */
+body.apple-warm-theme .push-notification {
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--apple-hairline);
+  border-radius: var(--apple-radius-pill);
+  box-shadow: 0 14px 36px rgba(28, 25, 23, 0.12);
+  padding: 12px 18px;
+}
+
+body.apple-warm-theme .push-kicker {
+  color: var(--apple-ink-2);
+}
+
+body.apple-warm-theme .push-message {
+  color: var(--apple-ink-0);
+}
+
+/* ─── 1. PORTADA / LANDING (APPLE WARM MINIMALIST) ─────────────── */
+body.apple-warm-theme .landing {
+  background:
+    radial-gradient(ellipse 80% 42% at 50% -10%, rgba(255, 107, 26, 0.08), transparent 68%),
+    linear-gradient(180deg, var(--apple-canvas-top) 0%, var(--apple-canvas) 100%);
+  overflow-y: auto;
+}
+
+body.apple-warm-theme .landing-inner {
+  max-width: 440px;
+  gap: 18px;
+}
+
+body.apple-warm-theme .landing-kicker-pill {
+  background: var(--apple-orange-bg);
+  border: 1px solid rgba(255, 107, 26, 0.18);
+  color: var(--brand-orange);
+}
+
+body.apple-warm-theme .brand-credits {
+  color: var(--apple-ink-2);
+  font-size: 12.5px;
+}
+
+body.apple-warm-theme .cloud-pill {
+  background: var(--apple-surface);
+  border: 1px solid var(--apple-hairline);
+  color: var(--apple-ink-1);
+  box-shadow: var(--apple-shadow-card);
+  padding: 7px 14px;
+}
+
+body.apple-warm-theme .landing-card {
+  background: var(--apple-surface);
+  border: 1px solid var(--apple-hairline);
+  border-radius: var(--apple-radius-card);
+  box-shadow: var(--apple-shadow-card);
+  padding: 18px 20px;
+}
+
+body.apple-warm-theme .landing-card.primary-entry {
+  border-color: rgba(255, 107, 26, 0.22);
+}
+
+body.apple-warm-theme .landing-card:hover,
+body.apple-warm-theme .landing-card:active {
+  background: var(--apple-surface);
+  border-color: var(--brand-orange);
+  box-shadow: var(--apple-shadow-hover);
+  transform: translateY(-2px);
+}
+
+body.apple-warm-theme .lc-icon-box {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: var(--apple-surface-soft);
+  border: 1px solid var(--apple-hairline);
+}
+
+body.apple-warm-theme .landing-card.primary-entry .lc-icon-box {
+  background: var(--apple-orange-bg);
+  border-color: transparent;
+}
+
+body.apple-warm-theme .lc-title {
+  color: var(--apple-ink-0);
+  font-family: var(--font-display);
+  font-size: 16px;
+}
+
+body.apple-warm-theme .lc-desc {
+  color: var(--apple-ink-2);
+  font-size: 12.5px;
+}
+
+body.apple-warm-theme .lc-badge {
+  background: var(--apple-orange-bg);
+  color: var(--brand-orange);
+  border-radius: var(--apple-radius-pill);
+  padding: 3px 8px;
+}
+
+body.apple-warm-theme .lc-badge.subtle {
+  background: var(--apple-surface-soft);
+  color: var(--apple-ink-1);
+  border: 1px solid var(--apple-hairline);
+}
+
+body.apple-warm-theme .lc-badge.pay-badge {
+  background: var(--apple-sage-bg);
+  color: var(--apple-sage-ink);
+}
+
+body.apple-warm-theme .lc-arrow {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--apple-surface-soft);
+  border: 1px solid var(--apple-hairline);
+  color: var(--apple-ink-1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+  transition: all var(--transition);
+}
+
+body.apple-warm-theme .landing-card:hover .lc-arrow {
+  background: var(--apple-ink-0);
+  border-color: var(--apple-ink-0);
+  color: #ffffff;
+}
+
+body.apple-warm-theme .lc-mode-actions {
+  border-top-color: var(--apple-hairline);
+  padding-top: 12px;
+}
+
+body.apple-warm-theme .btn-lc-mode {
+  background: var(--apple-surface-soft);
+  border: 1px solid var(--apple-hairline);
+  border-radius: 13px;
+  color: var(--apple-ink-0);
+  font-size: 12.5px;
+  padding: 10px 12px;
+}
+
+body.apple-warm-theme .btn-lc-mode:hover,
+body.apple-warm-theme .btn-lc-mode:active {
+  background: var(--apple-ink-0);
+  border-color: var(--apple-ink-0);
+  color: #ffffff;
+}
+
+body.apple-warm-theme .tenant-switcher-bar {
+  background: var(--apple-surface);
+  border: 1px solid var(--apple-hairline);
+  border-radius: var(--apple-radius-card);
+  box-shadow: var(--apple-shadow-card);
+  padding: 14px 16px;
+}
+
+body.apple-warm-theme .tenant-switcher-label {
+  color: var(--apple-ink-2);
+}
+
+body.apple-warm-theme .tenant-pill {
+  background: var(--apple-surface-soft);
+  border: 1px solid var(--apple-hairline);
+  color: var(--apple-ink-1);
+  padding: 7px 13px;
+}
+
+body.apple-warm-theme .tenant-pill:hover {
+  border-color: var(--apple-hairline-strong);
+  color: var(--apple-ink-0);
+}
+
+body.apple-warm-theme .tenant-pill.active {
+  background: var(--apple-ink-0);
+  border-color: var(--apple-ink-0);
+  color: #ffffff;
+}
+
+/* ─── 2. HEADER CLIENTE FLOTANTE (FROSTED ALABASTER GLASS) ─────── */
+body.apple-warm-theme #view-client {
+  background: linear-gradient(180deg, var(--apple-canvas-top) 0%, var(--apple-canvas) 100%);
+  color: var(--apple-ink-0);
+}
+
+body.apple-warm-theme .topnav {
+  height: 64px;
+  background: rgba(248, 246, 240, 0.86);
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  border-bottom: 1px solid var(--apple-hairline);
+}
+
+body.apple-warm-theme .nav-btn-minimal {
+  background: var(--apple-surface);
+  border: 1px solid var(--apple-hairline);
+  color: var(--apple-ink-0);
+  box-shadow: var(--apple-shadow-card);
+  padding: 7px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+body.apple-warm-theme .nav-btn-minimal:hover,
+body.apple-warm-theme .nav-btn-minimal:active {
+  border-color: var(--apple-ink-0);
+  color: var(--apple-ink-0);
+}
+
+body.apple-warm-theme .nav-brand-title {
+  font-family: var(--font-display);
+  font-size: 17px;
+  letter-spacing: -0.4px;
+}
+
+body.apple-warm-theme .nav-brand-credits {
+  color: var(--apple-ink-2);
+  font-size: 10px;
+}
+
+body.apple-warm-theme .credits-dot {
+  color: var(--apple-hairline-strong);
+}
+
+body.apple-warm-theme .tracker-pill-btn {
+  background: var(--apple-surface);
+  border: 1px solid var(--apple-hairline);
+  color: var(--apple-ink-0);
+  box-shadow: var(--apple-shadow-card);
+  padding: 7px 13px;
+  border-radius: var(--apple-radius-pill);
+}
+
+body.apple-warm-theme .client-scroll-container {
+  padding: 18px 16px 170px;
+  max-width: 530px;
+}
+
+/* ─── 3. MODALIDAD (IOS SEGMENTED CONTROL) & BARRA DE CONTEXTO ─── */
+body.apple-warm-theme .fulfillment-mode-tabs {
+  background: var(--apple-surface);
+  border: 1px solid var(--apple-hairline);
+  border-radius: var(--apple-radius-pill);
+  padding: 4px;
+  box-shadow: var(--apple-shadow-card);
+  gap: 4px;
+}
+
+body.apple-warm-theme .fmode-tab {
+  color: var(--apple-ink-1);
+  border-radius: var(--apple-radius-pill);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 9px 8px;
+}
+
+body.apple-warm-theme .fmode-tab:hover {
+  color: var(--apple-ink-0);
+}
+
+body.apple-warm-theme .fmode-tab.active {
+  background: var(--apple-ink-0);
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(22, 22, 24, 0.16);
+}
+
+body.apple-warm-theme .prepay-mode-banner {
+  background: #eef8eb;
+  border: 1px solid rgba(30, 122, 70, 0.2);
+  border-radius: 18px;
+  padding: 13px 16px;
+}
+
+body.apple-warm-theme .prepay-badge {
+  color: var(--apple-sage-ink);
+  font-family: var(--font);
+  font-size: 11px;
+  letter-spacing: 0.2px;
+}
+
+body.apple-warm-theme .prepay-wallets {
+  background: var(--apple-surface);
+  color: var(--apple-ink-0);
+  border: 1px solid rgba(30, 122, 70, 0.15);
+  font-size: 11px;
+  padding: 3px 9px;
+}
+
+body.apple-warm-theme .prepay-banner-desc {
+  color: #2c4a35;
+  font-size: 12.5px;
+}
+
+body.apple-warm-theme .client-context-bar {
+  background: var(--apple-surface);
+  border: 1px solid var(--apple-hairline);
+  border-radius: 16px;
+  padding: 12px 15px;
+  box-shadow: var(--apple-shadow-card);
+}
+
+body.apple-warm-theme .client-context-bar:hover,
+body.apple-warm-theme .client-context-bar:active {
+  border-color: var(--brand-orange);
+  background: var(--apple-surface);
+  box-shadow: var(--apple-shadow-hover);
+}
+
+body.apple-warm-theme .ctx-dot {
+  box-shadow: 0 0 0 3px var(--apple-orange-bg);
+}
+
+body.apple-warm-theme .ctx-table-pill {
+  color: var(--apple-ink-0);
+  font-size: 13px;
+}
+
+body.apple-warm-theme .ctx-sep {
+  color: var(--apple-ink-2);
+}
+
+body.apple-warm-theme .ctx-guest-pill {
+  color: var(--apple-ink-1);
+  font-size: 12.5px;
+}
+
+body.apple-warm-theme .ctx-right-badge {
+  background: var(--apple-orange-bg);
+  color: var(--brand-orange);
+  font-family: var(--font);
+  font-size: 11px;
+  padding: 4px 10px;
+}
+
+/* Presencia en la mesa */
+body.apple-warm-theme .table-presence-strip {
+  background: var(--apple-surface);
+  border: 1px solid var(--apple-hairline);
+  border-radius: 14px;
+  padding: 9px 13px;
+  box-shadow: var(--apple-shadow-card);
+}
+
+body.apple-warm-theme .presence-text {
+  color: var(--apple-ink-1);
+  font-size: 12px;
+}
+
+body.apple-warm-theme .diner-avatar {
+  border: 2px solid #ffffff;
+}
+
+body.apple-warm-theme .diner-avatar.is-me {
+  color: #ffffff;
+}
+
+/* ─── 4. CABECERA DE MENÚ & TARJETAS DE PLATILLOS ──────────────── */
+body.apple-warm-theme .minimal-heading {
+  gap: 5px;
+  margin-bottom: 14px;
+}
+
+body.apple-warm-theme .step-label {
+  color: var(--brand-orange);
+  font-size: 10.5px;
+}
+
+body.apple-warm-theme .minimal-heading h1 {
+  font-size: 27px;
+  font-weight: 800;
+  letter-spacing: -0.7px;
+  color: var(--apple-ink-0);
+}
+
+body.apple-warm-theme .station-cards {
+  gap: 14px;
+}
+
+body.apple-warm-theme .station-card {
+  background: var(--apple-surface);
+  border: 1px solid var(--apple-hairline);
+  border-radius: var(--apple-radius-card);
+  box-shadow: var(--apple-shadow-card);
+  padding: 18px;
+  gap: 16px;
+}
+
+body.apple-warm-theme .station-card:hover,
+body.apple-warm-theme .station-card:active {
+  background: var(--apple-surface);
+  border-color: var(--brand-orange);
+  box-shadow: var(--apple-shadow-hover);
+  transform: translateY(-2px);
+}
+
+body.apple-warm-theme .station-illustration {
+  width: 108px;
+  height: 86px;
+  background: radial-gradient(circle at 50% 55%, #f9f2e6 0%, #f5efe3 72%, transparent 100%);
+  border-radius: 18px;
+  padding: 6px;
+}
+
+body.apple-warm-theme .station-kicker {
+  color: var(--apple-ink-2);
+  font-size: 9.5px;
+}
+
+body.apple-warm-theme .station-card-top h2 {
+  font-size: 20px;
+  color: var(--apple-ink-0);
+  letter-spacing: -0.4px;
+}
+
+body.apple-warm-theme .station-price-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+body.apple-warm-theme .price-tag {
+  background: var(--apple-orange-bg);
+  color: var(--brand-orange);
+  font-family: var(--font-display);
+  font-size: 14.5px;
+  font-weight: 800;
+  padding: 4px 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+body.apple-warm-theme .station-corner-arrow {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--apple-hairline);
+  background: var(--apple-surface-soft);
+  color: var(--apple-ink-1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  transition: all var(--transition);
+}
+
+body.apple-warm-theme .station-card:hover .station-corner-arrow {
+  background: var(--apple-ink-0);
+  border-color: var(--apple-ink-0);
+  color: #ffffff;
+}
+
+body.apple-warm-theme .station-card-body p {
+  color: var(--apple-ink-1);
+  font-size: 12.5px;
+  line-height: 1.42;
+}
+
+/* ─── 5. ARMADOR TAP-TO-SELECT (ESTILO APPLE TOUCH TILES) ──────── */
+body.apple-warm-theme .station-tabs {
+  background: var(--apple-surface);
+  border: 1px solid var(--apple-hairline);
+  border-radius: var(--apple-radius-pill);
+  padding: 4px;
+  box-shadow: var(--apple-shadow-card);
+  gap: 4px;
+}
+
+body.apple-warm-theme .station-tab {
+  color: var(--apple-ink-1);
+  border-radius: var(--apple-radius-pill);
+  padding: 10px 15px;
+  font-size: 13.5px;
+}
+
+body.apple-warm-theme .station-tab.active {
+  background: var(--apple-ink-0);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(22, 22, 24, 0.16);
+}
+
+body.apple-warm-theme .plate-preview-minimal {
+  background:
+    radial-gradient(ellipse 75% 65% at 50% 44%, #fbf8f1 0%, #ffffff 74%);
+  border: 1px solid var(--apple-hairline);
+  border-radius: 24px;
+  padding: 14px 18px 16px;
+  box-shadow: var(--apple-shadow-card);
+}
+
+body.apple-warm-theme .plate-canvas svg {
+  filter: drop-shadow(0 12px 22px rgba(28, 25, 23, 0.12));
+}
+
+body.apple-warm-theme .live-summary-line {
+  border-top-color: var(--apple-hairline);
+  padding-top: 12px;
+}
+
+body.apple-warm-theme .live-summary-text {
+  color: var(--apple-ink-0);
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+body.apple-warm-theme .btn-clear-minimal {
+  background: var(--apple-surface-soft);
+  border: 1px solid var(--apple-hairline);
+  color: var(--apple-ink-1);
+  padding: 5px 12px;
+  font-size: 11.5px;
+}
+
+body.apple-warm-theme .btn-clear-minimal:hover,
+body.apple-warm-theme .btn-clear-minimal:active {
+  color: var(--apple-ink-0);
+  border-color: var(--apple-hairline-strong);
+  background: #efece4;
+}
+
+body.apple-warm-theme .minimal-group-title {
+  color: var(--apple-ink-2);
+  font-size: 10.5px;
+  letter-spacing: 0.8px;
+}
+
+/* Tarjetas táctiles de ingredientes */
+body.apple-warm-theme .tap-grid {
+  gap: 10px;
+}
+
+body.apple-warm-theme .tap-card {
+  background: var(--apple-surface);
+  border: 1.5px solid var(--apple-hairline);
+  border-radius: 18px;
+  padding: 14px 10px 12px;
+  min-height: 106px;
+  box-shadow: var(--apple-shadow-card);
+}
+
+body.apple-warm-theme .tap-card:hover {
+  border-color: var(--apple-hairline-strong);
+  transform: translateY(-1px);
+  box-shadow: var(--apple-shadow-hover);
+}
+
+body.apple-warm-theme .tap-card.selected {
+  background: #fff7f2;
+  border-color: var(--brand-orange);
+  box-shadow: 0 6px 18px rgba(255, 107, 26, 0.12);
+}
+
+body.apple-warm-theme .tap-check {
+  top: 8px;
+  right: 8px;
+  width: 20px;
+  height: 20px;
+  background: var(--brand-orange);
+  color: #ffffff;
+  font-size: 11px;
+  box-shadow: 0 2px 6px rgba(255, 107, 26, 0.3);
+}
+
+body.apple-warm-theme .tap-art {
+  width: 60px;
+  height: 46px;
+  background: var(--apple-surface-soft);
+  border-radius: 14px;
+  padding: 3px;
+}
+
+body.apple-warm-theme .tap-card.selected .tap-art {
+  background: #ffffff;
+}
+
+body.apple-warm-theme .tap-name {
+  color: var(--apple-ink-0);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+body.apple-warm-theme .tap-included {
+  color: var(--apple-ink-2);
+  font-family: var(--font);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+body.apple-warm-theme .tap-card.selected .tap-included {
+  color: var(--brand-orange);
+}
+
+body.apple-warm-theme .tap-card.sold-out,
+body.apple-warm-theme .drink-row.sold-out,
+body.apple-warm-theme .station-card.sold-out {
+  opacity: 0.5;
+  background: var(--apple-surface-soft) !important;
+  border-color: var(--apple-hairline) !important;
+}
+
+/* ─── 6. BEBIDAS CON ÍCONOS PASTEL & STEPPER EN LÍNEA ──────────── */
+body.apple-warm-theme .drinks-section {
+  border-top-color: var(--apple-hairline);
+  padding-top: 14px;
+  gap: 12px;
+}
+
+body.apple-warm-theme .drinks-list {
+  gap: 10px;
+}
+
+body.apple-warm-theme .drink-row {
+  background: var(--apple-surface);
+  border: 1px solid var(--apple-hairline);
+  border-radius: 18px;
+  padding: 12px 14px;
+  box-shadow: var(--apple-shadow-card);
+}
+
+body.apple-warm-theme .drink-row:hover,
+body.apple-warm-theme .drink-row:active {
+  background: var(--apple-surface);
+  border-color: var(--apple-hairline-strong);
+  box-shadow: var(--apple-shadow-hover);
+}
+
+body.apple-warm-theme .drink-row.in-cart {
+  border-color: rgba(255, 107, 26, 0.45);
+  background: #fff9f5;
+}
+
+body.apple-warm-theme .drink-emoji-badge {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+body.apple-warm-theme .drink-emoji-badge.tone-rose  { background: #fce8ec; }
+body.apple-warm-theme .drink-emoji-badge.tone-sand  { background: #f8efe2; }
+body.apple-warm-theme .drink-emoji-badge.tone-coral { background: #fdeae7; }
+body.apple-warm-theme .drink-emoji-badge.tone-sky   { background: var(--apple-sky-bg); }
+
+body.apple-warm-theme .drink-name {
+  color: var(--apple-ink-0);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+body.apple-warm-theme .drink-price {
+  color: var(--apple-ink-1);
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+body.apple-warm-theme .btn-tap-drink {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--apple-surface-soft);
+  border: 1px solid var(--apple-hairline-strong);
+  color: var(--apple-ink-0);
+  font-size: 18px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+}
+
+body.apple-warm-theme .btn-tap-drink:hover:not(:disabled),
+body.apple-warm-theme .btn-tap-drink:active:not(:disabled) {
+  background: var(--apple-ink-0);
+  border-color: var(--apple-ink-0);
+  color: #ffffff;
+}
+
+body.apple-warm-theme .drink-qty-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--apple-surface);
+  border: 1px solid rgba(255, 107, 26, 0.35);
+  border-radius: var(--apple-radius-pill);
+  padding: 3px;
+  box-shadow: var(--apple-shadow-card);
+  flex-shrink: 0;
+}
+
+body.apple-warm-theme .dq-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: var(--apple-surface-soft);
+  color: var(--apple-ink-0);
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+}
+
+body.apple-warm-theme .dq-btn:hover,
+body.apple-warm-theme .dq-btn:active {
+  background: var(--brand-orange);
+  color: #ffffff;
+}
+
+body.apple-warm-theme .dq-val {
+  min-width: 22px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--brand-orange);
+}
+
+/* ─── 7. ASISTENCIA EN MESA ────────────────────────────────────── */
+body.apple-warm-theme .service-assistance-card {
+  background: var(--apple-surface);
+  border: 1px solid var(--apple-hairline);
+  border-radius: var(--apple-radius-card);
+  padding: 16px 18px;
+  box-shadow: var(--apple-shadow-card);
+}
+
+body.apple-warm-theme .service-live-tag {
+  color: var(--apple-sage-ink);
+  font-family: var(--font);
+  font-weight: 700;
+}
+
+body.apple-warm-theme .btn-service-action {
+  background: var(--apple-surface-soft);
+  border: 1px solid var(--apple-hairline);
+  border-radius: 14px;
+  color: var(--apple-ink-0);
+  font-weight: 700;
+}
+
+body.apple-warm-theme .btn-service-action:hover,
+body.apple-warm-theme .btn-service-action:active {
+  background: var(--apple-surface);
+  border-color: var(--brand-orange);
+  color: var(--brand-orange);
+}
+
+body.apple-warm-theme .btn-service-action.bill:hover,
+body.apple-warm-theme .btn-service-action.bill:active {
+  border-color: var(--apple-amber-ink);
+  color: var(--apple-amber-ink);
+}
+
+body.apple-warm-theme .btn-service-action.bill-full {
+  background: var(--apple-amber-bg);
+  border-color: rgba(179, 107, 6, 0.25);
+  color: var(--apple-amber-ink);
+}
+
+/* ─── 8. DOCK FLOTANTE INFERIOR (APPLE FROSTED GLASS CAPSULE) ───── */
+body.apple-warm-theme .thumb-dock {
+  bottom: 12px;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(26px) saturate(190%);
+  -webkit-backdrop-filter: blur(26px) saturate(190%);
+  border: 1px solid rgba(26, 24, 21, 0.09);
+  border-radius: 24px;
+  box-shadow: 0 18px 44px rgba(28, 25, 23, 0.14), 0 2px 6px rgba(28, 25, 23, 0.05);
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+}
+
+body.apple-warm-theme .builder-qty-stepper {
+  background: var(--apple-surface-soft);
+  border: 1px solid var(--apple-hairline-strong);
+  border-radius: var(--apple-radius-pill);
+  padding: 0 5px;
+}
+
+body.apple-warm-theme .bqty-btn {
+  color: var(--apple-ink-0);
+  border-radius: 50%;
+}
+
+body.apple-warm-theme .bqty-btn:disabled {
+  color: #c5c2bb;
+}
+
+body.apple-warm-theme .bqty-val {
+  color: var(--apple-ink-0);
+}
+
+body.apple-warm-theme .btn-dock-add {
+  background: var(--brand-orange);
+  border: none;
+  color: #ffffff;
+  border-radius: var(--apple-radius-pill);
+  padding: 0 18px;
+  box-shadow: 0 6px 18px rgba(255, 107, 26, 0.28);
+}
+
+body.apple-warm-theme .btn-dock-add:hover:not(:disabled),
+body.apple-warm-theme .btn-dock-add:active:not(:disabled) {
+  background: #e55810;
+  color: #ffffff;
+}
+
+body.apple-warm-theme .btn-dock-add:disabled {
+  background: var(--apple-surface-soft);
+  border: 1px solid var(--apple-hairline);
+  color: var(--apple-ink-2);
+  box-shadow: none;
+}
+
+body.apple-warm-theme .dock-cart-trigger {
+  background: var(--apple-surface-soft);
+  border: 1px solid var(--apple-hairline);
+  border-radius: var(--apple-radius-pill);
+  padding: 0 14px 0 10px;
+}
+
+body.apple-warm-theme .dock-cart-trigger:hover,
+body.apple-warm-theme .dock-cart-trigger:active {
+  background: #efece4;
+  border-color: var(--apple-hairline-strong);
+}
+
+body.apple-warm-theme .dock-count {
+  border-radius: 50%;
+  background: var(--apple-orange-bg);
+  border: none;
+  color: var(--brand-orange);
+}
+
+body.apple-warm-theme .dock-cart-label,
+body.apple-warm-theme .dock-cart-total {
+  color: var(--apple-ink-0);
+  font-variant-numeric: tabular-nums;
+}
+
+body.apple-warm-theme .dock-cart-sub {
+  color: var(--apple-ink-2);
+}
+
+body.apple-warm-theme .dock-btn-pedir {
+  background: var(--apple-ink-0);
+  color: #ffffff;
+  border-radius: var(--apple-radius-pill);
+  padding: 0 24px;
+  box-shadow: 0 6px 18px rgba(22, 22, 24, 0.2);
+}
+
+body.apple-warm-theme .dock-btn-pedir:hover:not(:disabled) {
+  background: #2b2b30;
+}
+
+body.apple-warm-theme .dock-btn-pedir:disabled {
+  background: #e9e6de;
+  color: var(--apple-ink-2);
+  box-shadow: none;
+}
+
+body.apple-warm-theme .btn-dock-secondary {
+  background: var(--apple-ink-0);
+  border: none;
+  color: #ffffff;
+  border-radius: var(--apple-radius-pill);
+}
+
+/* ─── 9. RASTREADOR EN VIVO, RECIBO DIGITAL & SPLIT-BILL ───────── */
+body.apple-warm-theme .tracker-hero-card {
+  background: var(--apple-surface);
+  border: 1px solid var(--apple-hairline);
+  border-radius: 24px;
+  box-shadow: var(--apple-shadow-card);
+  padding: 20px;
+}
+
+body.apple-warm-theme .tracker-hero-card[data-status="received"] {
+  border-color: rgba(179, 107, 6, 0.28);
+  box-shadow: 0 12px 30px rgba(179, 107, 6, 0.08);
+}
+
+body.apple-warm-theme .tracker-hero-card[data-status="preparing"] {
+  border-color: rgba(255, 107, 26, 0.34);
+  box-shadow: 0 12px 30px rgba(255, 107, 26, 0.1);
+}
+
+body.apple-warm-theme .tracker-hero-card[data-status="ready"] {
+  border-color: rgba(30, 122, 70, 0.35);
+  box-shadow: 0 12px 32px rgba(30, 122, 70, 0.12);
+}
+
+body.apple-warm-theme .tracker-top {
+  border-bottom-color: var(--apple-hairline);
+}
+
+body.apple-warm-theme .tracker-order-num {
+  background: var(--apple-orange-bg);
+  color: var(--brand-orange);
+}
+
+body.apple-warm-theme .tracker-table-name {
+  color: var(--apple-ink-1);
+}
+
+body.apple-warm-theme .tracker-status-title {
+  color: var(--apple-ink-0);
+  font-size: 28px;
+}
+
+body.apple-warm-theme .tracker-status-desc {
+  color: var(--apple-ink-1);
+}
+
+body.apple-warm-theme .tracker-progress {
+  height: 6px;
+  background: #efece5;
+}
+
+body.apple-warm-theme .tracker-steps {
+  background: var(--apple-surface-soft);
+  border: 1px solid var(--apple-hairline);
+  border-radius: 16px;
+}
+
+body.apple-warm-theme .step-node {
+  background: #e5e1d8;
+  border-color: #d6d1c6;
+}
+
+body.apple-warm-theme .tracker-step.done .step-node {
+  background: var(--apple-ink-0);
+  border-color: var(--apple-ink-0);
+}
+
+body.apple-warm-theme .step-name {
+  color: var(--apple-ink-0);
+}
+
+body.apple-warm-theme .step-sub {
+  color: var(--apple-ink-2);
+}
+
+/* Detalles de entrega y presencia en Tracker */
+body.apple-warm-theme .tracker-fulfillment-box,
+body.apple-warm-theme .tracker-presence-card {
+  background: var(--apple-surface);
+  border: 1px solid var(--apple-hairline);
+  border-radius: var(--apple-radius-card);
+  box-shadow: var(--apple-shadow-card);
+  padding: 16px 18px;
+}
+
+body.apple-warm-theme .tf-label { color: var(--apple-ink-2); }
+body.apple-warm-theme .tf-val { color: var(--apple-ink-0); }
+
+body.apple-warm-theme .presence-row {
+  background: var(--apple-surface-soft);
+  border: 1px solid var(--apple-hairline);
+  border-radius: 14px;
+}
+
+body.apple-warm-theme .presence-row.is-me {
+  background: #fff7f2;
+  border-color: rgba(255, 107, 26, 0.35);
+}
+
+body.apple-warm-theme .presence-name,
+body.apple-warm-theme .presence-amount { color: var(--apple-ink-0); }
+body.apple-warm-theme .presence-status { color: var(--apple-ink-2); }
+body.apple-warm-theme .presence-status.st-ready { color: var(--apple-sage-ink); }
+
+/* Split Bill Tabs + Recibo de Papel Blanco */
+body.apple-warm-theme .split-tab {
+  background: var(--apple-surface);
+  border: 1px solid var(--apple-hairline);
+  border-radius: 16px;
+  box-shadow: var(--apple-shadow-card);
+  padding: 12px 14px;
+}
+
+body.apple-warm-theme .split-tab.active {
+  background: #fff7f2;
+  border-color: var(--brand-orange);
+}
+
+body.apple-warm-theme .split-tab-title { color: var(--apple-ink-1); }
+body.apple-warm-theme .split-tab.active .split-tab-title { color: var(--apple-ink-0); }
+
+body.apple-warm-theme .receipt-paper {
+  background: var(--apple-surface);
+  border: 1px solid var(--apple-hairline);
+  border-radius: var(--apple-radius-card);
+  box-shadow: var(--apple-shadow-card);
+  padding: 20px;
+}
+
+body.apple-warm-theme .receipt-meta,
+body.apple-warm-theme .receipt-foot { color: var(--apple-ink-2); }
+
+body.apple-warm-theme .receipt-divider {
+  border-bottom: 1.5px dashed rgba(26, 24, 21, 0.12);
+}
+
+body.apple-warm-theme .tracker-item-row { color: var(--apple-ink-1); }
+body.apple-warm-theme .ti-name,
+body.apple-warm-theme .ti-amount,
+body.apple-warm-theme .receipt-total-row { color: var(--apple-ink-0); }
+
+body.apple-warm-theme .receipt-total-row span:last-child {
+  color: var(--apple-sage-ink);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+body.apple-warm-theme .receipt-paid-pill {
+  background: var(--apple-amber-bg);
+  color: var(--apple-amber-ink);
+  border: none;
+}
+
+body.apple-warm-theme .receipt-paid-pill.is-paid {
+  background: var(--apple-sage-bg);
+  color: var(--apple-sage-ink);
+  border: none;
+}
+
+body.apple-warm-theme .group-diner-card {
+  background: var(--apple-surface-soft);
+  border: 1px solid var(--apple-hairline);
+  border-radius: 14px;
+}
+
+body.apple-warm-theme .group-diner-header { border-bottom-color: var(--apple-hairline); }
+body.apple-warm-theme .group-diner-name { color: var(--apple-ink-0); }
+body.apple-warm-theme .group-table-grand-total {
+  background: var(--apple-surface-soft);
+  border: 1px solid var(--apple-hairline-strong);
+  color: var(--apple-ink-0);
+}
+body.apple-warm-theme .group-table-grand-total span:last-child {
+  color: var(--apple-sage-ink);
+}
+
+/* Tarjeta de Pago Digital (Botón Apple Pay Negro Nativo sobre Blanco) */
+body.apple-warm-theme .digital-pay-card {
+  background: var(--apple-surface);
+  border: 1px solid var(--apple-hairline);
+  border-radius: var(--apple-radius-card);
+  box-shadow: var(--apple-shadow-card);
+  padding: 18px;
+}
+
+body.apple-warm-theme .pay-methods-mini {
+  background: var(--apple-surface-soft);
+  color: var(--apple-ink-1);
+  border: 1px solid var(--apple-hairline);
+}
+
+body.apple-warm-theme .btn-apple-stripe-pay {
+  border-radius: var(--apple-radius-pill);
+  height: 52px;
+}
+
+body.apple-warm-theme .btn-apple-stripe-pay.primary {
+  background: #161618;
+  color: #ffffff;
+  box-shadow: 0 8px 22px rgba(22, 22, 24, 0.2);
+}
+
+body.apple-warm-theme .apple-pay-mark {
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+}
+
+body.apple-warm-theme .btn-apple-stripe-pay.table-full {
+  background: var(--apple-orange-bg);
+  color: var(--brand-orange);
+  border: 1px solid rgba(255, 107, 26, 0.3);
+}
+
+body.apple-warm-theme .paid-confirmation-banner {
+  background: #e9f7e6;
+  border: 1px solid rgba(30, 122, 70, 0.25);
+  border-radius: 18px;
+}
+
+body.apple-warm-theme .paid-conf-icon {
+  background: var(--apple-sage-ink);
+  color: #ffffff;
+}
+
+body.apple-warm-theme .paid-conf-title {
+  color: var(--apple-sage-ink);
+}
+
+body.apple-warm-theme .paid-conf-sub {
+  color: #2f553b;
+}
+
+/* ─── 10. BOTTOM SHEET CARRITO, MODALES, CHECKOUT & TOAST ──────── */
+body.apple-warm-theme .cart-overlay,
+body.apple-warm-theme .modal-overlay {
+  background: rgba(22, 22, 24, 0.34);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+body.apple-warm-theme .bottom-sheet-cart {
+  background: var(--apple-surface);
+  border-top: 1px solid var(--apple-hairline);
+  border-radius: 26px 26px 0 0;
+  box-shadow: 0 -16px 46px rgba(22, 22, 24, 0.16);
+}
+
+body.apple-warm-theme .sheet-grabber {
+  background: #dcd8ce;
+}
+
+body.apple-warm-theme .cart-header,
+body.apple-warm-theme .cart-footer,
+body.apple-warm-theme .cart-item {
+  border-color: var(--apple-hairline);
+}
+
+body.apple-warm-theme .cart-header h2,
+body.apple-warm-theme .cart-item-name,
+body.apple-warm-theme .cart-row.total {
+  color: var(--apple-ink-0);
+}
+
+body.apple-warm-theme .cart-close,
+body.apple-warm-theme .cart-empty {
+  color: var(--apple-ink-2);
+}
+
+body.apple-warm-theme .qty-btn {
+  background: var(--apple-surface-soft);
+  border: 1px solid var(--apple-hairline);
+  border-radius: 50%;
+  color: var(--apple-ink-0);
+}
+
+body.apple-warm-theme .qty-num {
+  color: var(--apple-ink-0);
+}
+
+body.apple-warm-theme .btn-send-order {
+  background: var(--apple-ink-0);
+  color: #ffffff;
+  border-radius: var(--apple-radius-pill);
+}
+
+body.apple-warm-theme .btn-send-order:disabled {
+  background: #e9e6de;
+  color: var(--apple-ink-2);
+}
+
+/* Modales generales de cliente (Upsell, Mesa/Domicilio, Checkout) */
+body.apple-warm-theme .modal {
+  background: var(--apple-surface);
+  border: 1px solid var(--apple-hairline);
+  border-radius: 26px;
+  box-shadow: 0 24px 64px rgba(22, 22, 24, 0.18);
+  color: var(--apple-ink-0);
+  padding: 24px 22px;
+}
+
+body.apple-warm-theme .modal-title {
+  color: var(--apple-ink-0);
+  font-size: 19px;
+}
+
+body.apple-warm-theme .modal-sub,
+body.apple-warm-theme .modal-field-label {
+  color: var(--apple-ink-2);
+}
+
+body.apple-warm-theme .modal-input {
+  background: var(--apple-surface-soft);
+  border: 1.5px solid var(--apple-hairline-strong);
+  border-radius: 14px;
+  color: var(--apple-ink-0);
+}
+
+body.apple-warm-theme .modal-input:focus {
+  background: var(--apple-surface);
+  border-color: var(--brand-orange);
+  box-shadow: 0 0 0 3px rgba(255, 107, 26, 0.12);
+}
+
+body.apple-warm-theme .btn-cancel {
+  background: var(--apple-surface-soft);
+  border: 1px solid var(--apple-hairline-strong);
+  border-radius: var(--apple-radius-pill);
+  color: var(--apple-ink-1);
+}
+
+body.apple-warm-theme .btn-confirm {
+  background: var(--apple-ink-0);
+  color: #ffffff;
+  border-radius: var(--apple-radius-pill);
+}
+
+body.apple-warm-theme .upsell-drink-btn {
+  background: var(--apple-surface-soft);
+  border: 1px solid var(--apple-hairline);
+  border-radius: 16px;
+}
+
+body.apple-warm-theme .upsell-drink-btn:hover,
+body.apple-warm-theme .upsell-drink-btn:active {
+  background: #fff7f2;
+  border-color: var(--brand-orange);
+}
+
+body.apple-warm-theme .upsell-drink-name { color: var(--apple-ink-0); }
+
+body.apple-warm-theme .btn-upsell-skip {
+  border-color: var(--apple-hairline-strong);
+  border-radius: var(--apple-radius-pill);
+  color: var(--apple-ink-1);
+}
+
+body.apple-warm-theme .modal-fmode-tabs {
+  background: var(--apple-surface-soft);
+  border: 1px solid var(--apple-hairline);
+  border-radius: var(--apple-radius-pill);
+}
+
+body.apple-warm-theme .mfmode-tab {
+  color: var(--apple-ink-1);
+  border-radius: var(--apple-radius-pill);
+}
+
+body.apple-warm-theme .mfmode-tab.active {
+  background: var(--apple-ink-0);
+  color: #ffffff;
+  border: none;
+}
+
+body.apple-warm-theme .table-chip,
+body.apple-warm-theme .tip-pill {
+  background: var(--apple-surface-soft);
+  border: 1px solid var(--apple-hairline);
+  border-radius: var(--apple-radius-pill);
+  color: var(--apple-ink-1);
+}
+
+body.apple-warm-theme .table-chip.selected,
+body.apple-warm-theme .table-chip:hover,
+body.apple-warm-theme .tip-pill.active {
+  background: var(--apple-orange-bg);
+  border-color: var(--brand-orange);
+  color: var(--brand-orange);
+}
+
+body.apple-warm-theme .delivery-fee-pill {
+  background: var(--apple-surface-soft);
+  border: 1px solid var(--apple-hairline);
+  border-radius: 12px;
+  color: var(--apple-ink-0);
+}
+
+body.apple-warm-theme .modal-prepay-note {
+  background: #eef8eb;
+  border: 1px solid rgba(30, 122, 70, 0.22);
+  color: #254a30;
+  border-radius: 14px;
+}
+
+/* Checkout Modal: Apple Pay & Stripe */
+body.apple-warm-theme .pay-modal-top {
+  border-bottom-color: var(--apple-hairline);
+}
+
+body.apple-warm-theme .pay-merchant-badge { color: var(--apple-ink-1); }
+
+body.apple-warm-theme .pay-connect-acct {
+  background: var(--apple-sage-bg);
+  color: var(--apple-sage-ink);
+  border: none;
+}
+
+body.apple-warm-theme .pay-summary-box {
+  background: var(--apple-surface-soft);
+  border: 1px solid var(--apple-hairline);
+  border-radius: 16px;
+}
+
+body.apple-warm-theme .pay-sum-row { color: var(--apple-ink-1); }
+body.apple-warm-theme .pay-sum-row.total {
+  border-top-color: var(--apple-hairline-strong);
+  color: var(--apple-ink-0);
+}
+body.apple-warm-theme .pay-sum-row.total span:last-child {
+  color: var(--apple-sage-ink);
+}
+
+body.apple-warm-theme .btn-wallet-apple-pay {
+  background: #161618;
+  color: #ffffff;
+  border-radius: var(--apple-radius-pill);
+  box-shadow: 0 8px 22px rgba(22, 22, 24, 0.2);
+}
+
+body.apple-warm-theme .ap-sub {
+  color: rgba(255, 255, 255, 0.78);
+  border-left-color: rgba(255, 255, 255, 0.24);
+}
+
+body.apple-warm-theme .apple-pay-biometric-box {
+  background: var(--apple-surface-soft);
+  border: 1px solid rgba(30, 122, 70, 0.3);
+  border-radius: 16px;
+}
+
+body.apple-warm-theme .ap-faceid-ring {
+  border-color: var(--apple-sage-ink);
+  color: var(--apple-sage-ink);
+}
+
+body.apple-warm-theme .ap-faceid-status {
+  color: var(--apple-ink-0);
+}
+
+body.apple-warm-theme .pay-or-divider span {
+  color: var(--apple-ink-2);
+}
+
+body.apple-warm-theme .btn-fill-demo-card {
+  background: var(--apple-orange-bg);
+  border-color: rgba(255, 107, 26, 0.35);
+  border-radius: var(--apple-radius-pill);
+  padding: 4px 10px;
+}
+
+body.apple-warm-theme .btn-stripe-submit {
+  background: var(--apple-sage-ink) !important;
+  color: #ffffff !important;
+}
+
+/* Client Toast */
+body.apple-warm-theme #order-toast.toast {
+  background: var(--apple-ink-0);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--apple-radius-pill);
+  box-shadow: 0 12px 32px rgba(22, 22, 24, 0.24);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   INVENTARIO INTELIGENTE, RECETAS & CADUCIDADES PEPS (APPLE BENTO)
+═══════════════════════════════════════════════════════════════════ */
+
+.kds-apple-theme .stock-subtab-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.kds-apple-theme .stock-segmented-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--apple-surface);
+  border: 1px solid var(--apple-hairline);
+  border-radius: var(--apple-radius-pill);
+  padding: 4px;
+  box-shadow: var(--apple-shadow-card);
+}
+
+.kds-apple-theme .stock-seg-btn {
+  border: none;
+  background: transparent;
+  color: var(--apple-ink-1);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: var(--apple-radius-pill);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.kds-apple-theme .stock-seg-btn:hover {
+  color: var(--apple-ink-0);
+}
+
+.kds-apple-theme .stock-seg-btn.active {
+  background: var(--apple-ink-0);
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 3px 10px rgba(22, 22, 24, 0.16);
+}
+
+/* Switch estilo iOS para Auto-86 */
+.kds-apple-theme .stock-auto86-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--apple-surface);
+  border: 1px solid var(--apple-hairline);
+  border-radius: var(--apple-radius-pill);
+  padding: 7px 14px;
+  box-shadow: var(--apple-shadow-card);
+  cursor: pointer;
+  user-select: none;
+}
+
+.kds-apple-theme .stock-auto86-toggle input {
+  display: none;
+}
+
+.kds-apple-theme .auto86-switch {
+  width: 36px;
+  height: 20px;
+  border-radius: 99px;
+  background: #dcd8ce;
+  position: relative;
+  transition: background var(--transition);
+  flex-shrink: 0;
+}
+
+.kds-apple-theme .auto86-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+  transition: transform var(--transition);
+}
+
+.kds-apple-theme .stock-auto86-toggle input:checked + .auto86-switch {
+  background: var(--apple-sage-ink);
+}
+
+.kds-apple-theme .stock-auto86-toggle input:checked + .auto86-switch::after {
+  transform: translateX(16px);
+}
+
+.kds-apple-theme .auto86-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--apple-ink-0);
+}
+
+.kds-apple-theme .stock-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.kds-apple-theme .apple-trend-pill.warn {
+  background: var(--apple-amber-bg);
+  color: var(--apple-amber-ink);
+}
+
+.kds-apple-theme .apple-trend-pill.danger {
+  background: var(--apple-red-bg);
+  color: var(--apple-red-ink);
+}
+
+/* Tarjeta de Alertas Urgentes (Reabastecimiento & Caducidades) */
+.kds-apple-theme .inv-alerts-card {
+  border-color: rgba(179, 107, 6, 0.22);
+  background: linear-gradient(180deg, #fffdf8 0%, #ffffff 100%);
+}
+
+.kds-apple-theme .inv-alerts-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.kds-apple-theme .inv-alert-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--apple-hairline);
+}
+.kds-apple-theme .inv-alert-row:last-child {
+  border-bottom: none;
+  padding-bottom: 2px;
+}
+
+.kds-apple-theme .inv-alert-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.kds-apple-theme .inv-alert-dot.dot-red {
+  background: var(--apple-red-ink);
+  box-shadow: 0 0 0 4px var(--apple-red-bg);
+}
+.kds-apple-theme .inv-alert-dot.dot-amber {
+  background: #d98207;
+  box-shadow: 0 0 0 4px var(--apple-amber-bg);
+}
+
+.kds-apple-theme .inv-alert-texts {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.kds-apple-theme .inv-alert-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--apple-ink-0);
+}
+
+.kds-apple-theme .inv-alert-desc {
+  font-size: 12px;
+  color: var(--apple-ink-1);
+}
+
+.kds-apple-theme .btn-inv-quick-action {
+  background: var(--apple-ink-0);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--apple-radius-pill);
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 7px 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: transform var(--transition), background var(--transition);
+}
+.kds-apple-theme .btn-inv-quick-action:hover {
+  background: #2b2b30;
+  transform: translateY(-1px);
+}
+
+/* Barra de filtros + buscador */
+.kds-apple-theme .inv-toolbar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.kds-apple-theme #inv-filter-pills {
+  flex-wrap: wrap;
+  overflow-x: visible;
+}
+
+.kds-apple-theme .inv-search-pill {
+  min-width: 210px;
+}
+
+/* Grid de Tarjetas Bento de Insumos */
+.kds-apple-theme .inv-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 16px;
+}
+
+.kds-apple-theme .inv-item-card {
+  background: var(--apple-surface);
+  border: 1px solid var(--apple-hairline);
+  border-radius: var(--apple-radius-card);
+  padding: 18px 20px 16px;
+  box-shadow: var(--apple-shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+
+.kds-apple-theme .inv-item-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--apple-shadow-hover);
+}
+
+.kds-apple-theme .inv-item-card.st-out {
+  border-color: rgba(204, 43, 43, 0.3);
+}
+
+.kds-apple-theme .inv-item-card.st-low {
+  border-color: rgba(179, 107, 6, 0.25);
+}
+
+.kds-apple-theme .inv-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.kds-apple-theme .inv-card-title-group {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+}
+
+.kds-apple-theme .sales-prod-icon-circle.tone-plum {
+  background: var(--apple-plum-bg);
+}
+
+.kds-apple-theme .inv-card-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.kds-apple-theme .inv-item-name {
+  font-family: var(--font-display);
+  font-size: 15.5px;
+  font-weight: 800;
+  color: var(--apple-ink-0);
+  letter-spacing: -0.3px;
+}
+
+.kds-apple-theme .inv-item-meta {
+  font-size: 11.5px;
+  color: var(--apple-ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kds-apple-theme .inv-status-pill {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--apple-radius-pill);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.kds-apple-theme .inv-status-pill.st-ok {
+  background: var(--apple-sage-bg);
+  color: var(--apple-sage-ink);
+}
+.kds-apple-theme .inv-status-pill.st-low {
+  background: var(--apple-amber-bg);
+  color: var(--apple-amber-ink);
+}
+.kds-apple-theme .inv-status-pill.st-out {
+  background: var(--apple-red-bg);
+  color: var(--apple-red-ink);
+}
+
+/* Lectura de Stock + Porciones + Caducidad PEPS */
+.kds-apple-theme .inv-stock-readout-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.kds-apple-theme .inv-stock-big {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.kds-apple-theme .inv-stock-value {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.6px;
+  color: var(--apple-ink-0);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.kds-apple-theme .inv-stock-min {
+  font-size: 11px;
+  color: var(--apple-ink-2);
+  font-weight: 500;
+}
+
+.kds-apple-theme .inv-badges-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+}
+
+.kds-apple-theme .inv-servings-pill {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--apple-ink-1);
+  background: var(--apple-surface-soft);
+  border: 1px solid var(--apple-hairline);
+  padding: 3px 9px;
+  border-radius: var(--apple-radius-pill);
+}
+
+.kds-apple-theme .inv-expiry-pill {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: var(--apple-radius-pill);
+}
+.kds-apple-theme .inv-expiry-pill.exp-sage {
+  background: var(--apple-sage-bg);
+  color: var(--apple-sage-ink);
+}
+.kds-apple-theme .inv-expiry-pill.exp-amber {
+  background: var(--apple-amber-bg);
+  color: var(--apple-amber-ink);
+}
+.kds-apple-theme .inv-expiry-pill.exp-red {
+  background: var(--apple-red-bg);
+  color: var(--apple-red-ink);
+}
+.kds-apple-theme .inv-expiry-pill.exp-neutral {
+  background: var(--apple-surface-soft);
+  color: var(--apple-ink-2);
+}
+
+/* Barra de Stock con Marca de Mínimo */
+.kds-apple-theme .inv-bar-track {
+  position: relative;
+  width: 100%;
+  height: 8px;
+  border-radius: 99px;
+  background-color: #f2efe8;
+  background-image: var(--apple-hatch-bg);
+  overflow: visible;
+}
+
+.kds-apple-theme .inv-bar-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.kds-apple-theme .inv-bar-fill.st-ok  { background: #34a853; }
+.kds-apple-theme .inv-bar-fill.st-low { background: #e89b19; }
+.kds-apple-theme .inv-bar-fill.st-out { background: var(--apple-red-ink); }
+
+.kds-apple-theme .inv-bar-min-mark {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--apple-ink-0);
+  opacity: 0.38;
+}
+
+/* Tira de Vínculo de Receta */
+.kds-apple-theme .inv-recipe-strip {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--apple-ink-1);
+  background: var(--apple-surface-soft);
+  border: 1px solid var(--apple-hairline);
+  border-radius: 11px;
+  padding: 7px 11px;
+}
+
+/* Botones de Acción por Insumo */
+.kds-apple-theme .inv-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding-top: 2px;
+}
+
+.kds-apple-theme .inv-act-btn {
+  flex: 1;
+  border-radius: var(--apple-radius-pill);
+  border: 1px solid var(--apple-hairline-strong);
+  background: var(--apple-surface);
+  color: var(--apple-ink-1);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.kds-apple-theme .inv-act-btn:hover {
+  background: var(--apple-surface-soft);
+  color: var(--apple-ink-0);
+}
+
+.kds-apple-theme .inv-act-btn.primary {
+  background: var(--apple-ink-0);
+  border-color: var(--apple-ink-0);
+  color: #ffffff;
+}
+.kds-apple-theme .inv-act-btn.primary:hover {
+  background: #2b2b30;
+}
+
+.kds-apple-theme .inv-act-btn.warn:hover {
+  background: var(--apple-amber-bg);
+  border-color: rgba(179, 107, 6, 0.3);
+  color: var(--apple-amber-ink);
+}
+
+.kds-apple-theme .mode86-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Modales de Insumo y Reabastecimiento */
+.kds-apple-theme .inv-editor-modal {
+  width: 520px;
+  max-width: calc(100vw - 28px);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.kds-apple-theme .inv-restock-modal {
+  width: 400px;
+  max-width: calc(100vw - 28px);
+}
+
+.kds-apple-theme .inv-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 12px;
+  margin-bottom: 14px;
+}
+
+.kds-apple-theme .inv-form-grid .modal-field-block {
+  margin-bottom: 0;
+}
+
+.kds-apple-theme .inv-form-grid .span-2 {
+  grid-column: 1 / -1;
+}
+
+.kds-apple-theme .inv-select {
+  height: 45px;
+  padding: 0 12px;
+  cursor: pointer;
+}
+
+.kds-apple-theme .btn-inv-delete {
+  background: var(--apple-red-bg);
+  color: var(--apple-red-ink);
+  border: 1px solid rgba(204, 43, 43, 0.25);
+  border-radius: var(--apple-radius-pill);
+  padding: 0 14px;
+  height: 42px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.kds-apple-theme .btn-inv-delete:hover {
+  background: var(--apple-red-ink);
+  color: #ffffff;
+}
+
+@media (max-width: 680px) {
+  .kds-apple-theme .inv-cards-grid {
+    grid-template-columns: 1fr;
+  }
+  .kds-apple-theme .inv-form-grid {
+    grid-template-columns: 1fr;
+  }
+  .kds-apple-theme .inv-form-grid .span-2 {
+    grid-column: auto;
+  }
 }

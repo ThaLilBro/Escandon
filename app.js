@@ -250,7 +250,7 @@ const DRINKS_CONFIG = [
 // ══════════════════════════════════════════════
 //  ESTADO DE LA APLICACIÓN
 // ══════════════════════════════════════════════
-let currentView    = 'landing'; // 'landing' | 'client' | 'kitchen'
+let currentView    = 'client'; // 'client' | 'kitchen'
 let clientMode     = 'menu';    // 'menu' | 'tracker'
 let currentStation = null;      // 'taco' | 'hotdog'
 let presetTableFromURL = '';
@@ -621,9 +621,13 @@ function handleIncomingEvent(type, payload, fromRemote = false) {
         orderCounter = payload.num;
       }
       orders.sort((a, b) => a.createdAt - b.createdAt);
+      if (!payload.inventoryDeducted) {
+        deductInventoryForOrder(payload, { silent: true });
+      }
       persistOrders();
       renderKDS();
       renderDailySales();
+      renderKDSStockPanel();
       renderClientTracker();
       if (fromRemote) playKitchenBell();
     }
@@ -691,6 +695,18 @@ function handleIncomingEvent(type, payload, fromRemote = false) {
       }
       renderKDSStockPanel();
     }
+  } else if (type === 'INVENTORY_UPDATE') {
+    if (Array.isArray(payload.inventoryItems)) {
+      inventoryItems = payload.inventoryItems;
+    }
+    if (Array.isArray(payload.inventoryMovements)) {
+      inventoryMovements = payload.inventoryMovements;
+    }
+    if (typeof payload.autoMode86Enabled === 'boolean') {
+      autoMode86Enabled = payload.autoMode86Enabled;
+    }
+    persistInventory();
+    renderKDSStockPanel();
   } else if (type === 'SERVICE_CALL') {
     if (payload && payload.id) {
       if (!serviceCalls.some(c => c.id === payload.id)) {
@@ -1041,6 +1057,19 @@ function readTenantStorage(keyName) {
 
 function loadPersistedOrders() {
   try {
+    // Purga única de comandas/ventas demo de pruebas para iniciar en limpio (producción)
+    if (!localStorage.getItem('kds-clean-prod-v13')) {
+      localStorage.removeItem(storageKey('orders'));
+      localStorage.removeItem('kds-orders');
+      localStorage.removeItem(storageKey('completed-orders'));
+      localStorage.removeItem('kds-completed-orders');
+      localStorage.removeItem(storageKey('service-calls'));
+      localStorage.removeItem('kds-service-calls');
+      localStorage.removeItem(storageKey('sales-ledger'));
+      localStorage.removeItem('escandon-sales-ledger');
+      localStorage.setItem('kds-clean-prod-v13', '1');
+    }
+
     const saved          = readTenantStorage('orders');
     const savedCompleted = readTenantStorage('completed-orders');
     const savedSoldOut   = readTenantStorage('sold-out');
@@ -1067,25 +1096,26 @@ function loadPersistedOrders() {
     myOrderIds = [];
     activeTrackedOrderId = null;
   }
+  loadPersistedInventory();
 }
 
 // ══════════════════════════════════════════════
 //  NAVEGACIÓN DE VISTAS Y SEGURIDAD PIN KDS (12345)
 // ══════════════════════════════════════════════
 function showView(view) {
-  currentView = view;
-  document.getElementById('app-landing').classList.add('hidden');
-  document.getElementById('view-client').classList.add('hidden');
-  document.getElementById('view-kitchen').classList.add('hidden');
+  const resolved = view === 'kitchen' ? 'kitchen' : 'client';
+  currentView = resolved;
+  const clientEl  = document.getElementById('view-client');
+  const kitchenEl = document.getElementById('view-kitchen');
+  if (clientEl)  clientEl.classList.add('hidden');
+  if (kitchenEl) kitchenEl.classList.add('hidden');
 
-  if (view === 'landing') {
-    document.getElementById('app-landing').classList.remove('hidden');
-  } else if (view === 'client') {
-    document.getElementById('view-client').classList.remove('hidden');
-    initClientView();
-  } else if (view === 'kitchen') {
-    document.getElementById('view-kitchen').classList.remove('hidden');
+  if (resolved === 'kitchen') {
+    if (kitchenEl) kitchenEl.classList.remove('hidden');
     initKitchenView();
+  } else {
+    if (clientEl) clientEl.classList.remove('hidden');
+    initClientView();
   }
 }
 
@@ -1096,9 +1126,7 @@ function handleClientBack() {
   }
   if (currentStation) {
     showStationSelector();
-    return;
   }
-  showView('landing');
 }
 
 function verifyKDSPin() {
@@ -1134,11 +1162,12 @@ function verifyKDSPin() {
 
 function lockKDSAndExit() {
   closeCloseShiftModal();
+  closeInventoryModal();
+  closeInventoryRestockModal();
   kdsUnlocked = false;
   kdsSubView = 'comandas';
   sessionStorage.removeItem(storageKey('unlocked'));
   renderKitchenLockState();
-  showView('landing');
 }
 
 function renderKitchenLockState() {
@@ -1162,11 +1191,12 @@ function renderKitchenLockState() {
 function copyCustomerLink() {
   const baseUrl = window.location.origin + window.location.pathname;
   const tenantParam = getTenantQueryParam();
-  const customerUrl = `${baseUrl}?vista=cliente${tenantParam}`;
+  const cleanQuery = tenantParam ? `?${tenantParam.replace(/^&/, '')}` : '';
+  const customerUrl = `${baseUrl}${cleanQuery}`;
 
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(customerUrl).then(() => {
-      alert(`Link para clientes copiado:\n\n${customerUrl}`);
+      showKDSToast(`🔗 Link para clientes copiado`);
     }).catch(() => {
       prompt('Copia este link para tus clientes:', customerUrl);
     });
@@ -1215,7 +1245,10 @@ function setClientSubMode(mode) {
     mainBarEl.classList.add('hidden');
     builderBarEl.classList.add('hidden');
     trackerBarEl.classList.remove('hidden');
-    if (backBtnEl) backBtnEl.textContent = '← Menú';
+    if (backBtnEl) {
+      backBtnEl.textContent = '← Menú';
+      backBtnEl.classList.remove('hidden');
+    }
     renderClientTracker();
   } else {
     menuFlowEl.classList.remove('hidden');
@@ -1223,7 +1256,10 @@ function setClientSubMode(mode) {
     mainBarEl.classList.remove('hidden');
     trackerBarEl.classList.add('hidden');
     builderBarEl.classList.toggle('hidden', !currentStation);
-    if (backBtnEl) backBtnEl.textContent = currentStation ? '← Bases' : '← Inicio';
+    if (backBtnEl) {
+      backBtnEl.textContent = '← Menú';
+      backBtnEl.classList.toggle('hidden', !currentStation);
+    }
   }
 
   updateHeaderTrackerPill();
@@ -1282,7 +1318,7 @@ function showStationSelector() {
   document.getElementById('builder-workspace').classList.add('hidden');
   document.getElementById('dock-builder-bar').classList.add('hidden');
   const backBtnEl = document.getElementById('btn-client-back');
-  if (backBtnEl) backBtnEl.textContent = '← Inicio';
+  if (backBtnEl) backBtnEl.classList.add('hidden');
   renderCart();
 }
 
@@ -1335,7 +1371,10 @@ function selectStation(station) {
   document.getElementById('tab-hotdog').classList.toggle('active', station === 'hotdog');
 
   const backBtnEl = document.getElementById('btn-client-back');
-  if (backBtnEl) backBtnEl.textContent = '← Bases';
+  if (backBtnEl) {
+    backBtnEl.textContent = '← Menú';
+    backBtnEl.classList.remove('hidden');
+  }
 
   if (station === 'taco' && !tacoDraft.tortilla) {
     const availBase = TACO_CONFIG.base.find(b => !isStockSoldOut(getStockKey('taco', 'base', b.id)));
@@ -1594,22 +1633,59 @@ function renderTapCard(category, item, isSelected) {
   `;
 }
 
+function getDrinkIconTone(drinkId) {
+  if (drinkId === 'drink_jamaica') return 'tone-rose';
+  if (drinkId === 'drink_horchata') return 'tone-sand';
+  if (drinkId === 'drink_coca') return 'tone-coral';
+  return 'tone-sky';
+}
+
+function adjustDrinkQty(drinkId, delta) {
+  const idx = cartItems.findIndex(it => it.key === drinkId);
+  if (idx === -1) {
+    if (delta > 0) addDrinkToCart(drinkId);
+    return;
+  }
+  cartItems[idx].qty += delta;
+  if (cartItems[idx].qty <= 0) {
+    cartItems.splice(idx, 1);
+  }
+  renderCart();
+  hapticTap(8);
+}
+
 function renderDrinksSection() {
   const html = DRINKS_CONFIG.map(drink => {
     const isOut = isStockSoldOut(getStockKey(null, 'drink', drink.id));
     const inCart = cartItems.find(it => it.key === drink.id);
+    const tone = getDrinkIconTone(drink.id);
+
+    const actionHtml = isOut
+      ? `<button type="button" class="btn-tap-drink" disabled>Agotado</button>`
+      : (inCart
+        ? `
+          <div class="drink-qty-stepper" onclick="event.stopPropagation()">
+            <button type="button" class="dq-btn" onclick="adjustDrinkQty('${drink.id}', -1)" aria-label="Quitar una bebida">−</button>
+            <span class="dq-val">${inCart.qty}</span>
+            <button type="button" class="dq-btn" onclick="adjustDrinkQty('${drink.id}', 1)" aria-label="Agregar una bebida">+</button>
+          </div>
+        `
+        : `
+          <button type="button" class="btn-tap-drink" onclick="event.stopPropagation(); addDrinkToCart('${drink.id}')" aria-label="Agregar ${drink.name}">
+            +
+          </button>
+        `);
+
     return `
       <div class="drink-row${isOut ? ' sold-out' : ''}${inCart ? ' in-cart' : ''}" onclick="addDrinkToCart('${drink.id}')">
         <div class="drink-left">
-          <span class="drink-emoji">${drink.emoji}</span>
+          <span class="drink-emoji-badge ${tone}">${drink.emoji}</span>
           <div class="drink-info">
             <span class="drink-name">${drink.name}</span>
             <span class="drink-price">${isOut ? 'Agotado por hoy' : '$' + drink.price}</span>
           </div>
         </div>
-        <button type="button" class="btn-tap-drink" ${isOut ? 'disabled' : ''} onclick="event.stopPropagation(); addDrinkToCart('${drink.id}')">
-          ${isOut ? 'Agotado' : (inCart ? `${inCart.qty} · +` : '+')}
-        </button>
+        ${actionHtml}
       </div>
     `;
   }).join('');
@@ -1673,7 +1749,9 @@ function buildTacoPlateSVG(state) {
         </radialGradient>
       </defs>
 
-      <ellipse cx="190" cy="116" rx="142" ry="78" fill="#141414" stroke="#242424" stroke-width="2"/>
+      <ellipse cx="190" cy="121" rx="144" ry="79" fill="rgba(28,25,23,0.06)"/>
+      <ellipse cx="190" cy="116" rx="142" ry="78" fill="#fcfbf7" stroke="#e4ded2" stroke-width="2"/>
+      <ellipse cx="190" cy="116" rx="122" ry="64" fill="none" stroke="#efeae0" stroke-width="1.4"/>
 
       ${isDoble ? `
         <g>
@@ -1783,7 +1861,9 @@ function buildHotdogPlateSVG(state) {
         </linearGradient>
       </defs>
 
-      <ellipse cx="190" cy="116" rx="154" ry="76" fill="#141414" stroke="#242424" stroke-width="2"/>
+      <ellipse cx="190" cy="121" rx="156" ry="77" fill="rgba(28,25,23,0.06)"/>
+      <ellipse cx="190" cy="116" rx="154" ry="76" fill="#fcfbf7" stroke="#e4ded2" stroke-width="2"/>
+      <ellipse cx="190" cy="116" rx="134" ry="62" fill="none" stroke="#efeae0" stroke-width="1.4"/>
 
       <rect x="58" y="60" width="264" height="56" rx="28" fill="url(#bunTopGrad)" stroke="#965c14" stroke-width="2"/>
       <rect x="66" y="88" width="248" height="34" rx="17" fill="#f7e4b9"/>
@@ -2533,6 +2613,7 @@ function dispatchConfirmedOrderToKitchen(orderData) {
   orders.push(order);
   myOrderIds.push(order.id);
   activeTrackedOrderId = order.id;
+  deductInventoryForOrder(order, { silent: true });
   persistOrders();
 
   publishCloudSync('NEW_ORDER', order);
@@ -2743,7 +2824,7 @@ function payWithStripeCard() {
 
   if (rawNum.length < 12 || rawExp.length < 4 || rawCvc.length < 3) {
     if (errEl) {
-      errEl.textContent = 'Completa tu tarjeta o toca "⚡ Autocompletar Demo (4242)" arriba';
+      errEl.textContent = 'Verifica los datos de tu tarjeta';
       errEl.classList.remove('hidden');
     }
     return;
@@ -3343,18 +3424,20 @@ function setKDSSubView(subView) {
   const stockEl    = document.getElementById('kds-stock-section');
   const qrsEl      = document.getElementById('kds-qrs-section');
 
-  const salesBtn = document.getElementById('btn-kds-sales');
-  const stockBtn = document.getElementById('btn-kds-stock');
-  const qrsBtn   = document.getElementById('btn-kds-qrs');
+  const comandasBtn = document.getElementById('btn-kds-comandas');
+  const salesBtn    = document.getElementById('btn-kds-sales');
+  const stockBtn    = document.getElementById('btn-kds-stock');
+  const qrsBtn      = document.getElementById('btn-kds-qrs');
 
   if (comandasEl) comandasEl.classList.toggle('hidden', kdsSubView !== 'comandas');
   if (salesEl)    salesEl.classList.toggle('hidden', kdsSubView !== 'sales');
   if (stockEl)    stockEl.classList.toggle('hidden', kdsSubView !== 'stock');
   if (qrsEl)      qrsEl.classList.toggle('hidden', kdsSubView !== 'qrs');
 
-  if (salesBtn) salesBtn.classList.toggle('active', kdsSubView === 'sales');
-  if (stockBtn) stockBtn.classList.toggle('active', kdsSubView === 'stock');
-  if (qrsBtn)   qrsBtn.classList.toggle('active', kdsSubView === 'qrs');
+  if (comandasBtn) comandasBtn.classList.toggle('active', kdsSubView === 'comandas');
+  if (salesBtn)    salesBtn.classList.toggle('active', kdsSubView === 'sales');
+  if (stockBtn)    stockBtn.classList.toggle('active', kdsSubView === 'stock');
+  if (qrsBtn)      qrsBtn.classList.toggle('active', kdsSubView === 'qrs');
 
   renderKDSServiceAlerts();
 
@@ -3476,7 +3559,960 @@ function getKDSStockGroups() {
   ];
 }
 
+// ═══════════════════════════════════════════════════════════════════
+//  INVENTARIO INTELIGENTE DE INSUMOS, RECETAS Y CADUCIDADES (PEPS)
+//  - Multi-tenant aislado por sucursal (tenantId)
+//  - Descuento automático por pedido + devolución al cancelar
+//  - Semáforo de frescura / caducidad y Modo 86 Automático
+// ═══════════════════════════════════════════════════════════════════
+const INVENTORY_RECIPE_META = {
+  manual:          { label: 'Insumo manual', unitHint: '', stockKey: null },
+  taco_tortilla:   { label: 'Taco (1× sencilla · 2× doble)', unitHint: 'tacos', stockKey: null },
+  taco_bistec:     { label: 'Taco de Bistec', unitHint: 'tacos', stockKey: 'protein:bistec' },
+  taco_longaniza:  { label: 'Taco de Longaniza', unitHint: 'tacos', stockKey: 'protein:longaniza' },
+  taco_cilantro:   { label: 'Taco con Cilantro', unitHint: 'tacos', stockKey: 'taco:topping:cilantro' },
+  taco_cebolla:    { label: 'Taco / Hot Dog con Cebolla', unitHint: 'porciones', stockKey: 'taco:topping:cebolla' },
+  taco_salsa_roja: { label: 'Taco con Salsa Roja', unitHint: 'tacos', stockKey: 'taco:topping:salsa_roja' },
+  hotdog_base:     { label: 'Hot Dog (Base)', unitHint: 'hot dogs', stockKey: 'station:hotdog' },
+  hotdog_ketchup:  { label: 'Hot Dog con Ketchup', unitHint: 'hot dogs', stockKey: 'hotdog:topping:ketchup' },
+  hotdog_mayonesa: { label: 'Hot Dog con Mayonesa', unitHint: 'hot dogs', stockKey: 'hotdog:topping:mayonesa' },
+  hotdog_mostaza:  { label: 'Hot Dog con Mostaza', unitHint: 'hot dogs', stockKey: 'hotdog:topping:mostaza' },
+  hotdog_chiles:   { label: 'Hot Dog con Chiles Curados', unitHint: 'hot dogs', stockKey: 'hotdog:topping:chiles' },
+  hotdog_tomate:   { label: 'Hot Dog con Tomate', unitHint: 'hot dogs', stockKey: 'hotdog:topping:tomate' },
+  drink_jamaica:   { label: 'Agua de Jamaica (500 ml)', unitHint: 'vasos', stockKey: 'drink:drink_jamaica' },
+  drink_horchata:  { label: 'Agua de Horchata (500 ml)', unitHint: 'vasos', stockKey: 'drink:drink_horchata' },
+  drink_coca:      { label: 'Coca-Cola (500 ml)', unitHint: 'botellas', stockKey: 'drink:drink_coca' },
+};
+
+const INVENTORY_CATEGORY_META = {
+  'Proteínas':         { emoji: '🥩', tone: 'tone-orange' },
+  'Tortillas y Pan':   { emoji: '🌮', tone: 'tone-amber' },
+  'Verduras y Salsas': { emoji: '🌿', tone: 'tone-sage' },
+  'Bebidas':           { emoji: '🥤', tone: 'tone-sky' },
+  'Otros':             { emoji: '📦', tone: 'tone-plum' },
+};
+
+let inventoryItems     = [];
+let inventoryMovements = [];
+let autoMode86Enabled  = true;
+let stockSubTab        = 'inventory';
+let invActiveFilter    = 'all';
+let invSearchQuery     = '';
+
+function offsetDaysISO(deltaDays) {
+  const d = new Date();
+  d.setHours(12, 0, 0, 0);
+  d.setDate(d.getDate() + deltaDays);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function createDefaultInventoryCatalog() {
+  return [
+    {
+      id: 'inv_tortillas',
+      name: 'Tortillas de Maíz',
+      category: 'Tortillas y Pan',
+      unit: 'pza',
+      stock: 240,
+      minStock: 60,
+      capacity: 300,
+      expiryDate: offsetDaysISO(2),
+      lot: 'Tortillería La Flor · Lote Hoy',
+      recipeLink: 'taco_tortilla',
+      consumptionPerUnit: 1,
+    },
+    {
+      id: 'inv_bistec',
+      name: 'Bistec de Res',
+      category: 'Proteínas',
+      unit: 'g',
+      stock: 4200,
+      minStock: 1200,
+      capacity: 5000,
+      expiryDate: offsetDaysISO(4),
+      lot: 'Carnicería Norte · L-18',
+      recipeLink: 'taco_bistec',
+      consumptionPerUnit: 80,
+    },
+    {
+      id: 'inv_longaniza',
+      name: 'Longaniza Artesanal',
+      category: 'Proteínas',
+      unit: 'g',
+      stock: 2600,
+      minStock: 1000,
+      capacity: 4000,
+      expiryDate: offsetDaysISO(6),
+      lot: 'Lote Toluca · L-09',
+      recipeLink: 'taco_longaniza',
+      consumptionPerUnit: 75,
+    },
+    {
+      id: 'inv_cilantro',
+      name: 'Cilantro Fresco',
+      category: 'Verduras y Salsas',
+      unit: 'g',
+      stock: 320,
+      minStock: 200,
+      capacity: 600,
+      expiryDate: offsetDaysISO(1),
+      lot: 'Central de Abastos · Mañana',
+      recipeLink: 'taco_cilantro',
+      consumptionPerUnit: 10,
+    },
+    {
+      id: 'inv_cebolla',
+      name: 'Cebolla Blanca Picada',
+      category: 'Verduras y Salsas',
+      unit: 'g',
+      stock: 950,
+      minStock: 350,
+      capacity: 1500,
+      expiryDate: offsetDaysISO(3),
+      lot: 'Prep Diario · Caja 2',
+      recipeLink: 'taco_cebolla',
+      consumptionPerUnit: 15,
+    },
+    {
+      id: 'inv_salsa_roja',
+      name: 'Salsa Roja de Molcajete',
+      category: 'Verduras y Salsas',
+      unit: 'ml',
+      stock: 1800,
+      minStock: 500,
+      capacity: 2500,
+      expiryDate: offsetDaysISO(4),
+      lot: 'Cocina · Lote AM',
+      recipeLink: 'taco_salsa_roja',
+      consumptionPerUnit: 25,
+    },
+    {
+      id: 'inv_pan_hotdog',
+      name: 'Pan Artesanal Hot Dog',
+      category: 'Tortillas y Pan',
+      unit: 'pza',
+      stock: 36,
+      minStock: 15,
+      capacity: 60,
+      expiryDate: offsetDaysISO(5),
+      lot: 'Panadería Sur · Paq 3',
+      recipeLink: 'hotdog_base',
+      consumptionPerUnit: 1,
+    },
+    {
+      id: 'inv_salchicha',
+      name: 'Salchicha Asada',
+      category: 'Proteínas',
+      unit: 'pza',
+      stock: 12,
+      minStock: 15,
+      capacity: 60,
+      expiryDate: offsetDaysISO(7),
+      lot: 'Refrigerado B · L-44',
+      recipeLink: 'hotdog_base',
+      consumptionPerUnit: 1,
+    },
+    {
+      id: 'inv_jamaica',
+      name: 'Agua de Jamaica (Lista)',
+      category: 'Bebidas',
+      unit: 'ml',
+      stock: 3500,
+      minStock: 4000,
+      capacity: 10000,
+      expiryDate: offsetDaysISO(2),
+      lot: 'Vitrolero 1 · Hoy',
+      recipeLink: 'drink_jamaica',
+      consumptionPerUnit: 500,
+    },
+    {
+      id: 'inv_horchata',
+      name: 'Agua de Horchata (Lista)',
+      category: 'Bebidas',
+      unit: 'ml',
+      stock: 6500,
+      minStock: 3000,
+      capacity: 10000,
+      expiryDate: offsetDaysISO(3),
+      lot: 'Vitrolero 2 · Hoy',
+      recipeLink: 'drink_horchata',
+      consumptionPerUnit: 500,
+    },
+    {
+      id: 'inv_coca',
+      name: 'Coca-Cola Retornable 500ml',
+      category: 'Bebidas',
+      unit: 'pza',
+      stock: 28,
+      minStock: 12,
+      capacity: 48,
+      expiryDate: offsetDaysISO(60),
+      lot: 'Reja 1 · Enfriador',
+      recipeLink: 'drink_coca',
+      consumptionPerUnit: 1,
+    },
+  ];
+}
+
+function persistInventory() {
+  try {
+    localStorage.setItem(storageKey('inventory-items'), JSON.stringify(inventoryItems));
+    localStorage.setItem(storageKey('inventory-movements'), JSON.stringify(inventoryMovements.slice(0, 30)));
+    localStorage.setItem(storageKey('inventory-auto86'), autoMode86Enabled ? '1' : '0');
+  } catch (e) {}
+}
+
+function loadPersistedInventory() {
+  try {
+    const rawItems = localStorage.getItem(storageKey('inventory-items'));
+    const rawMoves = localStorage.getItem(storageKey('inventory-movements'));
+    const rawAuto  = localStorage.getItem(storageKey('inventory-auto86'));
+    inventoryItems = rawItems !== null ? JSON.parse(rawItems) : createDefaultInventoryCatalog();
+    if (!Array.isArray(inventoryItems)) inventoryItems = createDefaultInventoryCatalog();
+    inventoryMovements = rawMoves ? JSON.parse(rawMoves) : [];
+    if (!Array.isArray(inventoryMovements)) inventoryMovements = [];
+    autoMode86Enabled = rawAuto === null ? true : rawAuto === '1';
+  } catch (e) {
+    inventoryItems = createDefaultInventoryCatalog();
+    inventoryMovements = [];
+    autoMode86Enabled = true;
+  }
+}
+
+function formatQtyUnit(val, unit) {
+  const num = Math.round((Number(val) || 0) * 100) / 100;
+  return `${num.toLocaleString('es-MX')} ${unit || ''}`.trim();
+}
+
+function getExpiryMeta(expiryDateStr) {
+  if (!expiryDateStr || !/^\d{4}-\d{2}-\d{2}$/.test(expiryDateStr)) {
+    return { daysLeft: null, status: 'none', label: 'Sin caducidad', tone: 'neutral' };
+  }
+  const [y, m, d] = expiryDateStr.split('-').map(Number);
+  const target = new Date(y, m - 1, d, 0, 0, 0, 0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const daysLeft = Math.round((target.getTime() - today.getTime()) / 86400000);
+
+  if (daysLeft < 0) {
+    const ago = Math.abs(daysLeft);
+    return {
+      daysLeft,
+      status: 'expired',
+      label: ago === 1 ? 'Caducó ayer' : `Caducó hace ${ago} días`,
+      tone: 'red',
+    };
+  }
+  if (daysLeft === 0) {
+    return { daysLeft: 0, status: 'expired', label: 'Caduca hoy · Revisar', tone: 'red' };
+  }
+  if (daysLeft === 1) {
+    return { daysLeft: 1, status: 'expiring_soon', label: 'Caduca mañana', tone: 'amber' };
+  }
+  if (daysLeft <= 3) {
+    return { daysLeft, status: 'expiring_soon', label: `Caduca en ${daysLeft} días`, tone: 'amber' };
+  }
+  return { daysLeft, status: 'fresh', label: `Vigente · ${daysLeft} días`, tone: 'sage' };
+}
+
+function getEstimatedServings(item) {
+  const perUnit = Number(item.consumptionPerUnit) || 0;
+  if (perUnit <= 0 || !item.recipeLink || item.recipeLink === 'manual') return null;
+  const stock = Math.max(0, Number(item.stock) || 0);
+  return Math.floor(stock / perUnit);
+}
+
+function getInventoryItemHealth(item) {
+  const stock = Math.max(0, Number(item.stock) || 0);
+  const minStock = Math.max(0, Number(item.minStock) || 0);
+  const cap = Math.max(Number(item.capacity) || 0, minStock * 2.5, stock, 1);
+  const pct = Math.min(100, Math.max(0, Math.round((stock / cap) * 100)));
+  const minPct = Math.min(95, Math.max(5, Math.round((minStock / cap) * 100)));
+  const expiry = getExpiryMeta(item.expiryDate);
+  const servings = getEstimatedServings(item);
+
+  let status = 'ok';
+  if (stock <= 0) status = 'out';
+  else if (stock <= minStock) status = 'low';
+
+  const needsRestock = status === 'out' || status === 'low';
+  const needsExpiryAction = expiry.status === 'expired' || expiry.status === 'expiring_soon';
+  const suggestedOrderQty = needsRestock ? Math.max(1, Math.round(cap - stock)) : 0;
+
+  return {
+    status,
+    pct,
+    minPct,
+    servings,
+    expiry,
+    needsRestock,
+    needsExpiryAction,
+    suggestedOrderQty,
+  };
+}
+
+function matchOrderItemToRecipeMultiplier(orderItem, recipeLink) {
+  if (!orderItem || !recipeLink || recipeLink === 'manual') return 0;
+  const qty     = Math.max(0, Number(orderItem.qty) || 0);
+  if (qty === 0) return 0;
+
+  const key     = String(orderItem.key || '').toLowerCase();
+  const station = String(orderItem.station || '').toLowerCase();
+  const name    = String(orderItem.name || '').toLowerCase();
+
+  const isTaco   = station === 'taco' || key.startsWith('taco:') || name.startsWith('taco');
+  const isHotdog = station === 'hotdog' || key.startsWith('hotdog:') || name.includes('hot dog') || name.includes('hotdog');
+
+  // Parseo estructurado para tacos: taco:<tortilla>:<protein>:<toppings>
+  const keyParts = key.split(':');
+  const toppingsList = isTaco ? (keyParts[3] || '').split(',').filter(Boolean) : (isHotdog ? (keyParts[1] || '').split(',').filter(Boolean) : []);
+
+  switch (recipeLink) {
+    case 'taco_tortilla': {
+      if (!isTaco) return 0;
+      const isDoble = keyParts[1] === 'doble' || name.includes('doble');
+      return qty * (isDoble ? 2 : 1);
+    }
+    case 'taco_bistec':
+      return (isTaco && (keyParts[2] === 'bistec' || name.includes('bistec'))) ? qty : 0;
+    case 'taco_longaniza':
+      return (isTaco && (keyParts[2] === 'longaniza' || name.includes('longaniza'))) ? qty : 0;
+    case 'taco_cilantro':
+      return (isTaco && (toppingsList.includes('cilantro') || name.includes('cilantro'))) ? qty : 0;
+    case 'taco_cebolla':
+      return ((isTaco || isHotdog) && (toppingsList.includes('cebolla') || name.includes('cebolla'))) ? qty : 0;
+    case 'taco_salsa_roja':
+      return (isTaco && (toppingsList.includes('salsa_roja') || name.includes('salsa roja') || name.includes('con todo'))) ? qty : 0;
+    case 'hotdog_base':
+      return isHotdog ? qty : 0;
+    case 'hotdog_ketchup':
+      return (isHotdog && (toppingsList.includes('ketchup') || name.includes('ketchup'))) ? qty : 0;
+    case 'hotdog_mayonesa':
+      return (isHotdog && (toppingsList.includes('mayonesa') || name.includes('mayonesa'))) ? qty : 0;
+    case 'hotdog_mostaza':
+      return (isHotdog && (toppingsList.includes('mostaza') || name.includes('mostaza'))) ? qty : 0;
+    case 'hotdog_chiles':
+      return (isHotdog && (toppingsList.includes('chiles') || name.includes('chile'))) ? qty : 0;
+    case 'hotdog_tomate':
+      return (isHotdog && (toppingsList.includes('tomate') || name.includes('tomate'))) ? qty : 0;
+    case 'drink_jamaica':
+      return (key === 'drink_jamaica' || name.includes('jamaica')) ? qty : 0;
+    case 'drink_horchata':
+      return (key === 'drink_horchata' || name.includes('horchata')) ? qty : 0;
+    case 'drink_coca':
+      return (key === 'drink_coca' || name.includes('coca')) ? qty : 0;
+    default:
+      return 0;
+  }
+}
+
+function computeOrderIngredientConsumption(order) {
+  const items = Array.isArray(order && order.items) ? order.items : [];
+  const deductions = [];
+
+  inventoryItems.forEach(inv => {
+    const perUnit = Number(inv.consumptionPerUnit) || 0;
+    if (perUnit <= 0 || !inv.recipeLink || inv.recipeLink === 'manual') return;
+
+    let totalMultiplier = 0;
+    items.forEach(orderItem => {
+      totalMultiplier += matchOrderItemToRecipeMultiplier(orderItem, inv.recipeLink);
+    });
+
+    if (totalMultiplier > 0) {
+      const amount = Math.round(totalMultiplier * perUnit * 100) / 100;
+      deductions.push({
+        itemId: inv.id,
+        name: inv.name,
+        unit: inv.unit,
+        amount,
+      });
+    }
+  });
+
+  return deductions;
+}
+
+function deductInventoryForOrder(order, { silent = false } = {}) {
+  if (!order || order.inventoryDeducted) return [];
+  const deductions = computeOrderIngredientConsumption(order);
+  order.inventoryDeducted = true;
+  if (deductions.length === 0) return [];
+
+  const depletedNames = [];
+  deductions.forEach(d => {
+    const inv = inventoryItems.find(x => x.id === d.itemId);
+    if (!inv) return;
+    inv.stock = Math.max(0, Math.round(((Number(inv.stock) || 0) - d.amount) * 100) / 100);
+    if (inv.stock <= 0) depletedNames.push(inv.name);
+  });
+
+  const summary = deductions.map(d => `−${formatQtyUnit(d.amount, d.unit)} ${d.name}`).join(' · ');
+  inventoryMovements.unshift({
+    id: Date.now() + Math.floor(Math.random() * 1000),
+    type: 'deduct',
+    ts: Date.now(),
+    title: `Orden #${String(order.num || 0).padStart(3, '0')} · ${order.table || 'Pedido'}`,
+    detail: summary,
+  });
+  if (inventoryMovements.length > 30) inventoryMovements.length = 30;
+
+  syncAutoMode86FromInventory({ notify: !silent });
+  persistInventory();
+  publishCloudSync('INVENTORY_UPDATE', { inventoryItems, inventoryMovements, autoMode86Enabled });
+
+  if (!silent && depletedNames.length > 0 && kdsUnlocked) {
+    showKDSToast(`⚠️ Stock agotado: ${depletedNames.join(', ')}`);
+  }
+  return deductions;
+}
+
+function restoreInventoryForOrder(order) {
+  if (!order || !order.inventoryDeducted) return;
+  const deductions = computeOrderIngredientConsumption(order);
+  order.inventoryDeducted = false;
+  if (deductions.length === 0) return;
+
+  deductions.forEach(d => {
+    const inv = inventoryItems.find(x => x.id === d.itemId);
+    if (!inv) return;
+    inv.stock = Math.round(((Number(inv.stock) || 0) + d.amount) * 100) / 100;
+  });
+
+  const summary = deductions.map(d => `+${formatQtyUnit(d.amount, d.unit)} ${d.name}`).join(' · ');
+  inventoryMovements.unshift({
+    id: Date.now() + Math.floor(Math.random() * 1000),
+    type: 'restock',
+    ts: Date.now(),
+    title: `Cancelación #${String(order.num || 0).padStart(3, '0')} (Devolución)`,
+    detail: summary,
+  });
+  if (inventoryMovements.length > 30) inventoryMovements.length = 30;
+
+  syncAutoMode86FromInventory({ notify: false });
+  persistInventory();
+  publishCloudSync('INVENTORY_UPDATE', { inventoryItems, inventoryMovements, autoMode86Enabled });
+}
+
+function syncAutoMode86FromInventory({ notify = false } = {}) {
+  if (!autoMode86Enabled) return false;
+  let changed = false;
+
+  // Agrupar insumos vinculados por stockKey del menú (ej. hotdog_base puede tener Pan y Salchicha)
+  const byStockKey = new Map();
+  inventoryItems.forEach(inv => {
+    const meta = INVENTORY_RECIPE_META[inv.recipeLink];
+    if (!meta || !meta.stockKey) return;
+    const arr = byStockKey.get(meta.stockKey) || [];
+    arr.push(inv);
+    byStockKey.set(meta.stockKey, arr);
+  });
+
+  byStockKey.forEach((itemsForKey, stockKey) => {
+    const anyUnavailable = itemsForKey.some(inv => {
+      const h = getInventoryItemHealth(inv);
+      return h.status === 'out' || h.expiry.status === 'expired';
+    });
+    const currentlyOut = soldOutItems.includes(stockKey);
+    if (anyUnavailable && !currentlyOut) {
+      soldOutItems.push(stockKey);
+      changed = true;
+    } else if (!anyUnavailable && currentlyOut) {
+      soldOutItems = soldOutItems.filter(k => k !== stockKey);
+      changed = true;
+    }
+  });
+
+  if (changed) {
+    persistOrders();
+    publishCloudSync('STOCK_UPDATE', { soldOutItems });
+    sanitizeDraftAgainstStock();
+    if (currentView === 'client') {
+      renderDrinksSection();
+      if (currentStation) renderBuilderWorkspace();
+    }
+    if (notify && kdsUnlocked) {
+      showKDSToast('Modo 86 sincronizado con el inventario');
+    }
+  }
+  return changed;
+}
+
+function setStockSubTab(tab) {
+  stockSubTab = tab === 'mode86' ? 'mode86' : 'inventory';
+  const invPane = document.getElementById('stock-inventory-pane');
+  const m86Pane = document.getElementById('stock-mode86-pane');
+  const invBtn  = document.getElementById('btn-stock-tab-inventory');
+  const m86Btn  = document.getElementById('btn-stock-tab-mode86');
+
+  if (invPane) invPane.classList.toggle('hidden', stockSubTab !== 'inventory');
+  if (m86Pane) m86Pane.classList.toggle('hidden', stockSubTab !== 'mode86');
+  if (invBtn)  invBtn.classList.toggle('active', stockSubTab === 'inventory');
+  if (m86Btn)  m86Btn.classList.toggle('active', stockSubTab === 'mode86');
+}
+
+function toggleAutoMode86(enabled) {
+  autoMode86Enabled = Boolean(enabled);
+  persistInventory();
+  if (autoMode86Enabled) {
+    syncAutoMode86FromInventory({ notify: false });
+  }
+  publishCloudSync('INVENTORY_UPDATE', { inventoryItems, inventoryMovements, autoMode86Enabled });
+  renderKDSStockPanel();
+  showKDSToast(autoMode86Enabled ? 'Auto-86 activado · Sincroniza menú al agotarse' : 'Auto-86 desactivado (modo manual)');
+}
+
+function setInventoryFilter(filter) {
+  invActiveFilter = filter || 'all';
+  document.querySelectorAll('#inv-filter-pills .kds-filter').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.invFilter === invActiveFilter);
+  });
+  renderInventoryDashboard();
+}
+
+function onInventorySearchInput(val) {
+  invSearchQuery = String(val || '').trim().toLowerCase();
+  renderInventoryDashboard();
+}
+
+function renderInventoryDashboard() {
+  const gridEl = document.getElementById('inventory-cards-grid');
+  if (!gridEl) return;
+
+  const autoChk = document.getElementById('stock-auto86-checkbox');
+  if (autoChk) autoChk.checked = autoMode86Enabled;
+  setStockSubTab(stockSubTab);
+
+  // Calcular KPIs y alertas de todos los insumos
+  const enriched = inventoryItems.map(item => ({ item, health: getInventoryItemHealth(item) }));
+  const totalCount = enriched.length;
+  const restockList = enriched.filter(e => e.health.needsRestock);
+  const expiryList  = enriched.filter(e => e.health.needsExpiryAction);
+  const healthyCount = enriched.filter(e => !e.health.needsRestock && !e.health.needsExpiryAction).length;
+  const healthPct = totalCount > 0 ? Math.round((healthyCount / totalCount) * 100) : 100;
+  const linkedCount = enriched.filter(e => e.item.recipeLink && e.item.recipeLink !== 'manual').length;
+  const deductCount = inventoryMovements.filter(m => m.type === 'deduct').length;
+
+  const kpiTotal = document.getElementById('inv-kpi-total');
+  const kpiHealthSub = document.getElementById('inv-kpi-healthy-sub');
+  const kpiHealthPct = document.getElementById('inv-kpi-health-pct');
+  const kpiHealthBar = document.getElementById('inv-kpi-health-bar');
+  const kpiLow = document.getElementById('inv-kpi-low');
+  const kpiLowSub = document.getElementById('inv-kpi-low-sub');
+  const kpiExp = document.getElementById('inv-kpi-expiring');
+  const kpiExpSub = document.getElementById('inv-kpi-exp-sub');
+  const kpiDeduct = document.getElementById('inv-kpi-deductions');
+  const kpiLinked = document.getElementById('inv-kpi-linked-sub');
+
+  if (kpiTotal) kpiTotal.textContent = String(totalCount);
+  if (kpiHealthSub) kpiHealthSub.textContent = `${healthyCount} en nivel óptimo`;
+  if (kpiHealthPct) kpiHealthPct.textContent = `${healthPct}%`;
+  if (kpiHealthBar) kpiHealthBar.style.width = `${healthPct}%`;
+  if (kpiLow) kpiLow.textContent = String(restockList.length);
+  if (kpiLowSub) {
+    const outCnt = enriched.filter(e => e.health.status === 'out').length;
+    kpiLowSub.textContent = outCnt > 0 ? `${outCnt} agotados · ${restockList.length - outCnt} bajos` : (restockList.length > 0 ? 'Bajo stock mínimo' : 'Todo abastecido');
+  }
+  if (kpiExp) kpiExp.textContent = String(expiryList.length);
+  if (kpiExpSub) {
+    const expNow = enriched.filter(e => e.health.expiry.status === 'expired').length;
+    kpiExpSub.textContent = expNow > 0 ? `${expNow} vencidos · ${expiryList.length - expNow} próximos` : (expiryList.length > 0 ? 'Vencen en ≤ 3 días' : 'Frescura óptima');
+  }
+  if (kpiDeduct) kpiDeduct.textContent = deductCount === 1 ? '1 orden' : `${deductCount} órdenes`;
+  if (kpiLinked) kpiLinked.textContent = `${linkedCount} insumos ligados a receta`;
+
+  // Contadores de filtros
+  const cntAll = document.getElementById('inv-cnt-all');
+  const cntRestock = document.getElementById('inv-cnt-restock');
+  const cntExpiry = document.getElementById('inv-cnt-expiry');
+  if (cntAll) cntAll.textContent = String(totalCount);
+  if (cntRestock) cntRestock.textContent = String(restockList.length);
+  if (cntExpiry) cntExpiry.textContent = String(expiryList.length);
+
+  // Tarjeta de Alertas Inteligentes (Compras & Caducidades)
+  const alertsCard = document.getElementById('inv-urgent-alerts-card');
+  const alertsListEl = document.getElementById('inv-urgent-alerts-list');
+  const urgentItems = enriched.filter(e => e.health.needsRestock || e.health.needsExpiryAction);
+  if (alertsCard && alertsListEl) {
+    if (urgentItems.length === 0) {
+      alertsCard.classList.add('hidden');
+    } else {
+      alertsCard.classList.remove('hidden');
+      alertsListEl.innerHTML = urgentItems.slice(0, 6).map(({ item, health }) => {
+        const isCrit = health.status === 'out' || health.expiry.status === 'expired';
+        const reasons = [];
+        if (health.status === 'out') reasons.push('Agotado (0 restante)');
+        else if (health.status === 'low') reasons.push(`Stock bajo: ${formatQtyUnit(item.stock, item.unit)} (mín. ${formatQtyUnit(item.minStock, item.unit)})`);
+        if (health.servings !== null && health.needsRestock) {
+          const uHint = INVENTORY_RECIPE_META[item.recipeLink]?.unitHint || 'porciones';
+          reasons.push(`alcanza ~${health.servings} ${uHint}`);
+        }
+        if (health.expiry.status === 'expired' || health.expiry.status === 'expiring_soon') {
+          reasons.push(health.expiry.label);
+        }
+        return `
+          <div class="inv-alert-row ${isCrit ? 'is-critical' : 'is-warn'}">
+            <div class="inv-alert-dot ${isCrit ? 'dot-red' : 'dot-amber'}"></div>
+            <div class="inv-alert-texts">
+              <span class="inv-alert-name">${escapeHTML(item.name)}</span>
+              <span class="inv-alert-desc">${escapeHTML(reasons.join(' · '))}${health.suggestedOrderQty > 0 ? ` · Sugerido pedir: +${formatQtyUnit(health.suggestedOrderQty, item.unit)}` : ''}</span>
+            </div>
+            <button type="button" class="btn-inv-quick-action" onclick="openInventoryRestockModal('${item.id}', 'in')">
+              + Reabastecer
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+
+  // Filtrado de tarjetas
+  let visible = enriched;
+  if (invActiveFilter === 'restock') visible = visible.filter(e => e.health.needsRestock);
+  else if (invActiveFilter === 'expiry') visible = visible.filter(e => e.health.needsExpiryAction);
+  else if (invActiveFilter !== 'all') visible = visible.filter(e => e.item.category === invActiveFilter);
+
+  if (invSearchQuery) {
+    visible = visible.filter(({ item }) => {
+      const hay = `${item.name} ${item.category} ${item.lot || ''} ${item.recipeLink || ''}`.toLowerCase();
+      return hay.includes(invSearchQuery);
+    });
+  }
+
+  if (visible.length === 0) {
+    gridEl.innerHTML = `
+      <div class="kds-empty inv-empty-state">
+        <div class="kds-empty-icon">📦</div>
+        <p class="kds-empty-title">Sin insumos en esta vista</p>
+        <p class="kds-empty-sub">Agrega un nuevo insumo o cambia el filtro para ver todo tu inventario.</p>
+        <button type="button" class="btn-kds-empty-action" onclick="openInventoryModal()">+ Agregar Insumo</button>
+      </div>
+    `;
+  } else {
+    gridEl.innerHTML = visible.map(({ item, health }) => {
+      const catMeta = INVENTORY_CATEGORY_META[item.category] || INVENTORY_CATEGORY_META['Otros'];
+      const recipeMeta = INVENTORY_RECIPE_META[item.recipeLink] || INVENTORY_RECIPE_META.manual;
+      const statusLabel = health.status === 'out' ? '✕ Agotado' : (health.status === 'low' ? '⚠ Stock Bajo' : '● Óptimo');
+      const statusCls = health.status === 'out' ? 'st-out' : (health.status === 'low' ? 'st-low' : 'st-ok');
+      const servingsText = health.servings !== null
+        ? `~${health.servings} ${recipeMeta.unitHint || 'porciones'}`
+        : 'Control manual';
+      const recipeLine = (item.recipeLink && item.recipeLink !== 'manual' && Number(item.consumptionPerUnit) > 0)
+        ? `Receta: −${formatQtyUnit(item.consumptionPerUnit, item.unit)} / ${recipeMeta.label}`
+        : 'Sin descuento automático de receta';
+
+      return `
+        <div class="inv-item-card ${statusCls}">
+          <div class="inv-card-top">
+            <div class="inv-card-title-group">
+              <span class="sales-prod-icon-circle ${catMeta.tone}">${catMeta.emoji}</span>
+              <div class="inv-card-titles">
+                <h4 class="inv-item-name">${escapeHTML(item.name)}</h4>
+                <span class="inv-item-meta">${escapeHTML(item.category)}${item.lot ? ` · ${escapeHTML(item.lot)}` : ''}</span>
+              </div>
+            </div>
+            <span class="inv-status-pill ${statusCls}">${statusLabel}</span>
+          </div>
+
+          <div class="inv-stock-readout-row">
+            <div class="inv-stock-big">
+              <span class="inv-stock-value">${formatQtyUnit(item.stock, item.unit)}</span>
+              <span class="inv-stock-min">Mínimo: ${formatQtyUnit(item.minStock, item.unit)}</span>
+            </div>
+            <div class="inv-badges-col">
+              <span class="inv-servings-pill">${escapeHTML(servingsText)}</span>
+              <span class="inv-expiry-pill exp-${health.expiry.tone}">⏳ ${escapeHTML(health.expiry.label)}</span>
+            </div>
+          </div>
+
+          <div class="inv-bar-wrap">
+            <div class="inv-bar-track">
+              <div class="inv-bar-fill ${statusCls}" style="width:${health.pct}%"></div>
+              <span class="inv-bar-min-mark" style="left:${health.minPct}%" title="Nivel mínimo de alerta"></span>
+            </div>
+          </div>
+
+          <div class="inv-recipe-strip">
+            <span>⚡ ${escapeHTML(recipeLine)}</span>
+          </div>
+
+          <div class="inv-card-actions">
+            <button type="button" class="inv-act-btn primary" onclick="openInventoryRestockModal('${item.id}', 'in')">+ Entrada</button>
+            <button type="button" class="inv-act-btn warn" onclick="openInventoryRestockModal('${item.id}', 'waste')">− Merma</button>
+            <button type="button" class="inv-act-btn" onclick="openInventoryModal('${item.id}')">✎ Editar</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Registro reciente de movimientos
+  const logEl = document.getElementById('inventory-movements-list');
+  if (logEl) {
+    if (inventoryMovements.length === 0) {
+      logEl.innerHTML = '<p class="recent-empty-msg">Los descuentos aparecerán aquí automáticamente cada vez que llegue un pedido o registres una entrada/merma.</p>';
+    } else {
+      logEl.innerHTML = inventoryMovements.slice(0, 10).map(mv => {
+        const tone = mv.type === 'restock' ? 'tone-sage' : (mv.type === 'waste' ? 'tone-amber' : 'tone-orange');
+        const icon = mv.type === 'restock' ? '+' : (mv.type === 'waste' ? '!' : '−');
+        return `
+          <div class="recent-diner-row">
+            <div class="order-avatar ${tone}">${icon}</div>
+            <div class="recent-diner-info">
+              <span class="recent-diner-name">${escapeHTML(mv.title)}</span>
+              <span class="recent-diner-sub">${escapeHTML(mv.detail)}</span>
+            </div>
+            <span class="recent-diner-time">${localTimeLabel(mv.ts || Date.now())}</span>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+}
+
+function openInventoryModal(itemId = null) {
+  const overlay = document.getElementById('inv-modal-overlay');
+  const modal   = document.getElementById('inventory-item-modal');
+  const titleEl = document.getElementById('inv-modal-title');
+  const delBtn  = document.getElementById('btn-inv-delete');
+  if (!overlay || !modal) return;
+
+  const existing = itemId ? inventoryItems.find(i => i.id === itemId) : null;
+  document.getElementById('inv-edit-id').value = existing ? existing.id : '';
+  document.getElementById('inv-name-input').value = existing ? existing.name : '';
+  document.getElementById('inv-category-input').value = existing ? existing.category : 'Proteínas';
+  document.getElementById('inv-unit-input').value = existing ? existing.unit : 'g';
+  document.getElementById('inv-stock-input').value = existing ? existing.stock : '';
+  document.getElementById('inv-min-input').value = existing ? existing.minStock : '';
+  document.getElementById('inv-expiry-input').value = existing ? (existing.expiryDate || '') : offsetDaysISO(5);
+  document.getElementById('inv-lot-input').value = existing ? (existing.lot || '') : '';
+  document.getElementById('inv-recipe-link-input').value = existing ? (existing.recipeLink || 'manual') : 'manual';
+  document.getElementById('inv-consumption-input').value = existing ? (existing.consumptionPerUnit || '') : '';
+
+  if (titleEl) titleEl.textContent = existing ? `Editar · ${existing.name}` : 'Agregar Nuevo Insumo';
+  if (delBtn) delBtn.classList.toggle('hidden', !existing);
+
+  overlay.classList.add('open');
+  modal.classList.add('open');
+}
+
+function closeInventoryModal() {
+  const overlay = document.getElementById('inv-modal-overlay');
+  const modal   = document.getElementById('inventory-item-modal');
+  if (overlay) overlay.classList.remove('open');
+  if (modal) modal.classList.remove('open');
+}
+
+function saveInventoryItemForm() {
+  const editId = document.getElementById('inv-edit-id').value.trim();
+  const name   = document.getElementById('inv-name-input').value.trim();
+  if (!name) {
+    showKDSToast('Escribe el nombre del insumo');
+    return;
+  }
+
+  const category = document.getElementById('inv-category-input').value || 'Otros';
+  const unit     = document.getElementById('inv-unit-input').value || 'pza';
+  const stock    = Math.max(0, parseFloat(document.getElementById('inv-stock-input').value) || 0);
+  const minStock = Math.max(0, parseFloat(document.getElementById('inv-min-input').value) || 0);
+  const expiryDate = document.getElementById('inv-expiry-input').value || '';
+  const lot      = document.getElementById('inv-lot-input').value.trim();
+  const recipeLink = document.getElementById('inv-recipe-link-input').value || 'manual';
+  const consumptionPerUnit = Math.max(0, parseFloat(document.getElementById('inv-consumption-input').value) || 0);
+
+  if (editId) {
+    const idx = inventoryItems.findIndex(x => x.id === editId);
+    if (idx !== -1) {
+      const prevCap = Number(inventoryItems[idx].capacity) || 0;
+      inventoryItems[idx] = {
+        ...inventoryItems[idx],
+        name,
+        category,
+        unit,
+        stock,
+        minStock,
+        capacity: Math.max(prevCap, stock, minStock * 2.5, 1),
+        expiryDate,
+        lot,
+        recipeLink,
+        consumptionPerUnit,
+      };
+    }
+  } else {
+    inventoryItems.unshift({
+      id: `inv_${Date.now()}_${Math.floor(Math.random() * 999)}`,
+      name,
+      category,
+      unit,
+      stock,
+      minStock,
+      capacity: Math.max(stock, minStock * 2.5, 1),
+      expiryDate,
+      lot,
+      recipeLink,
+      consumptionPerUnit,
+    });
+    inventoryMovements.unshift({
+      id: Date.now(),
+      type: 'restock',
+      ts: Date.now(),
+      title: `Alta de insumo · ${name}`,
+      detail: `Stock inicial: ${formatQtyUnit(stock, unit)}${expiryDate ? ` · Caduca ${expiryDate}` : ''}`,
+    });
+  }
+
+  syncAutoMode86FromInventory({ notify: false });
+  persistInventory();
+  publishCloudSync('INVENTORY_UPDATE', { inventoryItems, inventoryMovements, autoMode86Enabled });
+  closeInventoryModal();
+  renderKDSStockPanel();
+  showKDSToast(editId ? `Insumo "${name}" actualizado` : `Insumo "${name}" agregado`);
+}
+
+function deleteCurrentEditingInventoryItem() {
+  const editId = document.getElementById('inv-edit-id').value.trim();
+  if (!editId) return;
+  const target = inventoryItems.find(x => x.id === editId);
+  inventoryItems = inventoryItems.filter(x => x.id !== editId);
+  syncAutoMode86FromInventory({ notify: false });
+  persistInventory();
+  publishCloudSync('INVENTORY_UPDATE', { inventoryItems, inventoryMovements, autoMode86Enabled });
+  closeInventoryModal();
+  renderKDSStockPanel();
+  showKDSToast(target ? `Eliminado: ${target.name}` : 'Insumo eliminado');
+}
+
+function openInventoryRestockModal(itemId, mode = 'in') {
+  const item = inventoryItems.find(x => x.id === itemId);
+  if (!item) return;
+  const isWaste = mode === 'waste';
+
+  document.getElementById('inv-restock-id').value = item.id;
+  document.getElementById('inv-restock-mode').value = isWaste ? 'waste' : 'in';
+  document.getElementById('inv-restock-title').textContent = isWaste
+    ? `Registrar Merma · ${item.name}`
+    : `Entrada de Stock · ${item.name}`;
+  document.getElementById('inv-restock-sub').textContent = isWaste
+    ? `Stock actual: ${formatQtyUnit(item.stock, item.unit)}. Descuenta producto caducado o dañado.`
+    : `Stock actual: ${formatQtyUnit(item.stock, item.unit)}. Suma lote nuevo y actualiza caducidad PEPS.`;
+  document.getElementById('inv-restock-qty-label').textContent = isWaste
+    ? `CANTIDAD DE MERMA (${item.unit.toUpperCase()})`
+    : `CANTIDAD A SUMAR (${item.unit.toUpperCase()})`;
+
+  const health = getInventoryItemHealth(item);
+  document.getElementById('inv-restock-qty').value = isWaste ? '' : (health.suggestedOrderQty || '');
+  document.getElementById('inv-restock-expiry').value = isWaste ? '' : offsetDaysISO(7);
+  document.getElementById('inv-restock-note').value = '';
+
+  const expBlock = document.getElementById('inv-restock-expiry-block');
+  if (expBlock) expBlock.classList.toggle('hidden', isWaste);
+
+  const confirmBtn = document.getElementById('btn-inv-restock-confirm');
+  if (confirmBtn) confirmBtn.textContent = isWaste ? 'Registrar Merma' : 'Sumar al Inventario';
+
+  document.getElementById('inv-restock-overlay').classList.add('open');
+  document.getElementById('inventory-restock-modal').classList.add('open');
+}
+
+function closeInventoryRestockModal() {
+  const overlay = document.getElementById('inv-restock-overlay');
+  const modal   = document.getElementById('inventory-restock-modal');
+  if (overlay) overlay.classList.remove('open');
+  if (modal) modal.classList.remove('open');
+}
+
+function confirmInventoryRestock() {
+  const itemId = document.getElementById('inv-restock-id').value;
+  const mode   = document.getElementById('inv-restock-mode').value;
+  const qty    = parseFloat(document.getElementById('inv-restock-qty').value) || 0;
+  const newExp = document.getElementById('inv-restock-expiry').value;
+  const note   = document.getElementById('inv-restock-note').value.trim();
+
+  const item = inventoryItems.find(x => x.id === itemId);
+  if (!item || qty <= 0) {
+    showKDSToast('Ingresa una cantidad válida mayor a 0');
+    return;
+  }
+
+  if (mode === 'waste') {
+    item.stock = Math.max(0, Math.round(((Number(item.stock) || 0) - qty) * 100) / 100);
+    inventoryMovements.unshift({
+      id: Date.now(),
+      type: 'waste',
+      ts: Date.now(),
+      title: `Merma · ${item.name}`,
+      detail: `−${formatQtyUnit(qty, item.unit)}${note ? ` · ${note}` : ' · Descarte / Caducidad'}`,
+    });
+  } else {
+    item.stock = Math.round(((Number(item.stock) || 0) + qty) * 100) / 100;
+    item.capacity = Math.max(Number(item.capacity) || 0, item.stock);
+    if (newExp) item.expiryDate = newExp;
+    inventoryMovements.unshift({
+      id: Date.now(),
+      type: 'restock',
+      ts: Date.now(),
+      title: `Entrada · ${item.name}`,
+      detail: `+${formatQtyUnit(qty, item.unit)}${newExp ? ` · Caduca ${newExp}` : ''}${note ? ` · ${note}` : ''}`,
+    });
+  }
+  if (inventoryMovements.length > 30) inventoryMovements.length = 30;
+
+  syncAutoMode86FromInventory({ notify: false });
+  persistInventory();
+  publishCloudSync('INVENTORY_UPDATE', { inventoryItems, inventoryMovements, autoMode86Enabled });
+  closeInventoryRestockModal();
+  renderKDSStockPanel();
+  showKDSToast(mode === 'waste' ? `Merma registrada en ${item.name}` : `Reabastecido: +${formatQtyUnit(qty, item.unit)} ${item.name}`);
+}
+
+function copyRestockShoppingList() {
+  const profile = getActiveTenantProfile();
+  const urgent = inventoryItems
+    .map(item => ({ item, health: getInventoryItemHealth(item) }))
+    .filter(e => e.health.needsRestock || e.health.needsExpiryAction);
+
+  if (urgent.length === 0) {
+    showKDSToast('✓ Todo tu inventario está óptimo, no falta nada por pedir');
+    return;
+  }
+
+  const lines = [
+    `📋 LISTA DE COMPRAS & CADUCIDADES — ${profile.name.toUpperCase()}`,
+    `Fecha: ${new Date().toLocaleDateString('es-MX')}`,
+    '',
+  ];
+  urgent.forEach(({ item, health }) => {
+    const tag = health.status === 'out' ? '🔴 AGOTADO' : (health.status === 'low' ? '🟡 BAJO' : '⏳ CADUCIDAD');
+    const suggest = health.suggestedOrderQty > 0 ? ` → Pedir +${formatQtyUnit(health.suggestedOrderQty, item.unit)}` : '';
+    lines.push(`${tag} · ${item.name}: queda ${formatQtyUnit(item.stock, item.unit)} (${health.expiry.label})${suggest}`);
+  });
+
+  const text = lines.join('\n');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => {
+      showKDSToast(`📋 Lista copiada (${urgent.length} insumos por atender)`);
+    }).catch(() => showKDSToast(`Lista generada (${urgent.length} insumos)`));
+  } else {
+    showKDSToast(`Lista generada (${urgent.length} insumos)`);
+  }
+}
+
+function resetDefaultInventoryPrompt() {
+  inventoryItems = createDefaultInventoryCatalog();
+  inventoryMovements = [];
+  syncAutoMode86FromInventory({ notify: false });
+  persistInventory();
+  publishCloudSync('INVENTORY_UPDATE', { inventoryItems, inventoryMovements, autoMode86Enabled });
+  renderKDSStockPanel();
+  showKDSToast('Catálogo base de insumos restaurado');
+}
+
 function renderKDSStockPanel() {
+  renderInventoryDashboard();
+
   const listEl = document.getElementById('kds-stock-list');
   if (!listEl) return;
 
@@ -3594,7 +4630,7 @@ function renderTableQRCardsSync() {
   }
 
   gridEl.innerHTML = tables.map(t => {
-    const fullUrl = `${baseUrl}?vista=cliente&mesa=${encodeURIComponent(t.param)}${tenantParam}`;
+    const fullUrl = `${baseUrl}?mesa=${encodeURIComponent(t.param)}${tenantParam}`;
     return `
       <div class="qr-print-card">
         <div class="qr-card-brand" style="color:${profile.accent}">◈ ${profile.name}</div>
@@ -3654,27 +4690,165 @@ function updateTimers() {
   });
 }
 
+let kdsSearchQuery = '';
+
+function onKDSSearchInput(val) {
+  kdsSearchQuery = String(val || '').trim().toLowerCase();
+  renderKDS();
+}
+
+function getAvatarInitialsAndTone(name, fallbackLabel) {
+  const raw = String(name || fallbackLabel || 'C').trim();
+  const parts = raw.split(/\s+/).filter(Boolean);
+  const initials = parts.length >= 2
+    ? (parts[0][0] + parts[1][0]).toUpperCase()
+    : raw.slice(0, 2).toUpperCase();
+  const tones = ['tone-orange', 'tone-sage', 'tone-sky', 'tone-amber', 'tone-plum'];
+  let hash = 0;
+  for (let i = 0; i < raw.length; i++) hash = (hash * 31 + raw.charCodeAt(i)) % tones.length;
+  return { initials, tone: tones[Math.abs(hash) % tones.length] };
+}
+
+function buildAppleDotMatrixHTML(filledCols, totalCols = 7, rows = 5) {
+  // Matriz de puntos estilo Worktail "Employees on Leave": 7 columnas x 5 filas
+  const heights = [2, 4, 3, 5, 4, 3, 2];
+  let html = '';
+  for (let c = 0; c < totalCols; c++) {
+    const colActiveCount = filledCols > 0 ? Math.min(rows, Math.max(1, Math.round((heights[c % heights.length] / rows) * Math.min(rows, filledCols)))) : 0;
+    html += '<div class="adm-col">';
+    for (let r = rows - 1; r >= 0; r--) {
+      const isLit = c < Math.max(2, filledCols) && r < colActiveCount;
+      html += `<span class="adm-dot ${isLit ? 'lit' : ''}"></span>`;
+    }
+    html += '</div>';
+  }
+  return html;
+}
+
+function renderKDSLiveKPIs() {
+  if (!kdsUnlocked) return;
+  const stats = calculateDailySales();
+
+  // Fecha actual en formato minimalista Apple ("21 Nov · Turno Activo")
+  const datePill = document.getElementById('kds-date-pill');
+  if (datePill) {
+    try {
+      const now = new Date();
+      const dayNum = now.getDate();
+      const mon = (MONTH_NAMES_ES[now.getMonth()] || '').slice(0, 3);
+      datePill.textContent = `📅 ${dayNum} ${mon} · Turno Activo`;
+    } catch (e) {}
+  }
+
+  // Contadores de filtros en vivo
+  const counts = { all: orders.length, pending: 0, received: 0, preparing: 0, ready: 0 };
+  let mesaCnt = 0, pickupCnt = 0, deliveryCnt = 0, paidCnt = 0;
+
+  orders.forEach(o => {
+    if (o.status && counts[o.status] !== undefined) counts[o.status] += 1;
+    const fm = o.fulfillmentMode || 'dine_in';
+    if (fm === 'pickup') pickupCnt += 1;
+    else if (fm === 'delivery') deliveryCnt += 1;
+    else mesaCnt += 1;
+    if (o.paid) paidCnt += 1;
+  });
+
+  ['all', 'pending', 'received', 'preparing', 'ready'].forEach(key => {
+    const el = document.getElementById(`kds-count-${key}`);
+    if (el) el.textContent = String(counts[key]);
+  });
+
+  // KPI 1: Ventas del Turno
+  const kpiSalesEl = document.getElementById('kds-kpi-sales');
+  const kpiSalesSub = document.getElementById('kds-kpi-sales-sub');
+  if (kpiSalesEl) kpiSalesEl.textContent = formatMoney(stats.totalRevenue);
+  if (kpiSalesSub) {
+    kpiSalesSub.textContent = stats.ordersCount === 1
+      ? '1 pedido listo'
+      : `${stats.ordersCount} pedidos listos`;
+  }
+
+  // KPI 2: Comandas Activas + Dot Matrix
+  const activeCount = counts.pending + counts.received + counts.preparing;
+  const kpiActiveEl = document.getElementById('kds-kpi-active');
+  const kpiActiveSub = document.getElementById('kds-kpi-active-sub');
+  const dotMatrixEl = document.getElementById('kds-kpi-dot-matrix');
+  if (kpiActiveEl) kpiActiveEl.textContent = String(orders.length);
+  if (kpiActiveSub) {
+    kpiActiveSub.textContent = activeCount > 0
+      ? `${counts.preparing} cocinando · ${counts.pending + counts.received} en cola`
+      : (counts.ready > 0 ? `${counts.ready} listos para entregar` : 'Sin espera en barra');
+  }
+  if (dotMatrixEl) {
+    dotMatrixEl.innerHTML = buildAppleDotMatrixHTML(Math.min(7, orders.length > 0 ? Math.max(2, orders.length) : 0));
+  }
+
+  // KPI 3: Modalidades
+  const modesEl = document.getElementById('kds-kpi-modes');
+  if (modesEl) {
+    modesEl.innerHTML = `
+      <span class="channel-chip mesa">🍽️ ${mesaCnt} Mesa</span>
+      <span class="channel-chip pickup">🛍️ ${pickupCnt} Pickup</span>
+      <span class="channel-chip delivery">🛵 ${deliveryCnt} Envío</span>
+    `;
+  }
+
+  // KPI 4: Pagadas Digital (Apple Pay / Stripe)
+  const totalWithHistory = orders.length + completedOrders.length;
+  const completedPaid = completedOrders.filter(o => o.paid).length;
+  const totalPaid = paidCnt + completedPaid;
+  const paidPct = totalWithHistory > 0 ? Math.min(100, Math.round((totalPaid / totalWithHistory) * 100)) : 0;
+
+  const paidEl = document.getElementById('kds-kpi-paid');
+  const paidPctEl = document.getElementById('kds-kpi-paid-pct');
+  const paidBarEl = document.getElementById('kds-kpi-paid-bar');
+  if (paidEl) paidEl.textContent = String(totalPaid);
+  if (paidPctEl) paidPctEl.textContent = `${paidPct}%`;
+  if (paidBarEl) paidBarEl.style.width = `${paidPct}%`;
+}
+
+function seedDemoLiveKdsOrders() {
+  // Desactivado para producción: el KDS opera únicamente con órdenes reales
+}
+
 function setKDSFilter(filter, btn) {
   kdsFilter = filter;
   document.querySelectorAll('.kds-filter').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
+  if (btn) btn.classList.add('active');
   renderKDS();
 }
 
 function renderKDS() {
   if (!kdsUnlocked) return;
+  renderKDSLiveKPIs();
+
   const board = document.getElementById('kds-board');
   if (!board) return;
 
-  const filtered = kdsFilter === 'all'
+  let filtered = kdsFilter === 'all'
     ? orders
     : orders.filter(o => o.status === kdsFilter);
+
+  if (kdsSearchQuery) {
+    filtered = filtered.filter(o => {
+      const hay = [
+        String(o.num || ''),
+        `#${String(o.num || '').padStart(3, '0')}`,
+        o.table || '',
+        o.guestName || '',
+        o.fulfillmentMode || '',
+        ...(Array.isArray(o.items) ? o.items.map(i => i.name || '') : []),
+      ].join(' ').toLowerCase();
+      return hay.includes(kdsSearchQuery);
+    });
+  }
 
   if (filtered.length === 0) {
     board.innerHTML = `
       <div class="kds-empty" id="kds-empty">
-        <p>Sin comandas activas</p>
-        <p class="kds-empty-sub">Los pedidos entrantes aparecerán al instante</p>
+        <div class="kds-empty-icon">${kdsSearchQuery ? '⌕' : '🍽️'}</div>
+        <p class="kds-empty-title">${kdsSearchQuery ? 'Sin resultados para tu búsqueda' : 'Sin comandas activas'}</p>
+        <p class="kds-empty-sub">${kdsSearchQuery ? 'Prueba con otro número de mesa, cliente o limpia el filtro.' : 'Los pedidos entrantes de mesa, pickup y domicilio aparecerán al instante aquí.'}</p>
       </div>`;
     return;
   }
@@ -3688,24 +4862,26 @@ function renderKDS() {
     const isRemote = fMode === 'pickup' || fMode === 'delivery';
     const tableGroup = getTableGroupSummary(order.table, order);
     const hasTableGroup = !isRemote && (tableGroup.diners.length > 1 || tableGroup.tableOrdersCount > 1);
+    const avatar = getAvatarInitialsAndTone(order.guestName, order.table);
+
     const payBadgeHtml = order.paid
-      ? `<span class="kds-pay-badge">✓ PAGADO · ${(order.paymentLabel || 'APPLE PAY').toUpperCase()}</span>`
-      : '';
+      ? `<span class="kds-pay-badge">✓ Pagado · ${escapeHTML(order.paymentLabel || 'Apple Pay')}</span>`
+      : `<span class="kds-unpaid-badge">En cuenta</span>`;
 
     let fulfillmentBannerHtml = '';
     if (fMode === 'pickup') {
       fulfillmentBannerHtml = `
         <div class="kds-fulfillment-banner mode-pickup">
-          <span>🛍️ PICKUP (PARA LLEVAR) · 🕒 ${escapeHTML(order.pickupTime || 'Lo antes posible')}</span>
-          ${order.customerPhone ? `<span class="kds-fulfillment-sub">📞 Tel: ${escapeHTML(order.customerPhone)}</span>` : ''}
+          <span>🛍️ Pickup · ${escapeHTML(order.pickupTime || 'Lo antes posible')}</span>
+          ${order.customerPhone ? `<span class="kds-fulfillment-sub">Tel: ${escapeHTML(order.customerPhone)}</span>` : ''}
         </div>
       `;
     } else if (fMode === 'delivery') {
       fulfillmentBannerHtml = `
         <div class="kds-fulfillment-banner mode-delivery">
-          <span>🛵 ENVÍO A DOMICILIO (+$${order.deliveryFee || 25})</span>
-          <span class="kds-fulfillment-sub">📍 ${escapeHTML(order.deliveryAddress || 'Sin dirección')}${order.deliveryNotes ? ` · (${escapeHTML(order.deliveryNotes)})` : ''}</span>
-          ${order.customerPhone ? `<span class="kds-fulfillment-sub">📞 Tel: ${escapeHTML(order.customerPhone)}</span>` : ''}
+          <span>🛵 A Domicilio (+$${order.deliveryFee || 25})</span>
+          <span class="kds-fulfillment-sub">${escapeHTML(order.deliveryAddress || 'Sin dirección')}${order.deliveryNotes ? ` · ${escapeHTML(order.deliveryNotes)}` : ''}</span>
+          ${order.customerPhone ? `<span class="kds-fulfillment-sub">Tel: ${escapeHTML(order.customerPhone)}</span>` : ''}
         </div>
       `;
     }
@@ -3713,14 +4889,14 @@ function renderKDS() {
     const actionsBtns = (() => {
       if (order.status === 'pending') return `
         <button class="order-btn btn-primary-step" onclick="changeOrderStatus(${order.id}, 'received')">✓ Recibir</button>
-        <button class="order-btn btn-delete" onclick="deleteOrder(${order.id})">✕ Cancelar</button>
+        <button class="order-btn btn-delete" onclick="deleteOrder(${order.id})">Cancelar</button>
       `;
       if (order.status === 'received') return `
         <button class="order-btn btn-primary-step" onclick="changeOrderStatus(${order.id}, 'preparing')">▶ Preparar</button>
         <button class="order-btn" onclick="changeOrderStatus(${order.id}, 'pending')">↩ Atrás</button>
       `;
       if (order.status === 'preparing') return `
-        <button class="order-btn btn-ready" onclick="changeOrderStatus(${order.id}, 'ready')">✓ Listo</button>
+        <button class="order-btn btn-ready" onclick="changeOrderStatus(${order.id}, 'ready')">✓ Marcar Listo</button>
         <button class="order-btn" onclick="changeOrderStatus(${order.id}, 'received')">↩ Atrás</button>
       `;
       return `
@@ -3732,36 +4908,43 @@ function renderKDS() {
     return `
       <div class="order-card status-${order.status}" id="order-${order.id}">
         <div class="order-card-header">
-          <div>
-            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-              <span class="order-num">#${String(order.num).padStart(3, '0')}</span>
-              <span class="order-timer ${timerClass}" data-order-id="${order.id}">${timerTxt}</span>
-              ${payBadgeHtml}
-            </div>
-            <div class="order-table-row">
-              <span class="order-table">${escapeHTML(order.table)}</span>
-              ${order.guestName ? `<span class="kds-diner-badge">👤 ${escapeHTML(order.guestName)}</span>` : ''}
-            </div>
+          <div class="order-card-id-group">
+            <span class="order-num">#${String(order.num).padStart(3, '0')}</span>
+            <span class="order-timer ${timerClass}" data-order-id="${order.id}">${timerTxt}</span>
           </div>
-          <span class="status-badge">
+          <span class="status-badge badge-${order.status}">
             <span class="led-dot ${meta.ledClass}"></span>
             <span>${meta.label}</span>
           </span>
         </div>
+
+        <div class="order-guest-strip">
+          <div class="order-avatar ${avatar.tone}">${escapeHTML(avatar.initials)}</div>
+          <div class="order-guest-meta">
+            <span class="order-table">${escapeHTML(order.table)}</span>
+            <span class="order-guest-sub">${order.guestName ? escapeHTML(order.guestName) : 'Comensal'}</span>
+          </div>
+          <div class="order-price-col">
+            <span class="order-price-val">${formatMoney(order.total)}</span>
+            ${payBadgeHtml}
+          </div>
+        </div>
+
         ${fulfillmentBannerHtml}
         ${hasTableGroup ? `
           <div class="kds-table-group-pill">
-            👥 Grupo ${escapeHTML(order.table)} (${tableGroup.diners.length} ${tableGroup.diners.length === 1 ? 'comensal' : 'comensales'}) · Total mesa: $${tableGroup.tableTotal}
+            👥 ${escapeHTML(order.table)} · ${tableGroup.diners.length} ${tableGroup.diners.length === 1 ? 'comensal' : 'comensales'} · Mesa: ${formatMoney(tableGroup.tableTotal)}
           </div>
         ` : ''}
+
         <div class="order-items-list">
           ${order.items.map(it => `
             <div class="order-item-row">
-              <span class="order-item-qty">${it.qty}x</span>
-              <span class="order-item-name">${it.emoji} ${it.name}</span>
+              <span class="order-item-qty">${it.qty}×</span>
+              <span class="order-item-name">${it.emoji || ''} ${escapeHTML(it.name)}</span>
             </div>`).join('')}
         </div>
-        <div class="order-total">Total individual${order.guestName ? ` (${order.guestName})` : ''}: $${order.total}</div>
+
         <div class="order-actions">${actionsBtns}</div>
       </div>`;
   }).join('');
@@ -3773,10 +4956,14 @@ function changeOrderStatus(orderId, newStatus) {
   const prevStatus = order.status;
   order.status = newStatus;
   if (newStatus === 'ready') order.readyAt = Date.now();
+  if ((newStatus === 'preparing' || newStatus === 'ready') && !order.inventoryDeducted) {
+    deductInventoryForOrder(order, { silent: false });
+  }
   persistOrders();
   publishCloudSync('ORDER_STATUS', { id: orderId, status: newStatus, readyAt: order.readyAt || null });
   renderKDS();
   renderDailySales();
+  renderKDSStockPanel();
   notifyClientIfMyOrderChanged(order.id, prevStatus, newStatus, order.num);
 
   // Historial mensual (base de datos): guardar venta al marcar "Listo"
@@ -3806,11 +4993,16 @@ function deliverOrder(orderId) {
 }
 
 function deleteOrder(orderId) {
+  const target = orders.find(o => o.id === orderId);
+  if (target && target.inventoryDeducted && target.status === 'pending') {
+    restoreInventoryForOrder(target);
+  }
   orders = orders.filter(o => o.id !== orderId);
   persistOrders();
   publishCloudSync('ORDER_DELETE', { id: orderId });
   renderKDS();
   renderDailySales();
+  renderKDSStockPanel();
   renderClientTracker();
   updateHeaderTrackerPill();
 }
@@ -3971,7 +5163,241 @@ function renderDailySales() {
   if (amtCocasEl)   amtCocasEl.textContent   = formatMoney(stats.breakdown.cocas.amount);
   if (barCocasEl)   barCocasEl.style.width   = `${pct(stats.breakdown.cocas.amount)}%`;
 
+  renderSalesAppleCharts(stats);
+  renderKDSLiveKPIs();
   renderExecutiveExcelPreview();
+}
+
+function renderSalesAppleCharts(stats) {
+  const DAILY_TARGET = 1500;
+  const goalPct = Math.min(100, Math.round((stats.totalRevenue / DAILY_TARGET) * 100));
+
+  // 1. Mini KPI visual helpers (Dot Matrix & Hatched Goal Meter)
+  const ticketMatrix = document.getElementById('sales-ticket-dot-matrix');
+  if (ticketMatrix) {
+    const avgTicket = stats.ordersCount > 0 ? Math.round(stats.totalRevenue / stats.ordersCount) : 0;
+    const level = avgTicket > 0 ? Math.min(7, Math.max(2, Math.round(avgTicket / 25))) : 3;
+    ticketMatrix.innerHTML = buildAppleDotMatrixHTML(level);
+  }
+  const goalPctBadge = document.getElementById('sales-goal-pct-badge');
+  const goalMiniBar  = document.getElementById('sales-goal-mini-bar');
+  if (goalPctBadge) goalPctBadge.textContent = `${goalPct}%`;
+  if (goalMiniBar)  goalMiniBar.style.width  = `${goalPct}%`;
+
+  // Recolectar todas las órdenes del turno (activas + completadas)
+  const allShiftMap = new Map();
+  completedOrders.forEach(o => { if (o && o.id) allShiftMap.set(o.id, o); });
+  orders.forEach(o => { if (o && o.id) allShiftMap.set(o.id, o); });
+  const allShiftOrders = Array.from(allShiftMap.values()).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+  // 2. Gráfica 1: Ritmo de Ventas (Capsules Verde Salvia + Barra Pico Naranja + Rayado Diagonal)
+  const hourlyEl = document.getElementById('sales-hourly-chart');
+  if (hourlyEl) {
+    const slots = [
+      { label: '12h', h: 12, val: 0 },
+      { label: '13h', h: 13, val: 0 },
+      { label: '14h', h: 14, val: 0 },
+      { label: '15h', h: 15, val: 0 },
+      { label: '16h', h: 16, val: 0 },
+      { label: '17h', h: 17, val: 0 },
+      { label: '18h', h: 18, val: 0 },
+      { label: '19h', h: 19, val: 0 },
+    ];
+
+    if (allShiftOrders.length > 0) {
+      allShiftOrders.forEach((o, idx) => {
+        const dt = new Date(o.readyAt || o.createdAt || Date.now());
+        const hr = dt.getHours();
+        const found = slots.find(s => s.h === hr);
+        if (found) {
+          found.val += Number(o.total) || 0;
+        } else {
+          // Distribuir órdenes fuera de 12-19h en bloques activos para mantener gráfica rica
+          slots[idx % slots.length].val += Number(o.total) || 0;
+        }
+      });
+    }
+
+    const hasReal = slots.some(s => s.val > 0);
+    // Perfil sutil de guía cuando aún no hay ventas del turno
+    const displayVals = hasReal ? slots.map(s => s.val) : [52, 44, 68, 56, 82, 40, 58, 46];
+    const maxVal = Math.max(1, ...displayVals);
+    let peakIdx = 0;
+    displayVals.forEach((v, i) => { if (v >= displayVals[peakIdx]) peakIdx = i; });
+
+    hourlyEl.innerHTML = `
+      <div class="apple-bar-chart-grid">
+        <div class="apple-bar-yaxis">
+          <span>100%</span>
+          <span>75%</span>
+          <span>50%</span>
+          <span>25%</span>
+          <span>0</span>
+        </div>
+        <div class="apple-bar-cols">
+          ${slots.map((slot, idx) => {
+            const rawVal = displayVals[idx];
+            const isEmptyReal = hasReal && rawVal === 0;
+            const pctH = isEmptyReal ? 14 : Math.max(22, Math.round((rawVal / maxVal) * 84));
+            const isPeak = idx === peakIdx;
+            const tooltipLabel = hasReal ? formatMoney(rawVal) : `${pctH}%`;
+            return `
+              <div class="apple-bar-col">
+                <div class="apple-bar-track">
+                  <div class="apple-bar-fill ${isPeak ? 'is-peak' : ''} ${(!hasReal || isEmptyReal) ? 'is-ghost' : ''}" style="height:${pctH}%">
+                    ${isPeak ? `<span class="apple-peak-tooltip">${tooltipLabel}</span>` : ''}
+                  </div>
+                </div>
+                <span class="apple-bar-xlabel">${slot.label}</span>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  // 3. Gráfica 2: Flujo de Demanda (SVG Spline Elegante sobre Líneas Verticales + Pill Naranja)
+  const splineEl = document.getElementById('sales-demand-spline');
+  if (splineEl) {
+    const bd = stats.breakdown;
+    const rawCats = [
+      { label: 'Tacos', val: bd.tacos.qty },
+      { label: 'Hot Dogs', val: bd.hotdogs.qty },
+      { label: 'Jamaica', val: bd.aguas.jamaica },
+      { label: 'Horchata', val: bd.aguas.horchata },
+      { label: 'Coca-Cola', val: bd.cocas.qty },
+      { label: 'Órdenes', val: allShiftOrders.length },
+    ];
+    const hasData = rawCats.some(c => c.val > 0);
+    // Construir 24 puntos suaves interpolados a partir de las 6 categorías
+    const baseSeries = hasData
+      ? rawCats.map(c => c.val)
+      : [12, 18, 28, 15, 22, 14];
+    const pts = [];
+    for (let i = 0; i < baseSeries.length; i++) {
+      const curr = baseSeries[i];
+      const next = baseSeries[Math.min(baseSeries.length - 1, i + 1)];
+      pts.push(curr);
+      if (i < baseSeries.length - 1) {
+        pts.push((curr * 0.65 + next * 0.35) * 0.86);
+        pts.push((curr * 0.35 + next * 0.65) * 1.06);
+        pts.push((curr * 0.2 + next * 0.8) * 0.92);
+      }
+    }
+
+    const W = 420;
+    const H = 132;
+    const padX = 16;
+    const padTop = 30;
+    const padBot = 14;
+    const maxP = Math.max(1, ...pts);
+
+    const coords = pts.map((v, i) => {
+      const x = padX + (i / Math.max(1, pts.length - 1)) * (W - padX * 2);
+      const y = H - padBot - (v / maxP) * (H - padTop - padBot);
+      return { x, y, v };
+    });
+
+    let peakCoordIdx = 0;
+    coords.forEach((c, i) => { if (c.v > coords[peakCoordIdx].v) peakCoordIdx = i; });
+    const peakCoord = coords[peakCoordIdx];
+    const peakValueLabel = hasData ? `${Math.round(peakCoord.v)} u.` : '0 u.';
+
+    // Path suave con curvas cuadráticas
+    let d = `M ${coords[0].x.toFixed(1)} ${coords[0].y.toFixed(1)}`;
+    for (let i = 1; i < coords.length; i++) {
+      const prev = coords[i - 1];
+      const curr = coords[i];
+      const cx = ((prev.x + curr.x) / 2).toFixed(1);
+      d += ` Q ${prev.x.toFixed(1)} ${prev.y.toFixed(1)}, ${cx} ${((prev.y + curr.y) / 2).toFixed(1)}`;
+    }
+    const last = coords[coords.length - 1];
+    d += ` T ${last.x.toFixed(1)} ${last.y.toFixed(1)}`;
+
+    // Líneas verticales tenues de fondo (signature de Workforce Summary After)
+    let vLines = '';
+    for (let i = 0; i <= 36; i++) {
+      const lx = (padX + (i / 36) * (W - padX * 2)).toFixed(1);
+      const topY = 18 + ((i * 19) % 24);
+      vLines += `<line x1="${lx}" y1="${topY}" x2="${lx}" y2="${H - 8}" stroke="#EAE6DF" stroke-width="1" />`;
+    }
+
+    const pillW = 46;
+    const pillX = Math.max(4, Math.min(W - pillW - 4, peakCoord.x - pillW / 2));
+    const pillY = Math.max(2, peakCoord.y - 26);
+
+    splineEl.innerHTML = `
+      <svg class="apple-spline-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Flujo de demanda">
+        ${vLines}
+        <path d="${d}" fill="none" stroke="#E06732" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        <circle cx="${peakCoord.x.toFixed(1)}" cy="${peakCoord.y.toFixed(1)}" r="4" fill="#FFFFFF" stroke="#EB561D" stroke-width="2" />
+        <rect x="${pillX.toFixed(1)}" y="${pillY.toFixed(1)}" width="${pillW}" height="19" rx="9.5" fill="#EB561D" />
+        <text x="${(pillX + pillW / 2).toFixed(1)}" y="${(pillY + 13).toFixed(1)}" text-anchor="middle" fill="#FFFFFF" font-size="9.5" font-weight="700" font-family="Inter, sans-serif">${peakValueLabel}</text>
+      </svg>
+      <div class="apple-spline-xlabels">
+        ${rawCats.map(c => `<span>${c.label}</span>`).join('')}
+      </div>
+    `;
+  }
+
+  // 4. Mini gráfica de Área + Proyección Rayada (Pie de Payroll Status After)
+  const areaEl = document.getElementById('sales-goal-area-chart');
+  if (areaEl) {
+    const splitX = Math.max(70, Math.min(330, Math.round(30 + (goalPct / 100) * 300)));
+    areaEl.innerHTML = `
+      <div class="payroll-area-head">
+        <span class="payroll-area-caption">Meta diaria (${formatMoney(DAILY_TARGET)})</span>
+        <span class="payroll-area-pct-text">${goalPct}% completado</span>
+      </div>
+      <svg class="payroll-area-svg" viewBox="0 0 380 68" preserveAspectRatio="none">
+        <defs>
+          <pattern id="appleDiagHatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <line x1="0" y1="0" x2="0" y2="6" stroke="#CFCBC2" stroke-width="1.4" />
+          </pattern>
+        </defs>
+        <path d="M 8 56 L 8 40 Q 75 46, 130 34 T ${splitX} 26 L ${splitX} 58 Z" fill="#DCE5FA" opacity="0.88" />
+        <path d="M ${splitX} 26 Q ${Math.min(350, splitX + 60)} 18, 372 8 L 372 58 L ${splitX} 58 Z" fill="url(#appleDiagHatch)" />
+        <line x1="${splitX}" y1="16" x2="${splitX}" y2="58" stroke="#D9A84E" stroke-width="1.2" stroke-dasharray="3 3" />
+        <rect x="${Math.max(8, splitX - 18)}" y="24" width="36" height="17" rx="8.5" fill="#F2C879" />
+        <text x="${splitX}" y="35.5" text-anchor="middle" fill="#4E380B" font-size="9.5" font-weight="700" font-family="Inter, sans-serif">${goalPct}%</text>
+      </svg>
+    `;
+  }
+
+  // 5. Actividad Reciente de Comensales (Inspirado en Pending Leave Requests After con avatares)
+  const recentEl = document.getElementById('sales-recent-diners-list');
+  if (recentEl) {
+    const recent = allShiftOrders.slice(0, 6);
+    if (recent.length === 0) {
+      recentEl.innerHTML = `
+        <div class="recent-empty-wrap">
+          <p class="recent-empty-msg">Sin actividad en este turno.</p>
+        </div>
+      `;
+    } else {
+      recentEl.innerHTML = recent.map(o => {
+        const av = getAvatarInitialsAndTone(o.guestName, o.table);
+        const fMode = o.fulfillmentMode || 'dine_in';
+        const modeText = fMode === 'delivery' ? 'Domicilio' : fMode === 'pickup' ? 'Pickup' : (o.table || 'Mesa');
+        const payText = o.paid ? (o.paymentLabel || 'Apple Pay') : (STATUS_META[o.status]?.label || 'En curso');
+        const timeStr = localTimeLabel(o.readyAt || o.createdAt || Date.now());
+        return `
+          <div class="recent-diner-row">
+            <div class="order-avatar ${av.tone}">${escapeHTML(av.initials)}</div>
+            <div class="recent-diner-info">
+              <span class="recent-diner-name">${escapeHTML(o.guestName || o.table || 'Comensal')}</span>
+              <span class="recent-diner-sub">${escapeHTML(modeText)} · ${escapeHTML(payText)}</span>
+            </div>
+            <div class="recent-diner-right">
+              <span class="recent-diner-amt">${formatMoney(o.total)}</span>
+              <span class="recent-diner-time">${timeStr}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  }
 }
 
 function openCloseShiftModal() {
@@ -4864,7 +6290,7 @@ function renderExecutiveExcelPreview() {
     : `
       <tr>
         <td colspan="5" style="text-align:center;color:#64748b;padding:12px;">
-          Sin órdenes listas en este turno · Presiona <strong>"✨ Cargar Datos Demo"</strong> arriba para previsualizar y descargar un Excel completo con cuentas separadas.
+          Sin órdenes completadas en este turno. Las ventas completadas aparecerán aquí automáticamente.
         </td>
       </tr>
     `;
@@ -4957,99 +6383,7 @@ function renderExecutiveExcelPreview() {
 }
 
 async function seedDemoSalesForExcel() {
-  const now = Date.now();
-  const demoOrders = [
-    {
-      id: now - 3600000,
-      tenantId,
-      num: ++orderCounter,
-      table: 'Mesa 4',
-      guestName: 'Ana',
-      status: 'ready',
-      createdAt: now - 3600000,
-      readyAt: now - 3400000,
-      deliveredAt: now - 3300000,
-      total: 81,
-      items: [
-        { key: 'taco:doble:bistec:cilantro,cebolla', station: 'taco', name: 'Taco doble de bistec con cilantro, cebolla', emoji: '🌮', price: 28, qty: 2 },
-        { key: 'drink_jamaica', station: 'drink', name: 'Agua de Jamaica (500ml)', emoji: '🌺', price: 25, qty: 1 },
-      ],
-    },
-    {
-      id: now - 3500000,
-      tenantId,
-      num: ++orderCounter,
-      table: 'Mesa 4',
-      guestName: 'Carlos',
-      status: 'ready',
-      createdAt: now - 3500000,
-      readyAt: now - 3250000,
-      deliveredAt: now - 3200000,
-      total: 100,
-      items: [
-        { key: 'hotdog:ketchup,mostaza,chiles', station: 'hotdog', name: 'Hot Dog con ketchup, mostaza, chiles', emoji: '🌭', price: 35, qty: 2 },
-        { key: 'drink_coca', station: 'drink', name: 'Coca-Cola (Retornable 500ml)', emoji: '🥤', price: 30, qty: 1 },
-      ],
-    },
-    {
-      id: now - 2800000,
-      tenantId,
-      num: ++orderCounter,
-      table: 'Mesa 4',
-      guestName: 'Sofía',
-      status: 'ready',
-      createdAt: now - 2800000,
-      readyAt: now - 2600000,
-      deliveredAt: now - 2500000,
-      total: 109,
-      items: [
-        { key: 'taco:sencilla:longaniza:cilantro,salsa_roja', station: 'taco', name: 'Taco sencillo de longaniza con cilantro, salsa roja', emoji: '🌮', price: 28, qty: 3 },
-        { key: 'drink_horchata', station: 'drink', name: 'Agua de Horchata (500ml)', emoji: '🥛', price: 25, qty: 1 },
-      ],
-    },
-    {
-      id: now - 1900000,
-      tenantId,
-      num: ++orderCounter,
-      table: 'Mesa 1',
-      guestName: 'Diego',
-      status: 'ready',
-      createdAt: now - 1900000,
-      readyAt: now - 1700000,
-      deliveredAt: now - 1600000,
-      total: 142,
-      items: [
-        { key: 'taco:doble:bistec:cilantro,cebolla,salsa_roja', station: 'taco', name: 'Taco doble de bistec con todo', emoji: '🌮', price: 28, qty: 4 },
-        { key: 'drink_coca', station: 'drink', name: 'Coca-Cola (Retornable 500ml)', emoji: '🥤', price: 30, qty: 1 },
-      ],
-    },
-    {
-      id: now - 900000,
-      tenantId,
-      num: ++orderCounter,
-      table: 'Mesa 2',
-      guestName: 'Valeria',
-      status: 'ready',
-      createdAt: now - 900000,
-      readyAt: now - 700000,
-      deliveredAt: now - 600000,
-      total: 88,
-      items: [
-        { key: 'hotdog:mayonesa,tomate,cebolla', station: 'hotdog', name: 'Hot Dog con mayonesa, tomate, cebolla', emoji: '🌭', price: 35, qty: 1 },
-        { key: 'taco:sencilla:bistec:cilantro', station: 'taco', name: 'Taco sencillo de bistec', emoji: '🌮', price: 28, qty: 1 },
-        { key: 'drink_jamaica', station: 'drink', name: 'Agua de Jamaica (500ml)', emoji: '🌺', price: 25, qty: 1 },
-      ],
-    },
-  ];
-
-  demoOrders.forEach(o => {
-    completedOrders.push(o);
-  });
-  persistOrders();
-  await recordSalesForOrders(demoOrders, { cloud: true });
-  renderDailySales();
-  await renderMonthlyHistory();
-  showKDSToast('✨ 5 órdenes demo cargadas · Descarga tu Excel Ejecutivo');
+  // Desactivado para producción: los reportes se calculan con ventas reales
 }
 
 async function exportCurrentShiftOrMonthExcel() {
@@ -5060,8 +6394,8 @@ async function exportCurrentShiftOrMonthExcel() {
     records = (await ledgerGetAll()).filter(r => r.month === month);
   }
   if (records.length === 0) {
-    await seedDemoSalesForExcel();
-    records = getActivePreviewSaleRecords();
+    showKDSToast('No hay órdenes registradas para exportar');
+    return;
   }
   const profile = getActiveTenantProfile();
   const stamp = localDayKey(Date.now());
@@ -5157,37 +6491,44 @@ document.addEventListener('keydown', (e) => {
   initCloudWebSockets();
   initFirebaseIfConfigured();
 
-  const vistaParam = (urlParams.get('vista') || urlParams.get('view') || window.location.hash.replace('#', '')).toLowerCase();
-  const mesaParam  = urlParams.get('mesa') || '';
-  const modoParam  = (urlParams.get('modo') || urlParams.get('mode') || '').toLowerCase();
+  const vistaParam  = (urlParams.get('vista') || urlParams.get('view') || window.location.hash.replace('#', '')).toLowerCase();
+  const pathClean   = String(window.location.pathname || '').replace(/\/+$/, '').toLowerCase();
+  const isAdminLink = (
+    vistaParam === 'cocina' ||
+    vistaParam === 'kitchen' ||
+    vistaParam === 'kds' ||
+    vistaParam === 'admin' ||
+    vistaParam === 'restaurante' ||
+    (typeof urlParams.has === 'function' && (urlParams.has('admin') || urlParams.has('cocina'))) ||
+    pathClean.endsWith('/admin') ||
+    pathClean.endsWith('/cocina')
+  );
+
+  if (isAdminLink) {
+    showView('kitchen');
+    return;
+  }
+
+  const mesaParam = urlParams.get('mesa') || '';
+  const modoParam = (urlParams.get('modo') || urlParams.get('mode') || '').toLowerCase();
   if (mesaParam) presetTableFromURL = mesaParam;
 
-  if (modoParam === 'pickup' || modoParam === 'llevar') {
-    setFulfillmentMode('pickup');
+  if (mesaParam || modoParam === 'mesa' || modoParam === 'dine_in') {
+    setFulfillmentMode('dine_in');
   } else if (modoParam === 'domicilio' || modoParam === 'delivery' || modoParam === 'envio') {
     setFulfillmentMode('delivery');
   } else {
-    const savedMode = readTenantStorage('fulfillment-mode');
-    if (savedMode && !mesaParam) {
-      setFulfillmentMode(savedMode);
-    } else {
-      setFulfillmentMode('dine_in');
-    }
+    // Link general de clientes (Instagram / WhatsApp / Google Maps): inicia directo en Pickup
+    setFulfillmentMode('pickup');
   }
 
-  // Si el cliente recarga la página mientras espera su pedido activo y no pidió modo específico nuevo, mostrar el rastreador directo
+  // Si el cliente recarga mientras espera su pedido activo y no abrió un link de modo distinto, ir directo al rastreador
   const activeOrder = activeTrackedOrderId ? orders.find(o => o.id === activeTrackedOrderId) : null;
-  if (activeOrder && !modoParam && vistaParam !== 'cocina' && vistaParam !== 'kitchen' && vistaParam !== 'kds') {
+  if (activeOrder && !modoParam) {
     clientMode = 'tracker';
     showView('client');
     return;
   }
 
-  if (vistaParam === 'cliente' || vistaParam === 'client' || modoParam) {
-    showView('client');
-  } else if (vistaParam === 'cocina' || vistaParam === 'kitchen' || vistaParam === 'kds') {
-    showView('kitchen');
-  } else {
-    showView('landing');
-  }
+  showView('client');
 })();
