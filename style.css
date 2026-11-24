@@ -8960,15 +8960,21 @@ body.apple-warm-theme .drink-art-badge svg {
 }
 
 /* 4. Modal Cliente: Mesero IA + Club de Puntos */
+body.apple-warm-theme .modal.client-ai-loyalty-modal,
 .client-ai-loyalty-modal {
+  display: none;
   max-width: 500px;
   width: 94vw;
   max-height: 88vh;
-  display: flex;
   flex-direction: column;
   padding: 16px;
   gap: 12px;
   overflow: hidden;
+}
+
+body.apple-warm-theme .modal.client-ai-loyalty-modal.open,
+.client-ai-loyalty-modal.open {
+  display: flex;
 }
 
 .ai-loyalty-modal-top {
