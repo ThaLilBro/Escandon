@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20261121v13" />
+  <link rel="stylesheet" href="style.css?v=20261121v17" />
 </head>
 <body class="apple-warm-theme">
 
@@ -42,6 +42,15 @@
     </div>
 
     <div class="topnav-right">
+      <button type="button" class="loyalty-header-pill" id="btn-header-loyalty" onclick="openClientAILoyaltyModal('loyalty')" title="Puntos Escandón · Programa de Lealtad">
+        <span class="loyalty-star-icon">⭐</span>
+        <span id="header-loyalty-pts">0</span>
+        <span class="loyalty-pts-unit">pts</span>
+      </button>
+      <button type="button" class="ai-waiter-header-pill" id="btn-header-ai-waiter" onclick="openClientAILoyaltyModal('ai')" title="Mesero IA · Pide lo de siempre por chat">
+        <span class="ai-sparkle-icon">✨</span>
+        <span>IA</span>
+      </button>
       <button class="tracker-pill-btn hidden" id="btn-return-tracker" onclick="openActiveTracker()">
         <span class="led-dot" id="mini-tracker-led"></span>
         <span>Mi Orden</span>
@@ -95,6 +104,9 @@
         <div class="presence-avatars" id="presence-avatars"></div>
         <span class="presence-text" id="presence-text">Tu mesa</span>
       </div>
+
+      <!-- TARJETA INTELIGENTE: MESERO IA ("PIDE LO DE SIEMPRE") & PUNTOS ESCANDÓN -->
+      <section class="client-usual-ai-banner" id="client-usual-ai-banner" aria-label="Mesero IA y Puntos Escandón"></section>
 
       <!-- 1. Selección inicial de base -->
       <section id="station-selector" class="station-selector">
@@ -416,6 +428,7 @@
     </div>
 
     <div class="cart-footer">
+      <div class="cart-loyalty-box" id="cart-loyalty-box"></div>
       <div class="cart-row total">
         <span>Total</span>
         <span id="cart-total">$0</span>
@@ -609,6 +622,76 @@
     </div>
   </div>
 
+  <!-- MODAL UNIFICADO CLIENTE: MESERO IA ("PIDE LO DE SIEMPRE" · CHAT INTELIGENTE) + PROGRAMA DE LEALTAD PUNTOS ESCANDÓN -->
+  <div class="modal-overlay" id="client-ai-loyalty-overlay" onclick="closeClientAILoyaltyModal()"></div>
+  <div class="modal client-ai-loyalty-modal" id="client-ai-loyalty-modal">
+    <div class="ai-loyalty-modal-top">
+      <div class="ai-loyalty-seg-tabs" role="tablist">
+        <button type="button" class="ai-loyalty-seg-btn active" id="tab-client-ai" onclick="switchClientAILoyaltyTab('ai')">
+          <span>✨ Mesero IA</span>
+        </button>
+        <button type="button" class="ai-loyalty-seg-btn" id="tab-client-loyalty" onclick="switchClientAILoyaltyTab('loyalty')">
+          <span>⭐ Puntos Escandón</span>
+        </button>
+      </div>
+      <button type="button" class="ai-modal-close-btn" onclick="closeClientAILoyaltyModal()" aria-label="Cerrar">✕</button>
+    </div>
+
+    <!-- PESTAÑA 1: MESERO IA (CHAT NATURAL · "PIDE LO DE SIEMPRE") -->
+    <div class="ai-loyalty-pane" id="pane-client-ai">
+      <div class="ai-waiter-hero compact-chat-head">
+        <div class="ai-chat-emblem" aria-hidden="true">✨</div>
+        <div class="ai-waiter-hero-texts">
+          <div class="ai-waiter-head-row">
+            <span class="step-label">MESERO IA · MEMORIA DE PEDIDOS</span>
+            <span class="ai-local-badge">● En vivo</span>
+          </div>
+          <h3 class="ai-waiter-title">¿Qué te pedimos hoy?</h3>
+          <p class="ai-waiter-sub">Escríbeme <em>"Pide lo de siempre"</em>, arma tu orden o pregunta por tus puntos.</p>
+        </div>
+      </div>
+
+      <!-- Chips rápidos de 1 toque -->
+      <div class="ai-quick-chips-row" id="client-ai-quick-chips">
+        <button type="button" class="ai-quick-chip featured" onclick="runClientAIQuickPrompt('Pide lo de siempre')">
+          ⚡ Pide lo de siempre
+        </button>
+        <button type="button" class="ai-quick-chip" onclick="runClientAIQuickPrompt('Quiero 2 tacos de bistec con todo y 1 coca')">
+          🌮 2 tacos bistec + coca
+        </button>
+        <button type="button" class="ai-quick-chip" onclick="runClientAIQuickPrompt('Quiero 1 hot dog con todo y 1 agua de horchata')">
+          🌭 1 hot dog + horchata
+        </button>
+        <button type="button" class="ai-quick-chip" onclick="runClientAIQuickPrompt('¿Cuántos puntos tengo?')">
+          ⭐ Mis puntos
+        </button>
+        <button type="button" class="ai-quick-chip" onclick="runClientAIQuickPrompt('Manda mi pedido a cocina')">
+          🚀 Enviar a comanda
+        </button>
+      </div>
+
+      <!-- Historial de conversación con el Mesero IA -->
+      <div class="ai-chat-feed" id="client-ai-chat-feed"></div>
+
+      <!-- Barra de entrada de texto -->
+      <form class="ai-chat-input-bar" onsubmit="event.preventDefault(); sendClientAIMessage();">
+        <input
+          type="text"
+          id="client-ai-input"
+          class="ai-chat-input"
+          placeholder="Escribe 'Pide lo de siempre' o lo que se te antoja..."
+          autocomplete="off"
+        />
+        <button type="submit" class="ai-chat-send-btn">Enviar ↑</button>
+      </form>
+    </div>
+
+    <!-- PESTAÑA 2: PROGRAMA DE LEALTAD · PUNTOS ESCANDÓN -->
+    <div class="ai-loyalty-pane hidden" id="pane-client-loyalty">
+      <div id="client-loyalty-panel-content"></div>
+    </div>
+  </div>
+
   <!-- Toast ligero para acciones del menú -->
   <div class="toast" id="order-toast">
     <span class="toast-icon">✓</span>
@@ -670,6 +753,9 @@
         </button>
         <button class="btn-kds-sales" id="btn-kds-qrs" onclick="toggleKDSQRsView()">
           QRs
+        </button>
+        <button type="button" class="btn-kds-sales btn-kds-copilot-pill" id="btn-kds-copilot-nav" onclick="toggleKitchenAICopilot()">
+          <span>✨ Copiloto IA</span>
         </button>
       </div>
 
@@ -1478,6 +1564,71 @@
       </div>
     </div>
 
+    <!-- BOTÓN FLOTANTE Y PANEL DEL COPILOTO IA OPERATIVO DEL RESTAURANTE (TIEMPO REAL) -->
+    <div class="kds-copilot-fab-wrap no-print" id="kds-copilot-fab-wrap">
+      <button type="button" class="kds-copilot-fab-main" id="btn-kds-fab-open" onclick="toggleKitchenAICopilot(true)">
+        <span class="copilot-spark">✨</span>
+        <span>Copiloto IA</span>
+      </button>
+    </div>
+
+    <div class="modal-overlay" id="kds-copilot-overlay" onclick="toggleKitchenAICopilot(false)"></div>
+    <aside class="kds-copilot-drawer no-print" id="kds-copilot-drawer" aria-label="Copiloto IA Operativo del Restaurante">
+      <div class="kds-copilot-header">
+        <div class="kds-copilot-title-group">
+          <div class="kds-copilot-badge-row">
+            <span class="copilot-live-dot"></span>
+            <span class="step-label">COPILOTO OPERATIVO · RAZONAMIENTO EN VIVO</span>
+          </div>
+          <h3 class="kds-copilot-title">✨ Copiloto IA · <span class="brand-escandon">Escandon</span></h3>
+          <p class="kds-copilot-sub">Respuestas directas sobre mesas, comandas, carne, insumos y ventas.</p>
+        </div>
+        <div class="kds-copilot-head-actions">
+          <button type="button" class="ai-modal-close-btn" onclick="toggleKitchenAICopilot(false)" aria-label="Cerrar Copiloto">✕</button>
+        </div>
+      </div>
+
+      <!-- Mini tira de estado vivo del restaurante dentro del Copiloto -->
+      <div class="kds-copilot-telemetry" id="kds-copilot-telemetry"></div>
+
+      <!-- Preguntas y Comandos Rápidos en 1 Toque -->
+      <div class="ai-quick-chips-row kds-copilot-chips" id="kds-copilot-quick-chips">
+        <button type="button" class="ai-quick-chip featured" onclick="runKitchenAIQuickPrompt('¿Cuánto he vendido hoy?')">
+          💰 ¿Cuánto he vendido?
+        </button>
+        <button type="button" class="ai-quick-chip" onclick="runKitchenAIQuickPrompt('¿He vendido tacos?')">
+          🌮 ¿He vendido tacos?
+        </button>
+        <button type="button" class="ai-quick-chip" onclick="runKitchenAIQuickPrompt('Oye, ¿la mesa 2 qué había pedido?')">
+          🍽️ ¿Qué pidió Mesa 2?
+        </button>
+        <button type="button" class="ai-quick-chip" onclick="runKitchenAIQuickPrompt('¿Cuánta carne queda?')">
+          🥩 ¿Cuánta carne queda?
+        </button>
+        <button type="button" class="ai-quick-chip" onclick="runKitchenAIQuickPrompt('¿En qué parte se ve lo de insumos?')">
+          📦 ¿Dónde veo insumos?
+        </button>
+        <button type="button" class="ai-quick-chip" onclick="runKitchenAIQuickPrompt('¿Qué insumos están bajos o por caducar?')">
+          ⚠️ Alertas de stock
+        </button>
+      </div>
+
+      <!-- Feed de conversación del Copiloto -->
+      <div class="ai-chat-feed kds-copilot-feed" id="kds-copilot-chat-feed"></div>
+
+      <!-- Barra inferior de texto limpio -->
+      <form class="ai-chat-input-bar kds-copilot-input-bar" onsubmit="event.preventDefault(); sendKitchenAIMessage();">
+        <input
+          type="text"
+          id="kds-copilot-input"
+          class="ai-chat-input"
+          placeholder="Escribe tu pregunta sobre mesas, ventas o insumos..."
+          autocomplete="off"
+        />
+        <button type="submit" class="ai-chat-send-btn">Enviar ↑</button>
+      </form>
+    </aside>
+
     <!-- Toast ligero en Cocina -->
     <div class="toast" id="kds-toast">
       <span class="toast-icon">✓</span>
@@ -1488,6 +1639,6 @@
 
 <!-- Sincronización multi-dispositivo en tiempo real -->
 <script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
-<script src="app.js?v=20261121v13"></script>
+<script src="app.js?v=20261122v18"></script>
 </body>
 </html>

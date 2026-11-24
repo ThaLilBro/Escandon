@@ -8081,3 +8081,1697 @@ body.apple-warm-theme #order-toast.toast {
     grid-column: auto;
   }
 }
+
+/* ════════════════════════════════════════════════
+   COMPOSITOR FOTOGRÁFICO HIPERREALISTA POR CAPAS & ANIMACIONES
+   - Fotografía de estudio en PNG transparente por capa
+   - Caída en 3 oleadas ("mano de chef") + botellas squeeze 3D sincronizadas
+════════════════════════════════════════════════ */
+body.apple-warm-theme .plate-preview-minimal {
+  overflow: visible;
+  padding: 8px 14px 14px;
+}
+
+body.apple-warm-theme .plate-canvas {
+  height: 194px;
+  overflow: visible;
+}
+
+/* Escenario principal interactivo (relación 380:245) */
+.photo-plate-stage {
+  position: relative;
+  width: 300px;
+  max-width: 100%;
+  height: 194px;
+  margin: 0 auto;
+  overflow: visible;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.photo-dish-stack {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.pl-layer {
+  position: absolute;
+  left: 50%;
+  top: 61%;
+  transform: translate(-50%, -50%);
+  height: auto;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  display: block;
+}
+
+/* ─── Capas de Taco (Sencilla y Doble) ─────────── */
+.stage-taco .pl-plate {
+  width: 84%;
+  top: 62%;
+  filter: drop-shadow(0 12px 18px rgba(28, 22, 14, 0.14));
+}
+
+.stage-taco.is-sencilla .pl-tortilla-front {
+  width: 49%;
+  left: 50%;
+  top: 61%;
+  filter: drop-shadow(0 5px 8px rgba(45, 28, 6, 0.22));
+}
+
+.stage-taco.is-doble .pl-tortilla-back {
+  width: 47%;
+  left: 46%;
+  top: 63%;
+  filter: brightness(0.94) drop-shadow(0 5px 8px rgba(45, 28, 6, 0.24));
+}
+
+.stage-taco.is-doble .pl-tortilla-front {
+  width: 47%;
+  left: 53%;
+  top: 60%;
+  filter: drop-shadow(0 5px 9px rgba(45, 28, 6, 0.28));
+}
+
+.stage-taco .pl-taco-protein {
+  width: 33.5%;
+  left: 50%;
+  top: 61%;
+  filter: drop-shadow(0 5px 8px rgba(30, 14, 4, 0.34));
+}
+.stage-taco.is-doble .pl-taco-protein {
+  left: 53%;
+  top: 60%;
+}
+
+.stage-taco .pl-taco-cebolla {
+  width: 25.5%;
+  left: 50%;
+  top: 60.5%;
+  filter: drop-shadow(0 2px 3px rgba(22, 14, 8, 0.32));
+}
+.stage-taco.is-doble .pl-taco-cebolla {
+  left: 53%;
+  top: 59.5%;
+}
+
+.stage-taco .pl-taco-cilantro {
+  width: 27%;
+  left: 50%;
+  top: 60.5%;
+  filter: drop-shadow(0 2px 3px rgba(15, 24, 10, 0.32));
+}
+.stage-taco.is-doble .pl-taco-cilantro {
+  left: 53%;
+  top: 59.5%;
+}
+
+.stage-taco .pl-taco-salsa {
+  width: 26.5%;
+  left: 50%;
+  top: 61%;
+  filter: drop-shadow(0 3px 4px rgba(55, 8, 2, 0.32));
+}
+.stage-taco.is-doble .pl-taco-salsa {
+  left: 53%;
+  top: 60%;
+}
+
+/* ─── Capas de Hot Dog Artesanal ───────────────── */
+.stage-hotdog .pl-plate-dog {
+  width: 90%;
+  top: 62%;
+  filter: drop-shadow(0 12px 18px rgba(28, 22, 14, 0.14));
+}
+
+.stage-hotdog .pl-hotdog-base {
+  width: 73%;
+  left: 50%;
+  top: 61%;
+  filter: drop-shadow(0 7px 11px rgba(42, 24, 8, 0.26));
+}
+
+.stage-hotdog .pl-dog-ketchup {
+  width: 58%;
+  left: 49.5%;
+  top: 59.5%;
+  filter: drop-shadow(0 2px 3px rgba(60, 8, 2, 0.28));
+}
+
+.stage-hotdog .pl-dog-mostaza {
+  width: 57%;
+  left: 50.5%;
+  top: 62%;
+  filter: drop-shadow(0 2px 3px rgba(68, 44, 0, 0.24));
+}
+
+.stage-hotdog .pl-dog-mayo {
+  width: 55%;
+  left: 50%;
+  top: 58%;
+  filter: drop-shadow(0 2px 3px rgba(42, 34, 22, 0.28));
+}
+
+.stage-hotdog .pl-dog-tomate {
+  width: 60%;
+  left: 50%;
+  top: 60.5%;
+  filter: drop-shadow(0 2px 3px rgba(32, 10, 4, 0.34));
+}
+
+.stage-hotdog .pl-dog-cebolla {
+  width: 59%;
+  left: 50%;
+  top: 61%;
+  filter: drop-shadow(0 2px 3px rgba(24, 18, 12, 0.32));
+}
+
+.stage-hotdog .pl-dog-chiles {
+  width: 57%;
+  left: 50%;
+  top: 61%;
+  filter: drop-shadow(0 2px 3px rgba(18, 28, 8, 0.36));
+}
+
+/* ─── Modo Compacto para Tarjetas del Menú Principal ──── */
+.photo-plate-stage.is-compact {
+  width: 100%;
+  height: 100%;
+}
+.photo-plate-stage.is-compact .pl-layer {
+  top: 50%;
+}
+.photo-plate-stage.is-compact.stage-taco .pl-plate {
+  width: 98%;
+  top: 51%;
+}
+.photo-plate-stage.is-compact.stage-taco.is-doble .pl-tortilla-back {
+  width: 58%;
+  left: 44%;
+  top: 52%;
+}
+.photo-plate-stage.is-compact.stage-taco.is-doble .pl-tortilla-front {
+  width: 58%;
+  left: 54%;
+  top: 49%;
+}
+.photo-plate-stage.is-compact.stage-taco.is-doble .pl-taco-protein {
+  width: 41%;
+  left: 54%;
+  top: 49%;
+}
+.photo-plate-stage.is-compact.stage-taco.is-doble .pl-taco-cebolla {
+  width: 31%;
+  left: 54%;
+  top: 48.5%;
+}
+.photo-plate-stage.is-compact.stage-taco.is-doble .pl-taco-cilantro {
+  width: 33%;
+  left: 54%;
+  top: 48.5%;
+}
+.photo-plate-stage.is-compact.stage-taco.is-doble .pl-taco-salsa {
+  width: 32%;
+  left: 54%;
+  top: 49%;
+}
+.photo-plate-stage.is-compact.stage-hotdog .pl-plate-dog {
+  width: 102%;
+  top: 51%;
+}
+.photo-plate-stage.is-compact.stage-hotdog .pl-hotdog-base {
+  width: 84%;
+  top: 50%;
+}
+.photo-plate-stage.is-compact.stage-hotdog .pl-dog-ketchup {
+  width: 67%;
+  top: 48.5%;
+}
+.photo-plate-stage.is-compact.stage-hotdog .pl-dog-mostaza {
+  width: 66%;
+  top: 51.5%;
+}
+.photo-plate-stage.is-compact.stage-hotdog .pl-dog-mayo {
+  width: 63%;
+  top: 47.5%;
+}
+.photo-plate-stage.is-compact.stage-hotdog .pl-dog-tomate {
+  width: 69%;
+  top: 49.5%;
+}
+.photo-plate-stage.is-compact.stage-hotdog .pl-dog-cebolla {
+  width: 68%;
+  top: 50%;
+}
+.photo-plate-stage.is-compact.stage-hotdog .pl-dog-chiles {
+  width: 65%;
+  top: 50%;
+}
+
+/* ─── Miniaturas Fotográficas en Tarjetas Tap-to-Select ─── */
+body.apple-warm-theme .tap-art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 4px;
+}
+
+.tap-photo-thumb {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 2px 4px rgba(28, 22, 14, 0.18));
+}
+
+.tap-photo-onion,
+.tap-photo-mayo {
+  filter: drop-shadow(0 2px 4px rgba(28, 22, 14, 0.34));
+}
+
+.tap-photo-sauce {
+  width: 92%;
+  height: auto;
+}
+
+.tap-photo-strip {
+  width: 96%;
+  height: auto;
+}
+
+.tap-photo-doble {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+.tap-photo-doble img {
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  display: block;
+}
+.tap-photo-doble-back {
+  left: 5px;
+  bottom: 2px;
+  filter: brightness(0.93) drop-shadow(0 2px 3px rgba(45, 28, 6, 0.24));
+}
+.tap-photo-doble-front {
+  right: 5px;
+  top: 2px;
+  filter: drop-shadow(0 2px 4px rgba(45, 28, 6, 0.28));
+}
+
+/* Capa overlay SVG de efectos (vapor + ráfaga mano + bote squeeze) */
+.pl-fx-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 12;
+}
+
+body.apple-warm-theme .drink-art-badge {
+  padding: 4px;
+}
+body.apple-warm-theme .drink-art-badge svg {
+  width: 34px;
+  height: 34px;
+  display: block;
+}
+
+/* ─── ANIMACIONES FOTOGRÁFICAS POR CAPAS ───────── */
+
+/* 1. Tortilla real cayendo suave sobre el plato */
+.pl-tortilla-drop {
+  animation: photoTortillaDrop 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform, opacity;
+}
+@keyframes photoTortillaDrop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% - 38px)) scale(1.06, 0.88);
+  }
+  24% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+    transform: translate(-50%, calc(-50% + 3px)) scale(1.02, 0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1, 1);
+  }
+}
+
+/* 2. Proteína real cayendo desde arriba con peso e impacto suave */
+.pl-protein-drop {
+  animation: photoProteinDrop 500ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform, opacity;
+}
+@keyframes photoProteinDrop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% - 92px)) scale(0.76) rotate(-8deg);
+  }
+  18% {
+    opacity: 1;
+  }
+  68% {
+    opacity: 1;
+    transform: translate(-50%, calc(-50% + 5px)) scale(1.06, 0.93) rotate(1deg);
+  }
+  84% {
+    opacity: 1;
+    transform: translate(-50%, calc(-50% - 3px)) scale(0.98, 1.02) rotate(0deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1, 1) rotate(0deg);
+  }
+}
+
+/* 3. Caída en 3 oleadas escalonadas ("mano de chef") para cebolla, cilantro, tomate, chiles */
+.pl-wave-drop {
+  animation: photoWaveDrop 560ms cubic-bezier(0.22, 1, 0.36, 1) var(--drop-delay, 0ms) both;
+  will-change: transform, opacity;
+}
+@keyframes photoWaveDrop {
+  0% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--drop-x, 0px)), calc(-50% + var(--drop-y, -100px))) scale(0.72) rotate(var(--drop-rot, 0deg));
+  }
+  18% {
+    opacity: 1;
+  }
+  68% {
+    opacity: 1;
+    transform: translate(-50%, calc(-50% + 4px)) scale(1.06, 0.93) rotate(0deg);
+  }
+  84% {
+    opacity: 1;
+    transform: translate(-50%, calc(-50% - 3px)) scale(0.98, 1.02) rotate(0deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1, 1) rotate(0deg);
+  }
+}
+
+/* 4. Barrido fotográfico de aderezo sincronizado con el bote squeeze */
+.pl-sauce-wipe {
+  clip-path: inset(0 100% 0 0);
+  -webkit-clip-path: inset(0 100% 0 0);
+  will-change: clip-path;
+}
+.pl-sauce-wipe.wipe-taco {
+  animation: photoSauceWipe 590ms linear 145ms forwards;
+}
+.pl-sauce-wipe.wipe-dog {
+  animation: photoSauceWipe 625ms linear 145ms forwards;
+}
+@keyframes photoSauceWipe {
+  0% {
+    clip-path: inset(0 100% 0 0);
+    -webkit-clip-path: inset(0 100% 0 0);
+  }
+  100% {
+    clip-path: inset(0 0% 0 0);
+    -webkit-clip-path: inset(0 0% 0 0);
+  }
+}
+
+/* Micro-rebote del plato al recibir proteína */
+.dish-impact-bounce {
+  transform-origin: center;
+  animation: dishImpactBounce 440ms ease-out 220ms both;
+}
+@keyframes dishImpactBounce {
+  0%   { transform: translateY(0px) scale(1, 1); }
+  36%  { transform: translateY(3px) scale(1.015, 0.985); }
+  72%  { transform: translateY(-1.5px) scale(0.996, 1.004); }
+  100% { transform: translateY(0px) scale(1, 1); }
+}
+
+/* Ráfaga sutil arriba simulando espolvoreado con la mano */
+.hand-toss-burst {
+  animation: handTossBurst 380ms ease-out both;
+}
+@keyframes handTossBurst {
+  0%   { opacity: 0; }
+  25%  { opacity: 0.72; }
+  100% { opacity: 0; }
+}
+
+/* Vapor cálido sutil de plancha */
+.food-steam-wisp {
+  opacity: 0;
+  filter: blur(1.4px);
+  animation: steamWispFloat 2.8s ease-in-out infinite;
+}
+.food-steam-wisp.wisp-2 { animation-delay: 0.75s; }
+.food-steam-wisp.wisp-3 { animation-delay: 1.5s; }
+.food-steam-group.steam-burst .food-steam-wisp {
+  animation-duration: 1.9s;
+}
+@keyframes steamWispFloat {
+  0%   { opacity: 0; transform: translateY(8px) scaleX(0.92); }
+  30%  { opacity: 0.45; }
+  72%  { opacity: 0.24; }
+  100% { opacity: 0; transform: translateY(-16px) scaleX(1.12); }
+}
+
+/* 5. Animación de Botella Dispensadora 3D (Squeeze Bottle) */
+.squeeze-bottle-rig {
+  transform-origin: 0px 0px;
+  filter: drop-shadow(0 8px 10px rgba(24, 16, 10, 0.24));
+  will-change: transform, opacity;
+}
+
+.squeeze-bottle-rig.sweep-taco {
+  animation: bottleSweepTaco 920ms cubic-bezier(0.32, 0.08, 0.24, 1) forwards;
+}
+
+.squeeze-bottle-rig.sweep-hotdog {
+  animation: bottleSweepHotdog 960ms cubic-bezier(0.32, 0.08, 0.24, 1) forwards;
+}
+
+@keyframes bottleSweepTaco {
+  0%   { opacity: 0; transform: translate(118px, 52px) rotate(-26deg) scale(0.88); }
+  15%  { opacity: 1; transform: translate(140px, 110px) rotate(-18deg) scale(1); }
+  32%  { opacity: 1; transform: translate(168px, 98px) rotate(-13deg) scale(1); }
+  50%  { opacity: 1; transform: translate(198px, 110px) rotate(-19deg) scale(1); }
+  68%  { opacity: 1; transform: translate(226px, 98px) rotate(-13deg) scale(1); }
+  82%  { opacity: 1; transform: translate(252px, 110px) rotate(-9deg) scale(1); }
+  100% { opacity: 0; transform: translate(276px, 48px) rotate(12deg) scale(0.86); }
+}
+
+@keyframes bottleSweepHotdog {
+  0%   { opacity: 0; transform: translate(58px, 54px) rotate(-26deg) scale(0.88); }
+  15%  { opacity: 1; transform: translate(80px, 112px) rotate(-20deg) scale(1); }
+  32%  { opacity: 1; transform: translate(136px, 100px) rotate(-14deg) scale(1); }
+  50%  { opacity: 1; transform: translate(192px, 112px) rotate(-18deg) scale(1); }
+  68%  { opacity: 1; transform: translate(248px, 100px) rotate(-13deg) scale(1); }
+  82%  { opacity: 1; transform: translate(300px, 112px) rotate(-9deg) scale(1); }
+  100% { opacity: 0; transform: translate(324px, 50px) rotate(12deg) scale(0.86); }
+}
+
+.squeeze-bottle-body {
+  transform-origin: 0px -42px;
+  animation: bottleSqueezePulse 240ms ease-in-out 130ms 3 alternate both;
+}
+@keyframes bottleSqueezePulse {
+  0%   { transform: scale(1.01, 0.99); }
+  100% { transform: scale(0.87, 1.05); }
+}
+
+.squeeze-jet-group {
+  opacity: 0;
+  animation: squeezeJetActive 920ms linear forwards;
+}
+.sweep-hotdog .squeeze-jet-group {
+  animation-duration: 960ms;
+}
+@keyframes squeezeJetActive {
+  0%, 14%  { opacity: 0; }
+  18%, 78% { opacity: 1; }
+  84%, 100% { opacity: 0; }
+}
+
+.squeeze-drop {
+  animation: squeezeDropFall 220ms linear 140ms 3;
+}
+.squeeze-drop.d2 {
+  animation-delay: 230ms;
+}
+@keyframes squeezeDropFall {
+  0%   { transform: translateY(-6px) scale(0.75); opacity: 0.95; }
+  100% { transform: translateY(8px) scale(1.05); opacity: 0.2; }
+}
+
+/* Accesibilidad: respeta preferencia de movimiento reducido */
+@media (prefers-reduced-motion: reduce) {
+  .pl-tortilla-drop,
+  .pl-protein-drop,
+  .pl-wave-drop,
+  .pl-sauce-wipe,
+  .dish-impact-bounce,
+  .hand-toss-burst,
+  .food-steam-wisp,
+  .squeeze-bottle-rig,
+  .squeeze-bottle-body,
+  .squeeze-jet-group {
+    animation: none !important;
+  }
+  .squeeze-bottle-rig,
+  .hand-toss-burst {
+    display: none;
+  }
+  .pl-sauce-wipe {
+    clip-path: none !important;
+    -webkit-clip-path: none !important;
+  }
+}
+
+/* ==========================================================================
+   MESERO IA ("PIDE LO DE SIEMPRE"), PUNTOS ESCANDÓN & COPILOTO IA OPERATIVO
+   ========================================================================== */
+
+/* 1. Píldoras superiores en cabecera de Cliente */
+.topnav-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.loyalty-header-pill,
+.ai-waiter-header-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  color: #92400e;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.12);
+}
+
+.ai-waiter-header-pill {
+  border-color: rgba(255, 107, 26, 0.32);
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+  color: #c2410c;
+}
+
+.loyalty-header-pill:active,
+.ai-waiter-header-pill:active {
+  transform: scale(0.95);
+}
+
+.loyalty-pts-unit {
+  font-weight: 600;
+  opacity: 0.85;
+  font-size: 0.72rem;
+}
+
+/* 2. Banner VIP "¿Lo de siempre?" en el Menú Principal */
+.client-usual-ai-banner {
+  margin: 10px 0 14px;
+}
+
+.usual-ai-card {
+  position: relative;
+  border-radius: 20px;
+  padding: 15px 16px;
+  background: linear-gradient(145deg, #fffcf7 0%, #fff4e6 55%, #ffedd5 100%);
+  border: 1px solid rgba(255, 107, 26, 0.24);
+  box-shadow: 0 10px 26px -10px rgba(234, 88, 12, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.usual-ai-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.usual-ai-badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.usual-ai-kicker {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #c2410c;
+  background: rgba(255, 107, 26, 0.12);
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+
+.usual-loyalty-pill {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #92400e;
+  background: rgba(251, 191, 36, 0.22);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  padding: 3px 9px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.usual-mic-mini-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(28, 25, 23, 0.12);
+  background: #ffffff;
+  color: #1c1917;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.usual-ai-greeting {
+  font-size: 1.02rem;
+  font-weight: 800;
+  color: #1c1917;
+  margin: 0 0 6px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.usual-ai-greeting span {
+  font-weight: 600;
+  color: #57534e;
+  font-size: 0.92rem;
+}
+
+.usual-ai-desc {
+  font-size: 0.82rem;
+  line-height: 1.42;
+  color: #57534e;
+  margin: 0;
+}
+
+.usual-combo-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(28, 25, 23, 0.08);
+  border-radius: 13px;
+  padding: 9px 12px;
+}
+
+.usual-combo-items {
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: #292524;
+  line-height: 1.35;
+}
+
+.usual-combo-price {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #ea580c;
+  white-space: nowrap;
+}
+
+.usual-ai-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.btn-usual-primary {
+  flex: 1;
+  min-width: 170px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 13px;
+  border: none;
+  background: linear-gradient(135deg, #ff6b1a 0%, #ea580c 100%);
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 16px -4px rgba(234, 88, 12, 0.42);
+  transition: transform 0.15s ease;
+}
+
+.btn-usual-primary:active {
+  transform: scale(0.97);
+}
+
+.btn-usual-pts {
+  font-size: 0.72rem;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.22);
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+
+.btn-usual-secondary {
+  padding: 10px 12px;
+  border-radius: 13px;
+  border: 1px solid rgba(28, 25, 23, 0.12);
+  background: #ffffff;
+  color: #292524;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* 3. Caja de Puntos y Canje en el Carrito */
+.cart-loyalty-box {
+  margin-bottom: 10px;
+}
+
+.cart-loyalty-strip {
+  background: #fffbeb;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 14px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cart-loyalty-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  color: #78350f;
+}
+
+.cart-loyalty-earn {
+  font-weight: 700;
+  color: #d97706;
+  background: rgba(245, 158, 11, 0.14);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.cart-rewards-scroll {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.cart-rewards-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.cart-reward-chip {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: #ffffff;
+  color: #1c1917;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cart-reward-chip.active {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #ffffff;
+  border-color: #d97706;
+}
+
+.cart-reward-chip.locked {
+  opacity: 0.55;
+}
+
+.crw-cost {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.cart-reward-chip.active .crw-cost {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.cart-loyalty-discount-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: #15803d;
+  background: #dcfce7;
+  padding: 6px 10px;
+  border-radius: 9px;
+}
+
+.cart-save-usual-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-save-cart-usual {
+  background: transparent;
+  border: none;
+  color: #c2410c;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 2px 4px;
+  text-decoration: underline;
+}
+
+/* 4. Modal Cliente: Mesero IA + Club de Puntos */
+.client-ai-loyalty-modal {
+  max-width: 500px;
+  width: 94vw;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  gap: 12px;
+  overflow: hidden;
+}
+
+.ai-loyalty-modal-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ai-loyalty-seg-tabs {
+  display: flex;
+  background: #f5f2eb;
+  padding: 4px;
+  border-radius: 12px;
+  flex: 1;
+}
+
+.ai-loyalty-seg-btn {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #57534e;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.ai-loyalty-seg-btn.active {
+  background: #ffffff;
+  color: #1c1917;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+}
+
+.ai-modal-close-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: #f5f2eb;
+  color: #44403c;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ai-loyalty-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  overflow-y: auto;
+  max-height: calc(88vh - 76px);
+}
+
+.ai-waiter-hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: linear-gradient(135deg, #fff8f1 0%, #ffedd5 100%);
+  border: 1px solid rgba(255, 107, 26, 0.22);
+  padding: 12px 14px;
+  border-radius: 16px;
+}
+
+.ai-chat-emblem {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #ff6b1a 0%, #ea580c 100%);
+  color: #ffffff;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 16px rgba(234, 88, 12, 0.25);
+}
+
+.ai-waiter-hero-texts {
+  flex: 1;
+  min-width: 0;
+}
+
+.ai-waiter-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.ai-local-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #15803d;
+  background: rgba(22, 163, 74, 0.12);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.ai-waiter-title {
+  margin: 2px 0;
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: #1c1917;
+}
+
+.ai-waiter-sub {
+  margin: 0;
+  font-size: 0.77rem;
+  color: #57534e;
+  line-height: 1.35;
+}
+
+.ai-quick-chips-row {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 3px;
+  scrollbar-width: none;
+}
+
+.ai-quick-chips-row::-webkit-scrollbar {
+  display: none;
+}
+
+.ai-quick-chip {
+  flex-shrink: 0;
+  padding: 6px 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(28, 25, 23, 0.12);
+  background: #faf7f2;
+  color: #292524;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.ai-quick-chip.featured {
+  background: #fff7ed;
+  border-color: rgba(255, 107, 26, 0.38);
+  color: #c2410c;
+  font-weight: 700;
+}
+
+.ai-quick-chip:hover {
+  background: #f0ece1;
+}
+
+.ai-chat-feed {
+  background: #faf8f5;
+  border: 1px solid rgba(28, 25, 23, 0.08);
+  border-radius: 15px;
+  padding: 12px;
+  min-height: 190px;
+  max-height: 290px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ai-msg-row {
+  display: flex;
+  width: 100%;
+}
+
+.ai-msg-row.user {
+  justify-content: flex-end;
+}
+
+.ai-msg-row.assistant {
+  justify-content: flex-start;
+}
+
+.ai-msg-bubble {
+  max-width: 88%;
+  padding: 10px 13px;
+  border-radius: 15px;
+  font-size: 0.83rem;
+  line-height: 1.44;
+}
+
+.ai-msg-row.user .ai-msg-bubble {
+  background: linear-gradient(135deg, #1c1917 0%, #292524 100%);
+  color: #ffffff;
+  border-bottom-right-radius: 4px;
+}
+
+.ai-msg-row.assistant .ai-msg-bubble {
+  background: #ffffff;
+  color: #1c1917;
+  border: 1px solid rgba(28, 25, 23, 0.09);
+  border-bottom-left-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.ai-msg-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.ai-msg-action-btn {
+  padding: 6px 10px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 107, 26, 0.35);
+  background: #fff7ed;
+  color: #c2410c;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ai-msg-action-btn:hover {
+  background: #ffedd5;
+}
+
+.ai-chat-input-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  border: 1px solid rgba(28, 25, 23, 0.15);
+  border-radius: 14px;
+  padding: 5px 6px;
+}
+
+.ai-inline-mic-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: none;
+  background: #f5f2eb;
+  font-size: 1rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.ai-chat-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 0.85rem;
+  color: #1c1917;
+  padding: 6px 4px;
+}
+
+.ai-chat-send-btn {
+  padding: 8px 13px;
+  border-radius: 10px;
+  border: none;
+  background: #ff6b1a;
+  color: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* 5. Tarjeta Wallet de Lealtad Puntos Escandón */
+.loyalty-wallet-card {
+  background: linear-gradient(135deg, #1c1917 0%, #292524 55%, #44403c 100%);
+  color: #ffffff;
+  border-radius: 18px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 12px 24px -8px rgba(28, 25, 23, 0.35);
+}
+
+.lw-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.lw-kicker {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #fbbf24;
+}
+
+.lw-member-name {
+  margin: 2px 0 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.lw-tier-pill {
+  font-size: 0.73rem;
+  font-weight: 700;
+  background: rgba(251, 191, 36, 0.2);
+  color: #fde68a;
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.lw-points-hero {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.lw-points-num {
+  font-size: 1.65rem;
+  font-weight: 800;
+  color: #fbbf24;
+}
+
+.lw-points-label {
+  font-size: 0.78rem;
+  color: #d6d3d1;
+}
+
+.lw-progress-track {
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+}
+
+.lw-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #f59e0b 0%, #fbbf24 100%);
+}
+
+.lw-meta-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.74rem;
+  color: #e7e5e4;
+}
+
+.loyalty-section-block {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 4px;
+}
+
+.loyalty-sec-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.btn-link-accent {
+  background: none;
+  border: none;
+  color: #ea580c;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.loyalty-usual-box {
+  background: #fff8f1;
+  border: 1px solid rgba(255, 107, 26, 0.25);
+  border-radius: 13px;
+  padding: 11px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.loyalty-usual-box.empty {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.lub-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lub-title {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #1c1917;
+}
+
+.lub-sub {
+  font-size: 0.75rem;
+  color: #57534e;
+}
+
+.loyalty-rewards-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.loyalty-reward-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 13px;
+  border: 1px solid rgba(28, 25, 23, 0.09);
+  background: #ffffff;
+}
+
+.loyalty-reward-card.selected {
+  border-color: #d97706;
+  background: #fffbeb;
+}
+
+.loyalty-reward-card.locked {
+  opacity: 0.6;
+}
+
+.lrc-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.lrc-emoji {
+  font-size: 1.35rem;
+}
+
+.lrc-texts {
+  display: flex;
+  flex-direction: column;
+}
+
+.lrc-title {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #1c1917;
+}
+
+.lrc-sub {
+  font-size: 0.73rem;
+  color: #57534e;
+}
+
+.lrc-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.lrc-cost {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #b45309;
+}
+
+.btn-lrc-redeem {
+  padding: 5px 11px;
+  border-radius: 8px;
+  border: none;
+  background: #ff6b1a;
+  color: #ffffff;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-lrc-redeem:disabled {
+  background: #e7e5e4;
+  color: #78716c;
+  cursor: not-allowed;
+}
+
+.btn-lrc-redeem.active {
+  background: #16a34a;
+}
+
+.loyalty-ledger-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.loyalty-ledger-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.76rem;
+  padding: 6px 10px;
+  background: #faf8f5;
+  border-radius: 8px;
+}
+
+.llr-delta.pos {
+  color: #15803d;
+  font-weight: 700;
+}
+
+.llr-delta.neg {
+  color: #b45309;
+  font-weight: 700;
+}
+
+.loyalty-discount-row {
+  color: #15803d !important;
+  font-weight: 700;
+}
+
+/* 6. COPILOTO IA OPERATIVO DEL RESTAURANTE (KDS / COCINA) */
+.btn-kds-copilot-pill {
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%) !important;
+  color: #c2410c !important;
+  border: 1px solid rgba(255, 107, 26, 0.35) !important;
+  font-weight: 700 !important;
+}
+
+.btn-kds-copilot-pill.active {
+  background: linear-gradient(135deg, #ff6b1a 0%, #ea580c 100%) !important;
+  color: #ffffff !important;
+}
+
+.kds-copilot-fab-wrap {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 950;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kds-copilot-fab-mic {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 1px solid rgba(28, 25, 23, 0.12);
+  background: #ffffff;
+  font-size: 1.15rem;
+  cursor: pointer;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.12);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kds-copilot-fab-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px;
+  border-radius: 999px;
+  border: none;
+  background: linear-gradient(135deg, #1c1917 0%, #292524 100%);
+  color: #ffffff;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 10px 26px rgba(28, 25, 23, 0.28);
+  transition: transform 0.16s ease;
+}
+
+.kds-copilot-fab-main:hover {
+  transform: translateY(-2px);
+}
+
+.kds-copilot-drawer {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  bottom: 14px;
+  width: min(460px, 94vw);
+  background: #fffdf9;
+  border: 1px solid rgba(28, 25, 23, 0.12);
+  border-radius: 24px;
+  box-shadow: 0 24px 60px rgba(28, 25, 23, 0.24);
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  padding: 18px;
+  gap: 12px;
+  transform: translateX(110%);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease;
+}
+
+.kds-copilot-drawer.open {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.kds-copilot-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.kds-copilot-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.copilot-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #16a34a;
+  box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.18);
+}
+
+.kds-copilot-title {
+  margin: 3px 0 2px;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #1c1917;
+}
+
+.kds-copilot-sub {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #57534e;
+}
+
+.kds-copilot-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kds-copilot-telemetry {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.copilot-tel-pill {
+  flex: 1;
+  min-width: 115px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 7px 10px;
+  border-radius: 11px;
+  border: 1px solid rgba(28, 25, 23, 0.09);
+  background: #f5f2eb;
+  font-size: 0.75rem;
+  color: #292524;
+  cursor: pointer;
+}
+
+.ct-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #a8a29e;
+}
+
+.ct-dot.live {
+  background: #ea580c;
+}
+
+.kds-copilot-feed {
+  flex: 1;
+  max-height: none;
+  min-height: 240px;
+}
+
+/* Tarjetas ricas dentro de las respuestas del Copiloto IA */
+.ai-msg-rich-card {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.copilot-order-mini-card {
+  background: #faf7f2;
+  border: 1px solid rgba(28, 25, 23, 0.1);
+  border-radius: 11px;
+  padding: 9px 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.comc-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+}
+
+.comc-status {
+  color: #ea580c;
+  font-weight: 700;
+}
+
+.comc-items {
+  font-size: 0.78rem;
+  color: #292524;
+  line-height: 1.35;
+}
+
+.comc-foot {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.74rem;
+  color: #57534e;
+  border-top: 1px dashed rgba(0, 0, 0, 0.1);
+  padding-top: 4px;
+}
+
+.copilot-inv-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.copilot-inv-row {
+  background: #faf7f2;
+  border: 1px solid rgba(28, 25, 23, 0.08);
+  border-radius: 10px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cir-top {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+}
+
+.cir-qty {
+  font-weight: 700;
+  color: #ea580c;
+}
+
+.cir-bar {
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.cir-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: #16a34a;
+}
+
+.cir-fill.status-low {
+  background: #f59e0b;
+}
+
+.cir-fill.status-out {
+  background: #ef4444;
+}
+
+.cir-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.71rem;
+  color: #57534e;
+}
+
+.kds-ai-loyalty-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 6px;
+}
+
+.kds-ai-order-tag,
+.kds-loyalty-order-tag {
+  font-size: 0.71rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.kds-ai-order-tag {
+  background: #fff7ed;
+  color: #c2410c;
+  border: 1px solid rgba(255, 107, 26, 0.3);
+}
+
+.kds-loyalty-order-tag {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
