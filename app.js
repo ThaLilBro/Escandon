@@ -92,85 +92,240 @@ const STATUS_META = {
 const ORDER_PHASES = ['pending', 'received', 'preparing', 'ready'];
 
 // ══════════════════════════════════════════════
-//  COMPOSICIÓN FOTOGRÁFICA HIPERREALISTA POR CAPAS (PNG TRANSPARENTE)
+//  ILUSTRACIONES VECTORIALES ARTESANALES DETALLADAS (100% SVG INTEGRADO)
+//  - Cero imágenes externas rotas: nítido en cualquier pantalla y conexión
+//  - Cada ingrediente es inconfundible al instante
 // ══════════════════════════════════════════════
-const FOOD_ASSET_VER = '20261121v15';
-const FOOD_PHOTO = {
-  plate:          `assets/food/plate.png?v=${FOOD_ASSET_VER}`,
-  tortilla:       `assets/food/taco_tortilla.png?v=${FOOD_ASSET_VER}`,
-  bistec:         `assets/food/taco_bistec.png?v=${FOOD_ASSET_VER}`,
-  longaniza:      `assets/food/taco_longaniza.png?v=${FOOD_ASSET_VER}`,
-  hotdog:         `assets/food/hotdog_base.png?v=${FOOD_ASSET_VER}`,
-  cilantro:       `assets/food/top_cilantro.png?v=${FOOD_ASSET_VER}`,
-  cilantroWaves: [
-    `assets/food/top_cilantro_w1.png?v=${FOOD_ASSET_VER}`,
-    `assets/food/top_cilantro_w2.png?v=${FOOD_ASSET_VER}`,
-    `assets/food/top_cilantro_w3.png?v=${FOOD_ASSET_VER}`,
-  ],
-  cebolla:        `assets/food/top_cebolla.png?v=${FOOD_ASSET_VER}`,
-  cebollaWaves: [
-    `assets/food/top_cebolla_w1.png?v=${FOOD_ASSET_VER}`,
-    `assets/food/top_cebolla_w2.png?v=${FOOD_ASSET_VER}`,
-    `assets/food/top_cebolla_w3.png?v=${FOOD_ASSET_VER}`,
-  ],
-  cebollaDog:     `assets/food/top_cebolla_dog.png?v=${FOOD_ASSET_VER}`,
-  cebollaDogWaves: [
-    `assets/food/top_cebolla_dog_w1.png?v=${FOOD_ASSET_VER}`,
-    `assets/food/top_cebolla_dog_w2.png?v=${FOOD_ASSET_VER}`,
-    `assets/food/top_cebolla_dog_w3.png?v=${FOOD_ASSET_VER}`,
-  ],
-  tomate:         `assets/food/top_tomate.png?v=${FOOD_ASSET_VER}`,
-  tomateWaves: [
-    `assets/food/top_tomate_w1.png?v=${FOOD_ASSET_VER}`,
-    `assets/food/top_tomate_w2.png?v=${FOOD_ASSET_VER}`,
-    `assets/food/top_tomate_w3.png?v=${FOOD_ASSET_VER}`,
-  ],
-  chiles:         `assets/food/top_chiles.png?v=${FOOD_ASSET_VER}`,
-  chilesWaves: [
-    `assets/food/top_chiles_w1.png?v=${FOOD_ASSET_VER}`,
-    `assets/food/top_chiles_w2.png?v=${FOOD_ASSET_VER}`,
-    `assets/food/top_chiles_w3.png?v=${FOOD_ASSET_VER}`,
-  ],
-  salsaRoja:      `assets/food/sauce_salsa_roja.png?v=${FOOD_ASSET_VER}`,
-  ketchup:        `assets/food/sauce_ketchup.png?v=${FOOD_ASSET_VER}`,
-  mostaza:        `assets/food/sauce_mostaza.png?v=${FOOD_ASSET_VER}`,
-  mayonesa:       `assets/food/sauce_mayonesa.png?v=${FOOD_ASSET_VER}`,
-};
-
 function preloadFoodPhotoAssets() {
-  if (typeof Image === 'undefined') return;
-  const urls = [
-    FOOD_PHOTO.plate, FOOD_PHOTO.tortilla, FOOD_PHOTO.bistec, FOOD_PHOTO.longaniza,
-    FOOD_PHOTO.hotdog, FOOD_PHOTO.cilantro, FOOD_PHOTO.cebolla, FOOD_PHOTO.cebollaDog,
-    FOOD_PHOTO.tomate, FOOD_PHOTO.chiles, FOOD_PHOTO.salsaRoja, FOOD_PHOTO.ketchup,
-    FOOD_PHOTO.mostaza, FOOD_PHOTO.mayonesa,
-    ...FOOD_PHOTO.cilantroWaves, ...FOOD_PHOTO.cebollaWaves, ...FOOD_PHOTO.cebollaDogWaves,
-    ...FOOD_PHOTO.tomateWaves, ...FOOD_PHOTO.chilesWaves,
-  ];
-  urls.forEach(src => {
-    const img = new Image();
-    img.decoding = 'async';
-    img.src = src;
-  });
+  // Ilustraciones vectoriales integradas: carga instantánea sin archivos externos
 }
 
 const INGREDIENT_ART = {
-  tortilla_sencilla: `<img class="tap-photo-thumb" src="${FOOD_PHOTO.tortilla}" alt="" loading="eager" decoding="async" />`,
+  tortilla_sencilla: `
+    <svg class="tap-svg-art" viewBox="0 0 56 56" aria-hidden="true">
+      <defs>
+        <radialGradient id="ia_tort1" cx="42%" cy="36%" r="62%">
+          <stop offset="0%" stop-color="#fff1c2"/>
+          <stop offset="68%" stop-color="#f2cd78"/>
+          <stop offset="100%" stop-color="#d9a548"/>
+        </radialGradient>
+      </defs>
+      <ellipse cx="28" cy="31" rx="20" ry="18.5" fill="#7a4c14" opacity="0.16"/>
+      <circle cx="28" cy="27.5" r="19.5" fill="url(#ia_tort1)" stroke="#ba822e" stroke-width="1.5"/>
+      <circle cx="28" cy="27.5" r="16.5" fill="none" stroke="#fff7dc" stroke-width="1" opacity="0.6"/>
+      <ellipse cx="21" cy="21" rx="3.4" ry="2.1" transform="rotate(-18 21 21)" fill="#b06f22" opacity="0.46"/>
+      <ellipse cx="35.5" cy="23.5" rx="2.8" ry="1.8" transform="rotate(22 35.5 23.5)" fill="#9c5c17" opacity="0.42"/>
+      <ellipse cx="29" cy="34.5" rx="3.8" ry="2.2" transform="rotate(-8 29 34.5)" fill="#a6641b" opacity="0.44"/>
+      <circle cx="19" cy="31.5" r="1.5" fill="#9c5c17" opacity="0.38"/>
+      <circle cx="36" cy="32.5" r="1.4" fill="#b06f22" opacity="0.36"/>
+      <circle cx="28.5" cy="18" r="1.2" fill="#9c5c17" opacity="0.34"/>
+    </svg>`,
+
   tortilla_doble: `
-    <div class="tap-photo-doble" aria-hidden="true">
-      <img class="tap-photo-doble-back" src="${FOOD_PHOTO.tortilla}" alt="" loading="eager" decoding="async" />
-      <img class="tap-photo-doble-front" src="${FOOD_PHOTO.tortilla}" alt="" loading="eager" decoding="async" />
-    </div>`,
-  bistec:     `<img class="tap-photo-thumb" src="${FOOD_PHOTO.bistec}" alt="" loading="eager" decoding="async" />`,
-  longaniza:  `<img class="tap-photo-thumb" src="${FOOD_PHOTO.longaniza}" alt="" loading="eager" decoding="async" />`,
-  cilantro:   `<img class="tap-photo-thumb" src="${FOOD_PHOTO.cilantro}" alt="" loading="eager" decoding="async" />`,
-  cebolla:    `<img class="tap-photo-thumb tap-photo-onion" src="${FOOD_PHOTO.cebolla}" alt="" loading="eager" decoding="async" />`,
-  salsa_roja: `<img class="tap-photo-thumb tap-photo-sauce" src="${FOOD_PHOTO.salsaRoja}" alt="" loading="eager" decoding="async" />`,
-  ketchup:    `<img class="tap-photo-thumb tap-photo-sauce" src="${FOOD_PHOTO.ketchup}" alt="" loading="eager" decoding="async" />`,
-  mayonesa:   `<img class="tap-photo-thumb tap-photo-sauce tap-photo-mayo" src="${FOOD_PHOTO.mayonesa}" alt="" loading="eager" decoding="async" />`,
-  mostaza:    `<img class="tap-photo-thumb tap-photo-sauce" src="${FOOD_PHOTO.mostaza}" alt="" loading="eager" decoding="async" />`,
-  chiles:     `<img class="tap-photo-thumb tap-photo-strip" src="${FOOD_PHOTO.chiles}" alt="" loading="eager" decoding="async" />`,
-  tomate:     `<img class="tap-photo-thumb tap-photo-strip" src="${FOOD_PHOTO.tomate}" alt="" loading="eager" decoding="async" />`,
+    <svg class="tap-svg-art" viewBox="0 0 56 56" aria-hidden="true">
+      <defs>
+        <radialGradient id="ia_tort2b" cx="42%" cy="38%" r="64%">
+          <stop offset="0%" stop-color="#f6df9e"/>
+          <stop offset="72%" stop-color="#e3b659"/>
+          <stop offset="100%" stop-color="#c48d33"/>
+        </radialGradient>
+        <radialGradient id="ia_tort2f" cx="40%" cy="34%" r="62%">
+          <stop offset="0%" stop-color="#fff4ca"/>
+          <stop offset="68%" stop-color="#f4d17f"/>
+          <stop offset="100%" stop-color="#dba74b"/>
+        </radialGradient>
+      </defs>
+      <ellipse cx="24" cy="35" rx="16.5" ry="14.5" fill="#7a4c14" opacity="0.16"/>
+      <circle cx="23.5" cy="32" r="16" fill="url(#ia_tort2b)" stroke="#a87223" stroke-width="1.45"/>
+      <ellipse cx="16.5" cy="34" rx="2.6" ry="1.6" fill="#965715" opacity="0.42"/>
+      <circle cx="21" cy="41.5" r="1.4" fill="#965715" opacity="0.38"/>
+      <ellipse cx="33.5" cy="26.5" rx="16.2" ry="15.2" fill="#5e3609" opacity="0.22"/>
+      <circle cx="33" cy="24" r="16" fill="url(#ia_tort2f)" stroke="#ba822e" stroke-width="1.45"/>
+      <circle cx="33" cy="24" r="13.4" fill="none" stroke="#fff9e3" stroke-width="0.95" opacity="0.62"/>
+      <ellipse cx="27.5" cy="19.5" rx="2.8" ry="1.7" transform="rotate(-18 27.5 19.5)" fill="#a8671c" opacity="0.45"/>
+      <ellipse cx="39" cy="23" rx="2.4" ry="1.5" transform="rotate(20 39 23)" fill="#965715" opacity="0.42"/>
+      <ellipse cx="33" cy="30.5" rx="3.1" ry="1.8" fill="#a8671c" opacity="0.44"/>
+    </svg>`,
+
+  bistec: `
+    <svg class="tap-svg-art" viewBox="0 0 56 56" aria-hidden="true">
+      <ellipse cx="28" cy="37" rx="19" ry="8" fill="#4a1e0a" opacity="0.16"/>
+      <!-- Cubos y tiras de bistec asado a la plancha -->
+      <path d="M11 32 Q12 24 20 24 L25 26 Q27 32 22 36 L14 36 Z" fill="#6b3015" stroke="#421a09" stroke-width="1.3" stroke-linejoin="round"/>
+      <path d="M29 24 Q37 22 44 27 Q46 33 41 37 L31 36 Z" fill="#7a3818" stroke="#421a09" stroke-width="1.3" stroke-linejoin="round"/>
+      <path d="M17 22 Q23 15 32 17 Q37 20 35 27 L22 28 Z" fill="#8c431f" stroke="#471d0a" stroke-width="1.3" stroke-linejoin="round"/>
+      <path d="M20 30 Q28 26 35 30 Q37 36 31 39 L21 38 Z" fill="#823c1b" stroke="#421a09" stroke-width="1.3" stroke-linejoin="round"/>
+      <path d="M25 21 Q30 19 36 22 Q37 27 32 29 L24 27 Z" fill="#9c4f27" stroke="#4d200b" stroke-width="1.2" stroke-linejoin="round"/>
+      <!-- Marcas de sellado a la plancha -->
+      <path d="M20 20 L25 25 M26 18 L31 23 M33 27 L39 33 M23 32 L28 37 M14 28 L19 33" stroke="#361306" stroke-width="1.8" stroke-linecap="round" opacity="0.72"/>
+      <!-- Brillos jugosos -->
+      <path d="M21 19 Q25 18 29 19.5" stroke="#d99462" stroke-width="1.6" stroke-linecap="round" opacity="0.78"/>
+      <path d="M25 30.5 Q29 29.5 32.5 31" stroke="#d99462" stroke-width="1.4" stroke-linecap="round" opacity="0.7"/>
+      <path d="M35 26 Q39 26 41.5 28" stroke="#d99462" stroke-width="1.4" stroke-linecap="round" opacity="0.65"/>
+    </svg>`,
+
+  longaniza: `
+    <svg class="tap-svg-art" viewBox="0 0 56 56" aria-hidden="true">
+      <ellipse cx="28" cy="38" rx="19" ry="7.5" fill="#5e1406" opacity="0.16"/>
+      <!-- Trozos y rodajas adobadas de longaniza roja -->
+      <ellipse cx="18" cy="31" rx="8.5" ry="6.2" transform="rotate(-18 18 31)" fill="#b82b12" stroke="#6e1507" stroke-width="1.35"/>
+      <ellipse cx="37.5" cy="32" rx="8.5" ry="6.2" transform="rotate(16 37.5 32)" fill="#c93516" stroke="#6e1507" stroke-width="1.35"/>
+      <ellipse cx="28" cy="23.5" rx="9" ry="6.5" transform="rotate(-6 28 23.5)" fill="#df4820" stroke="#751808" stroke-width="1.35"/>
+      <ellipse cx="28" cy="34.5" rx="8.2" ry="5.6" transform="rotate(8 28 34.5)" fill="#d63c18" stroke="#6e1507" stroke-width="1.3"/>
+      <!-- Granitos de adobo y brillo naranja paprika -->
+      <circle cx="25" cy="22" r="1.4" fill="#ff9e4a" opacity="0.88"/>
+      <circle cx="31.5" cy="24.5" r="1.2" fill="#ffd28a" opacity="0.82"/>
+      <circle cx="17" cy="29.5" r="1.3" fill="#ff9e4a" opacity="0.8"/>
+      <circle cx="38" cy="30.5" r="1.3" fill="#ffad5c" opacity="0.82"/>
+      <circle cx="27.5" cy="33.5" r="1.2" fill="#ffd28a" opacity="0.8"/>
+      <circle cx="29" cy="21" r="1" fill="#591105" opacity="0.75"/>
+      <circle cx="20.5" cy="33" r="1" fill="#591105" opacity="0.75"/>
+      <circle cx="34.5" cy="34" r="1" fill="#591105" opacity="0.75"/>
+      <path d="M23 19.5 Q28 18 33 20" fill="none" stroke="#ffbd73" stroke-width="1.4" stroke-linecap="round" opacity="0.75"/>
+    </svg>`,
+
+  cilantro: `
+    <svg class="tap-svg-art" viewBox="0 0 56 56" aria-hidden="true">
+      <!-- Tallitos tiernos -->
+      <path d="M27 44 Q28 34 25 25 M29 44 Q32 34 36 27 M26 42 Q20 35 16 29" fill="none" stroke="#2c8c3c" stroke-width="2" stroke-linecap="round"/>
+      <!-- Hojas festoneadas de cilantro fresco -->
+      <path d="M25 26 C18 22 17 13 24 12 C27 9 32 10 33 14 C38 15 37 23 30 25 Z" fill="#35a648" stroke="#1d662a" stroke-width="1.3" stroke-linejoin="round"/>
+      <path d="M19 32 C11 31 9 23 14 19 C17 16 22 18 23 22 C26 26 23 31 19 32 Z" fill="#46bd58" stroke="#1e6b2c" stroke-width="1.25" stroke-linejoin="round"/>
+      <path d="M34 32 C32 25 36 18 42 19 C47 21 47 28 42 32 C39 34 35 34 34 32 Z" fill="#2c8f3d" stroke="#1a5e26" stroke-width="1.25" stroke-linejoin="round"/>
+      <path d="M24 37 C19 36 19 29 25 28 C29 26 34 29 33 34 C32 38 27 39 24 37 Z" fill="#4dc760" stroke="#1f702d" stroke-width="1.2" stroke-linejoin="round"/>
+      <!-- Nervaduras brillantes -->
+      <path d="M27 24 L27.5 14 M19 29 L15 22 M36 29 L41 23" stroke="#a6f2ae" stroke-width="1.2" stroke-linecap="round" opacity="0.85"/>
+    </svg>`,
+
+  cebolla: `
+    <svg class="tap-svg-art" viewBox="0 0 56 56" aria-hidden="true">
+      <ellipse cx="28" cy="39" rx="18" ry="6.5" fill="#5c5373" opacity="0.14"/>
+      <!-- Cubos perlados y aros de cebolla blanca picada -->
+      <path d="M12 29 L22 25 L26 33 L16 37 Z" fill="#ffffff" stroke="#8d82a6" stroke-width="1.4" stroke-linejoin="round"/>
+      <path d="M16 37 L26 33 L26 37 L16 40 Z" fill="#e6e1f0" stroke="#8d82a6" stroke-width="1.2" stroke-linejoin="round"/>
+      <path d="M28 28 L39 24 L43 32 L32 36 Z" fill="#ffffff" stroke="#8d82a6" stroke-width="1.4" stroke-linejoin="round"/>
+      <path d="M32 36 L43 32 L43 36 L32 39 Z" fill="#e2dce8" stroke="#8d82a6" stroke-width="1.2" stroke-linejoin="round"/>
+      <path d="M20 18 L31 15 L35 23 L24 26 Z" fill="#ffffff" stroke="#857a9e" stroke-width="1.45" stroke-linejoin="round"/>
+      <path d="M24 26 L35 23 L35 27 L24 30 Z" fill="#eae5f5" stroke="#857a9e" stroke-width="1.2" stroke-linejoin="round"/>
+      <!-- Líneas sutiles de capas de cebolla -->
+      <path d="M23 19 Q27.5 18 31.5 21" fill="none" stroke="#c3bad6" stroke-width="1.2" stroke-linecap="round"/>
+      <path d="M15 30 Q19 29 22 32" fill="none" stroke="#c3bad6" stroke-width="1.15" stroke-linecap="round"/>
+      <path d="M31 29 Q35.5 28 39 30.5" fill="none" stroke="#c3bad6" stroke-width="1.15" stroke-linecap="round"/>
+    </svg>`,
+
+  salsa_roja: `
+    <svg class="tap-svg-art" viewBox="0 0 56 56" aria-hidden="true">
+      <defs>
+        <radialGradient id="ia_salsa" cx="42%" cy="38%" r="60%">
+          <stop offset="0%" stop-color="#f54b33"/>
+          <stop offset="65%" stop-color="#cc1e0e"/>
+          <stop offset="100%" stop-color="#8c1005"/>
+        </radialGradient>
+      </defs>
+      <!-- Cazuelita / mancha brillante de salsa de molcajete -->
+      <path d="M10 31 C10 22 19 18 28 18 C37 18 46 22 46 31 C46 39 37 42 28 42 C19 42 10 39 10 31 Z" fill="#4a4440" stroke="#2b2725" stroke-width="1.5"/>
+      <ellipse cx="28" cy="28" rx="15.5" ry="9.5" fill="url(#ia_salsa)" stroke="#780d04" stroke-width="1.2"/>
+      <!-- Semillitas y trocitos asados de molcajete -->
+      <circle cx="22" cy="27" r="1.2" fill="#fad26b"/>
+      <circle cx="33" cy="29.5" r="1.15" fill="#fad26b"/>
+      <circle cx="28" cy="24.5" r="1.1" fill="#fad26b"/>
+      <circle cx="25" cy="31" r="1.2" fill="#4f0a03"/>
+      <circle cx="35.5" cy="26" r="1.1" fill="#4f0a03"/>
+      <circle cx="19.5" cy="30" r="1" fill="#4f0a03"/>
+      <!-- Brillo especular -->
+      <path d="M18 24.5 Q24 21 31 22" fill="none" stroke="#ffada1" stroke-width="2" stroke-linecap="round" opacity="0.72"/>
+    </svg>`,
+
+  ketchup: `
+    <svg class="tap-svg-art" viewBox="0 0 56 56" aria-hidden="true">
+      <!-- Bote squeeze de Ketchup + chorro zigzag rojo -->
+      <g transform="translate(22 25) rotate(-24)">
+        <path d="M-3 -17 L0 -23 L3 -17 Z" fill="#e02516" stroke="#851107" stroke-width="1.1"/>
+        <rect x="-6.5" y="-17" width="13" height="5" rx="2" fill="#f7f4ec" stroke="#b5aa98" stroke-width="1.1"/>
+        <rect x="-8.5" y="-12" width="17" height="26" rx="5.5" fill="#e02516" stroke="#851107" stroke-width="1.35"/>
+        <rect x="-7.2" y="-3" width="14.4" height="9" rx="1.5" fill="#ffffff" opacity="0.94"/>
+        <line x1="-4" y1="1.5" x2="4" y2="1.5" stroke="#e02516" stroke-width="2" stroke-linecap="round"/>
+        <path d="M-4.8 -9 L-4.8 10" stroke="#ff9c94" stroke-width="1.8" stroke-linecap="round" opacity="0.6"/>
+      </g>
+      <path d="M25 43 Q30 37 35 43 T46 41" fill="none" stroke="#851107" stroke-width="5.2" stroke-linecap="round" opacity="0.25"/>
+      <path d="M25 42 Q30 36 35 42 T46 40" fill="none" stroke="#df2314" stroke-width="4.2" stroke-linecap="round"/>
+      <path d="M26 41 Q30 36.8 34.5 41" fill="none" stroke="#ff9e96" stroke-width="1.2" stroke-linecap="round" opacity="0.8"/>
+    </svg>`,
+
+  mayonesa: `
+    <svg class="tap-svg-art" viewBox="0 0 56 56" aria-hidden="true">
+      <!-- Bote squeeze de Mayonesa + chorro cremoso marfil -->
+      <g transform="translate(22 25) rotate(-24)">
+        <path d="M-3 -17 L0 -23 L3 -17 Z" fill="#f7f2e4" stroke="#aba089" stroke-width="1.1"/>
+        <rect x="-6.5" y="-17" width="13" height="5" rx="2" fill="#ede4d1" stroke="#aba089" stroke-width="1.1"/>
+        <rect x="-8.5" y="-12" width="17" height="26" rx="5.5" fill="#fffdf7" stroke="#aba089" stroke-width="1.4"/>
+        <rect x="-7.2" y="-3" width="14.4" height="9" rx="1.5" fill="#f0b643" opacity="0.92"/>
+        <line x1="-4" y1="1.5" x2="4" y2="1.5" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+      </g>
+      <path d="M25 42 Q30 36 35 42 T46 40" fill="none" stroke="#b3a68c" stroke-width="5.6" stroke-linecap="round"/>
+      <path d="M25 42 Q30 36 35 42 T46 40" fill="none" stroke="#fffef9" stroke-width="3.6" stroke-linecap="round"/>
+    </svg>`,
+
+  mostaza: `
+    <svg class="tap-svg-art" viewBox="0 0 56 56" aria-hidden="true">
+      <!-- Bote squeeze de Mostaza + chorro dorado -->
+      <g transform="translate(22 25) rotate(-24)">
+        <path d="M-3 -17 L0 -23 L3 -17 Z" fill="#e8b30e" stroke="#916803" stroke-width="1.1"/>
+        <rect x="-6.5" y="-17" width="13" height="5" rx="2" fill="#f7c928" stroke="#916803" stroke-width="1.1"/>
+        <rect x="-8.5" y="-12" width="17" height="26" rx="5.5" fill="#f5c21b" stroke="#916803" stroke-width="1.35"/>
+        <rect x="-7.2" y="-3" width="14.4" height="9" rx="1.5" fill="#fffbe6" opacity="0.95"/>
+        <line x1="-4" y1="1.5" x2="4" y2="1.5" stroke="#a67704" stroke-width="2" stroke-linecap="round"/>
+        <path d="M-4.8 -9 L-4.8 10" stroke="#fff6b8" stroke-width="1.8" stroke-linecap="round" opacity="0.72"/>
+      </g>
+      <path d="M25 43 Q30 37 35 43 T46 41" fill="none" stroke="#916803" stroke-width="5.2" stroke-linecap="round" opacity="0.25"/>
+      <path d="M25 42 Q30 36 35 42 T46 40" fill="none" stroke="#f2bd16" stroke-width="4.2" stroke-linecap="round"/>
+      <path d="M26 41 Q30 36.8 34.5 41" fill="none" stroke="#fff7bf" stroke-width="1.2" stroke-linecap="round" opacity="0.85"/>
+    </svg>`,
+
+  chiles: `
+    <svg class="tap-svg-art" viewBox="0 0 56 56" aria-hidden="true">
+      <!-- 3 rodajas de chile jalapeño curado con semillas -->
+      <g transform="translate(20 33)">
+        <ellipse rx="10.5" ry="8.5" fill="#468027" stroke="#294f15" stroke-width="1.3"/>
+        <ellipse rx="7.6" ry="5.9" fill="#7ec744"/>
+        <ellipse rx="4.2" ry="3.2" fill="#e5f2b3"/>
+        <circle cx="-1.8" cy="-0.8" r="1" fill="#e0b84c"/>
+        <circle cx="1.8" cy="0.8" r="1" fill="#e0b84c"/>
+      </g>
+      <g transform="translate(36 33)">
+        <ellipse rx="10" ry="8" fill="#4d8a2b" stroke="#294f15" stroke-width="1.3"/>
+        <ellipse rx="7.2" ry="5.5" fill="#84cc49"/>
+        <ellipse rx="4" ry="3" fill="#e5f2b3"/>
+        <circle cx="-1.5" cy="0.8" r="0.95" fill="#e0b84c"/>
+        <circle cx="1.8" cy="-0.9" r="0.95" fill="#e0b84c"/>
+      </g>
+      <g transform="translate(28 21.5)">
+        <ellipse rx="11" ry="8.8" fill="#53942f" stroke="#294f15" stroke-width="1.35"/>
+        <ellipse rx="8.1" ry="6.2" fill="#8cd651"/>
+        <ellipse rx="4.5" ry="3.4" fill="#edf7c1"/>
+        <circle cx="-2" cy="-0.6" r="1.05" fill="#e0b84c"/>
+        <circle cx="2" cy="-0.5" r="1.05" fill="#e0b84c"/>
+        <circle cx="0" cy="1.6" r="1" fill="#e0b84c"/>
+      </g>
+    </svg>`,
+
+  tomate: `
+    <svg class="tap-svg-art" viewBox="0 0 56 56" aria-hidden="true">
+      <ellipse cx="28" cy="39" rx="18" ry="6.5" fill="#6b1108" opacity="0.14"/>
+      <!-- Cubos brillantes de tomate rojo picado -->
+      <path d="M11 29 L21 25 L25 33 L15 37 Z" fill="#e63522" stroke="#8f180c" stroke-width="1.3" stroke-linejoin="round"/>
+      <path d="M15 37 L25 33 L25 38 L15 41 Z" fill="#bf2111" stroke="#8f180c" stroke-width="1.15" stroke-linejoin="round"/>
+      <path d="M29 27 L40 24 L44 32 L33 36 Z" fill="#ed3f2b" stroke="#8f180c" stroke-width="1.3" stroke-linejoin="round"/>
+      <path d="M33 36 L44 32 L44 37 L33 40 Z" fill="#c42414" stroke="#8f180c" stroke-width="1.15" stroke-linejoin="round"/>
+      <path d="M19 18 L31 15 L35 23 L23 26 Z" fill="#f24733" stroke="#8f180c" stroke-width="1.35" stroke-linejoin="round"/>
+      <path d="M23 26 L35 23 L35 27.5 L23 30 Z" fill="#cc2616" stroke="#8f180c" stroke-width="1.15" stroke-linejoin="round"/>
+      <!-- Semillitas amarillas y brillo fresco -->
+      <circle cx="25.5" cy="20" r="1" fill="#ffe078"/>
+      <circle cx="29.5" cy="21" r="0.95" fill="#ffe078"/>
+      <circle cx="17.5" cy="31" r="0.95" fill="#ffe078"/>
+      <circle cx="36" cy="29.5" r="1" fill="#ffe078"/>
+      <path d="M22 18.5 L29 16.8" stroke="#ffb3a8" stroke-width="1.3" stroke-linecap="round" opacity="0.8"/>
+    </svg>`,
 };
 
 // ══════════════════════════════════════════════
@@ -1791,18 +1946,18 @@ function addDrinkToCart(drinkId) {
 }
 
 // ══════════════════════════════════════════════
-//  COMPOSITOR FOTOGRÁFICO HIPERREALISTA POR CAPAS (PNG TRANSPARENTE)
-//  - Fotografía real de estudio por capa (plato, tortillas, proteína, vegetales y salsas)
-//  - Caída escalonada en 3 oleadas ("mano de chef") para ingredientes picados
-//  - Botellas squeeze 3D animadas sincronizadas con el barrido real del aderezo
+//  COMPOSITOR VECTORIAL DETALLADO Y ANIMADO (100% SVG INTEGRADO)
+//  - Tortilla 100% opaca con manchas de comal (sencilla y doble)
+//  - Carne y verduras cayendo desde arriba en 3 oleadas ("mano de taquero")
+//  - Botellas squeeze 3D animadas tirando el aderezo en zigzag en vivo
 // ══════════════════════════════════════════════
 function renderHandTossBurstSVG(cx, cy, color = '#d69e4e') {
   return `
     <g class="hand-toss-burst" transform="translate(${cx}, ${cy})" opacity="0">
-      <path d="M-24 2 Q0 -12, 24 2" fill="none" stroke="${color}" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="4 6"/>
-      <line x1="-18" y1="6" x2="-22" y2="20" stroke="${color}" stroke-width="2" stroke-linecap="round"/>
-      <line x1="0" y1="4" x2="0" y2="22" stroke="${color}" stroke-width="2" stroke-linecap="round"/>
-      <line x1="18" y1="6" x2="22" y2="20" stroke="${color}" stroke-width="2" stroke-linecap="round"/>
+      <path d="M-26 2 Q0 -12, 26 2" fill="none" stroke="${color}" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="4 6"/>
+      <line x1="-18" y1="6" x2="-22" y2="22" stroke="${color}" stroke-width="2" stroke-linecap="round"/>
+      <line x1="0" y1="4" x2="0" y2="24" stroke="${color}" stroke-width="2" stroke-linecap="round"/>
+      <line x1="18" y1="6" x2="22" y2="22" stroke="${color}" stroke-width="2" stroke-linecap="round"/>
     </g>
   `;
 }
@@ -1880,19 +2035,185 @@ function renderSqueezeBottleSVG(condimentId, station, uid) {
   `;
 }
 
-function renderPhotoWaveLayer(waveUrls, fullUrl, layerClass, animate, compact) {
-  if (compact || !animate || !Array.isArray(waveUrls) || waveUrls.length === 0) {
-    return `<img class="pl-layer ${layerClass}" src="${fullUrl}" alt="" decoding="async" />`;
+function wrapVectorWaves(wavesHtml, animate, compact) {
+  if (compact || !animate) {
+    return `<g>${wavesHtml.join('')}</g>`;
   }
   const waveSpecs = [
-    { dx: '-14px', dy: '-96px',  rot: '-20deg', delay: '0ms'   },
-    { dx: '8px',   dy: '-114px', rot: '16deg',  delay: '75ms'  },
-    { dx: '-5px',  dy: '-102px', rot: '-12deg', delay: '150ms' },
+    { dx: '-12px', dy: '-88px',  rot: '-14deg', delay: '0ms'   },
+    { dx: '9px',   dy: '-104px', rot: '12deg',  delay: '80ms'  },
+    { dx: '-4px',  dy: '-94px',  rot: '-8deg',  delay: '155ms' },
   ];
-  return waveUrls.map((src, idx) => {
+  return wavesHtml.map((chunk, idx) => {
     const sp = waveSpecs[idx % waveSpecs.length];
-    return `<img class="pl-layer ${layerClass} pl-wave-drop" src="${src}" alt="" decoding="async" style="--drop-x:${sp.dx}; --drop-y:${sp.dy}; --drop-rot:${sp.rot}; --drop-delay:${sp.delay};" />`;
+    return `<g class="svg-toss-wave" style="--drop-x:${sp.dx}; --drop-y:${sp.dy}; --drop-rot:${sp.rot}; --drop-delay:${sp.delay};">${chunk}</g>`;
   }).join('');
+}
+
+function renderArtisanalTortillaSVG(cx, cy, gradId, isBack = false) {
+  const rx = 74;
+  const ry = 55;
+  return `
+    <g transform="translate(${cx}, ${cy})">
+      <ellipse cx="2" cy="7" rx="${rx}" ry="${ry}" fill="#5c360a" opacity="${isBack ? '0.18' : '0.24'}"/>
+      <ellipse cx="0" cy="0" rx="${rx}" ry="${ry}" fill="url(#${gradId})" stroke="${isBack ? '#b57d2b' : '#c78f36'}" stroke-width="2"/>
+      <ellipse cx="0" cy="-1" rx="${rx - 6}" ry="${ry - 5}" fill="none" stroke="#fff8de" stroke-width="1.4" opacity="0.52"/>
+      <!-- Manchitas auténticas del comal -->
+      <ellipse cx="-38" cy="-18" rx="9" ry="5.5" transform="rotate(-16 -38 -18)" fill="#a8671d" opacity="0.34"/>
+      <ellipse cx="34" cy="-22" rx="8" ry="4.8" transform="rotate(20 34 -22)" fill="#965615" opacity="0.32"/>
+      <ellipse cx="-44" cy="14" rx="7.5" ry="4.2" transform="rotate(14 -44 14)" fill="#a8671d" opacity="0.3"/>
+      <ellipse cx="42" cy="16" rx="8.5" ry="4.6" transform="rotate(-14 42 16)" fill="#965615" opacity="0.34"/>
+      <ellipse cx="6" cy="34" rx="10" ry="5" transform="rotate(-4 6 34)" fill="#a8671d" opacity="0.32"/>
+      <ellipse cx="-12" cy="-35" rx="7" ry="3.8" transform="rotate(8 -12 -35)" fill="#b06f22" opacity="0.3"/>
+      <circle cx="24" cy="28" r="2.6" fill="#8f5112" opacity="0.3"/>
+      <circle cx="-26" cy="27" r="2.2" fill="#8f5112" opacity="0.28"/>
+      <circle cx="48" cy="-4" r="2.3" fill="#a8671d" opacity="0.28"/>
+      <circle cx="-51" cy="-2" r="2.4" fill="#965615" opacity="0.28"/>
+    </g>
+  `;
+}
+
+function renderTacoBistecSVG(cx, cy, animate, compact) {
+  const mkPiece = (x, y, w, h, rot, fill, hi) => `
+    <g transform="translate(${cx + x}, ${cy + y}) rotate(${rot})">
+      <rect x="${-w/2}" y="${-h/2 + 2.2}" width="${w}" height="${h}" rx="4.5" fill="#331205" opacity="0.34"/>
+      <rect x="${-w/2}" y="${-h/2}" width="${w}" height="${h}" rx="4.5" fill="${fill}" stroke="#421908" stroke-width="1.35"/>
+      <line x1="${-w/2 + 4}" y1="${-h/2 + 2.5}" x2="${w/2 - 5}" y2="${h/2 - 2.5}" stroke="#2e0f04" stroke-width="1.8" stroke-linecap="round" opacity="0.62"/>
+      <path d="M${-w/2 + 3.5} ${-h/2 + 3.2} Q0 ${-h/2 + 1.5} ${w/2 - 4} ${-h/2 + 3.5}" fill="none" stroke="${hi}" stroke-width="1.5" stroke-linecap="round" opacity="0.72"/>
+    </g>`;
+
+  const wave1 = `
+    <ellipse cx="${cx}" cy="${cy + 4}" rx="48" ry="31" fill="#471d0a" opacity="0.2"/>
+    ${mkPiece(-32, 6,  20, 14, -18, '#6e3115', '#bf7241')}
+    ${mkPiece(-14, 15, 22, 14, 10,  '#7a3819', '#c77a48')}
+    ${mkPiece(12,  16, 21, 14, -12, '#692e14', '#b86c3d')}
+    ${mkPiece(32,  7,  20, 14, 22,  '#783617', '#c77a48')}
+    ${mkPiece(-28, -11, 20, 13, 14, '#7d3b1b', '#cc804e')}
+    ${mkPiece(27,  -12, 20, 13, -20,'#6e3115', '#bf7241')}
+  `;
+  const wave2 = `
+    ${mkPiece(-16, -2, 22, 15, -8,  '#853e1d', '#d48855')}
+    ${mkPiece(4,   3,  23, 15, 12,  '#7c391a', '#cc804e')}
+    ${mkPiece(20,  -4, 20, 14, -14, '#8a411f', '#d98f5b')}
+    ${mkPiece(-4,  -16, 21, 13, 6,  '#753517', '#c77a48')}
+    ${mkPiece(14,  -15, 19, 13, 18, '#873f1e', '#d48855')}
+    ${mkPiece(-2,  18, 19, 13, -6,  '#703216', '#bf7241')}
+  `;
+  const wave3 = `
+    ${mkPiece(-8,  -7, 20, 14, 15,  '#944823', '#e09a67')}
+    ${mkPiece(10,  -7, 19, 13, -10, '#8f4421', '#db9460')}
+    ${mkPiece(-20, 9,  17, 12, 24,  '#8c4220', '#d98f5b')}
+    ${mkPiece(22,  10, 17, 12, -16, '#914622', '#de9664')}
+    ${mkPiece(1,   7,  18, 12, 4,   '#994b25', '#e39e6b')}
+  `;
+
+  return wrapVectorWaves([wave1, wave2, wave3], animate, compact);
+}
+
+function renderTacoLonganizaSVG(cx, cy, animate, compact) {
+  const mkSlice = (x, y, rx, ry, rot, fill) => `
+    <g transform="translate(${cx + x}, ${cy + y}) rotate(${rot})">
+      <ellipse cx="0" cy="2.2" rx="${rx}" ry="${ry}" fill="#4d0d04" opacity="0.34"/>
+      <ellipse cx="0" cy="0" rx="${rx}" ry="${ry}" fill="${fill}" stroke="#691406" stroke-width="1.35"/>
+      <circle cx="${-rx*0.32}" cy="${-ry*0.18}" r="1.45" fill="#ffad5c" opacity="0.86"/>
+      <circle cx="${rx*0.28}"  cy="${ry*0.22}"  r="1.25" fill="#ffd68f" opacity="0.82"/>
+      <circle cx="${rx*0.15}"  cy="${-ry*0.32}" r="1.05" fill="#520f04" opacity="0.72"/>
+      <path d="M${-rx*0.5} ${-ry*0.45} Q0 ${-ry*0.68} ${rx*0.48} ${-ry*0.4}" fill="none" stroke="#ffc178" stroke-width="1.3" stroke-linecap="round" opacity="0.7"/>
+    </g>`;
+
+  const wave1 = `
+    <ellipse cx="${cx}" cy="${cy + 4}" rx="48" ry="31" fill="#6b1506" opacity="0.22"/>
+    ${mkSlice(-30, 6,  11, 7.5, -18, '#b82a10')}
+    ${mkSlice(-12, 16, 11.5, 7.5, 12, '#c93315')}
+    ${mkSlice(13,  16, 11, 7.5, -10, '#bd2d12')}
+    ${mkSlice(31,  6,  11, 7.2, 20,  '#c43013')}
+    ${mkSlice(-27, -11, 10.5, 7, 15, '#cc3516')}
+    ${mkSlice(27,  -12, 10.5, 7, -16,'#b5280f')}
+  `;
+  const wave2 = `
+    ${mkSlice(-16, -2, 11.5, 7.8, -8, '#d93e1a')}
+    ${mkSlice(5,   3,  12,   8,   10, '#cf3817')}
+    ${mkSlice(21,  -4, 11,   7.5, -14,'#db421c')}
+    ${mkSlice(-4,  -16, 11,  7.2, 8,  '#c93415')}
+    ${mkSlice(14,  -15, 10.5, 7,  18, '#d63d19')}
+    ${mkSlice(-2,  17, 10.5, 7,  -6,  '#c43114')}
+  `;
+  const wave3 = `
+    ${mkSlice(-7,  -8, 10.5, 7.2, 14, '#e64c22')}
+    ${mkSlice(10,  -7, 10,   7,  -12, '#de451e')}
+    ${mkSlice(-19, 9,  9.5,  6.8, 22, '#db421c')}
+    ${mkSlice(20,  9,  9.5,  6.8,-18, '#e34920')}
+    ${mkSlice(1,   7,  10,   7,   4,  '#eb5126')}
+  `;
+
+  return wrapVectorWaves([wave1, wave2, wave3], animate, compact);
+}
+
+function renderOnionCubesSVG(coords, animate, compact) {
+  const mkCube = ([x, y, s, rot]) => `
+    <g transform="translate(${x}, ${y}) rotate(${rot})">
+      <rect x="${-s/2}" y="${-s/2 + 1.3}" width="${s}" height="${s}" rx="1.6" fill="#4f4663" opacity="0.22"/>
+      <rect x="${-s/2}" y="${-s/2}" width="${s}" height="${s}" rx="1.6" fill="#ffffff" stroke="#8e83a8" stroke-width="1"/>
+      <line x1="${-s/2 + 1.5}" y1="${-s/2 + 2}" x2="${s/2 - 1.5}" y2="${-s/2 + 2}" stroke="#dcd6eb" stroke-width="1"/>
+    </g>`;
+  const g1 = coords.filter((_, i) => i % 3 === 0).map(mkCube).join('');
+  const g2 = coords.filter((_, i) => i % 3 === 1).map(mkCube).join('');
+  const g3 = coords.filter((_, i) => i % 3 === 2).map(mkCube).join('');
+  return wrapVectorWaves([g1, g2, g3], animate, compact);
+}
+
+function renderCilantroLeavesSVG(coords, animate, compact) {
+  const mkLeaf = ([x, y, sc, rot, shade]) => `
+    <g transform="translate(${x}, ${y}) rotate(${rot}) scale(${sc})">
+      <path d="M0 5 C-6 2 -7 -4 -2 -6 C0 -8 4 -7 5 -4 C9 -3 8 3 2 5 Z"
+            fill="${shade ? '#34a847' : '#49c45b'}" stroke="#1b6327" stroke-width="1.15" stroke-linejoin="round"/>
+      <path d="M0 4 L1 -4" stroke="#a6f5b0" stroke-width="1" stroke-linecap="round" opacity="0.8"/>
+    </g>`;
+  const g1 = coords.filter((_, i) => i % 3 === 0).map(mkLeaf).join('');
+  const g2 = coords.filter((_, i) => i % 3 === 1).map(mkLeaf).join('');
+  const g3 = coords.filter((_, i) => i % 3 === 2).map(mkLeaf).join('');
+  return wrapVectorWaves([g1, g2, g3], animate, compact);
+}
+
+function renderTomatoCubesSVG(coords, animate, compact) {
+  const mkTom = ([x, y, s, rot]) => `
+    <g transform="translate(${x}, ${y}) rotate(${rot})">
+      <rect x="${-s/2}" y="${-s/2 + 1.4}" width="${s}" height="${s}" rx="2" fill="#5e0d05" opacity="0.25"/>
+      <rect x="${-s/2}" y="${-s/2}" width="${s}" height="${s}" rx="2" fill="#eb3824" stroke="#96180b" stroke-width="1.05"/>
+      <circle cx="${-s*0.14}" cy="${s*0.05}" r="0.95" fill="#ffe17d"/>
+      <line x1="${-s/2 + 1.8}" y1="${-s/2 + 1.8}" x2="${s/2 - 2}" y2="${-s/2 + 1.8}" stroke="#ffaba1" stroke-width="1.1" stroke-linecap="round" opacity="0.8"/>
+    </g>`;
+  const g1 = coords.filter((_, i) => i % 3 === 0).map(mkTom).join('');
+  const g2 = coords.filter((_, i) => i % 3 === 1).map(mkTom).join('');
+  const g3 = coords.filter((_, i) => i % 3 === 2).map(mkTom).join('');
+  return wrapVectorWaves([g1, g2, g3], animate, compact);
+}
+
+function renderJalapenoRingsSVG(coords, animate, compact) {
+  const mkRing = ([x, y, rx, ry, rot]) => `
+    <g transform="translate(${x}, ${y}) rotate(${rot})">
+      <ellipse cx="0" cy="1.8" rx="${rx}" ry="${ry}" fill="#1b360d" opacity="0.26"/>
+      <ellipse cx="0" cy="0" rx="${rx}" ry="${ry}" fill="#4d8c2b" stroke="#264a12" stroke-width="1.25"/>
+      <ellipse cx="0" cy="0" rx="${rx * 0.72}" ry="${ry * 0.7}" fill="#84cf4a"/>
+      <ellipse cx="0" cy="0" rx="${rx * 0.4}" ry="${ry * 0.38}" fill="#e9f5b8"/>
+      <circle cx="${-rx*0.16}" cy="-0.4" r="0.95" fill="#deb445"/>
+      <circle cx="${rx*0.16}"  cy="0.6"  r="0.95" fill="#deb445"/>
+    </g>`;
+  const g1 = coords.filter((_, i) => i % 3 === 0).map(mkRing).join('');
+  const g2 = coords.filter((_, i) => i % 3 === 1).map(mkRing).join('');
+  const g3 = coords.filter((_, i) => i % 3 === 2).map(mkRing).join('');
+  return wrapVectorWaves([g1, g2, g3], animate, compact);
+}
+
+function renderCeramicPlateSVG(cx, cy, rx, ry, uid) {
+  return `
+    <g class="svg-plate-base">
+      <ellipse cx="${cx}" cy="${cy + 10}" rx="${rx + 2}" ry="${ry + 2}" fill="#2b2016" opacity="0.11"/>
+      <ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="url(#${uid}_plateGrad)" stroke="#d9cfc2" stroke-width="2"/>
+      <ellipse cx="${cx}" cy="${cy + 1}" rx="${rx - 22}" ry="${ry - 14}" fill="url(#${uid}_plateWell)" stroke="#e6ddd1" stroke-width="1.4"/>
+      <ellipse cx="${cx}" cy="${cy}" rx="${rx - 4}" ry="${ry - 3}" fill="none" stroke="#ffffff" stroke-width="1.6" opacity="0.72"/>
+    </g>
+  `;
 }
 
 function buildTacoPlateSVG(state, opts = {}) {
@@ -1918,58 +2239,102 @@ function buildTacoPlateSVG(state, opts = {}) {
   const animSalsa    = Boolean(anim && anim.category === 'topping' && anim.itemId === 'salsa_roja');
 
   const showTossBurst = animBistec || animLonga || animCebolla || animCilantro;
-  const tossColor = animCilantro ? '#39ad52' : animCebolla ? '#a89bc4' : animLonga ? '#c9381e' : '#8a4a2a';
-  const posMode = isDoble ? 'is-doble' : 'is-sencilla';
+  const tossColor = animCilantro ? '#39ad52' : animCebolla ? '#8e83a8' : animLonga ? '#c9381e' : '#8a4a2a';
   const bounceClass = (animBistec || animLonga) ? ' dish-impact-bounce' : '';
 
+  const tx = isDoble ? 199 : 190;
+  const ty = isDoble ? 154 : 158;
+
+  const onionCoords = [
+    [tx - 30, ty - 6, 7.2, -16], [tx - 18, ty + 12, 6.8, 18], [tx - 6, ty - 14, 7.5, 10],
+    [tx + 8,  ty + 8, 7.0, -12], [tx + 22, ty - 10, 6.8, 22], [tx + 31, ty + 6, 7.2, -8],
+    [tx - 22, ty - 18, 6.4, 28], [tx + 14, ty + 18, 6.6, -24], [tx - 10, ty + 2, 7.4, 14],
+    [tx + 4,  ty - 3,  7.0, -20],[tx + 19, ty + 4,  6.5, 16], [tx - 26, ty + 10, 6.4, -10],
+    [tx + 2,  ty + 18, 6.6, 8],  [tx + 13, ty - 18, 6.4, -14],[tx - 14, ty - 8, 6.6, 20],
+  ];
+
+  const cilantroCoords = [
+    [tx - 26, ty + 1,  0.95, -22, 0], [tx - 12, ty - 12, 1.0,  18, 1], [tx + 6,  ty - 14, 0.9,  -12, 0],
+    [tx + 24, ty - 4,  0.98, 26,  1], [tx + 16, ty + 12, 0.92, -16, 0], [tx - 6,  ty + 14, 0.96, 14,  1],
+    [tx - 32, ty - 10, 0.85, 32,  1], [tx + 30, ty + 9,  0.88, -28, 0], [tx + 1,  ty + 1,  1.05, 8,   0],
+    [tx - 16, ty + 8,  0.9,  -10, 1], [tx + 14, ty - 3,  0.92, 20,  1], [tx - 2,  ty - 4,  0.86, -24, 0],
+    [tx - 20, ty - 16, 0.82, 12,  0], [tx + 22, ty - 15, 0.84, -18, 1],
+  ];
+
+  const salsaPath = `M ${tx - 46} ${ty + 4} Q ${tx - 30} ${ty - 16}, ${tx - 16} ${ty + 5} T ${tx + 16} ${ty - 3} T ${tx + 46} ${ty + 3}`;
+  const viewBox = compact ? '28 74 324 162' : '0 0 380 245';
+
   return `
-    <div class="photo-plate-stage stage-taco ${posMode}${compact ? ' is-compact' : ''}" data-uid="${uid}">
-      <div class="photo-dish-stack${bounceClass}">
-        <!-- Plato de cerámica artesanal -->
-        <img class="pl-layer pl-plate" src="${FOOD_PHOTO.plate}" alt="" decoding="async" />
+    <div class="vector-plate-stage stage-taco${compact ? ' is-compact' : ''}" data-uid="${uid}">
+      <svg class="food-plate-svg" viewBox="${viewBox}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs>
+          <radialGradient id="${uid}_plateGrad" cx="44%" cy="38%" r="64%">
+            <stop offset="0%" stop-color="#ffffff"/>
+            <stop offset="70%" stop-color="#f7f1e8"/>
+            <stop offset="100%" stop-color="#e5dbcd"/>
+          </radialGradient>
+          <radialGradient id="${uid}_plateWell" cx="50%" cy="46%" r="58%">
+            <stop offset="0%" stop-color="#faf6f0"/>
+            <stop offset="100%" stop-color="#efe6d9"/>
+          </radialGradient>
+          <radialGradient id="${uid}_tortBack" cx="42%" cy="36%" r="64%">
+            <stop offset="0%" stop-color="#f7dfa0"/>
+            <stop offset="68%" stop-color="#e3b85d"/>
+            <stop offset="100%" stop-color="#c99338"/>
+          </radialGradient>
+          <radialGradient id="${uid}_tortFront" cx="40%" cy="34%" r="62%">
+            <stop offset="0%" stop-color="#fff3c9"/>
+            <stop offset="66%" stop-color="#f4d17d"/>
+            <stop offset="100%" stop-color="#dba446"/>
+          </radialGradient>
+        </defs>
 
-        <!-- Tortilla trasera (cuando es Doble) -->
-        ${isDoble ? `
-          <img class="pl-layer pl-tortilla-back${animBase && state.tortilla === 'doble' ? ' pl-tortilla-drop' : ''}"
-               src="${FOOD_PHOTO.tortilla}" alt="" decoding="async" />
-        ` : ''}
+        <g class="svg-dish-stack${bounceClass}">
+          ${renderCeramicPlateSVG(190, 162, 146, 70, uid)}
 
-        <!-- Tortilla principal de maíz dorado -->
-        ${hasTortilla ? `
-          <img class="pl-layer pl-tortilla-front${animBase ? ' pl-tortilla-drop' : ''}"
-               src="${FOOD_PHOTO.tortilla}" alt="" decoding="async" />
-        ` : ''}
+          ${isDoble ? `
+            <g class="${animBase ? 'svg-tortilla-drop' : ''}">
+              ${renderArtisanalTortillaSVG(175, 163, `${uid}_tortBack`, true)}
+            </g>
+          ` : ''}
 
-        <!-- Proteína real: Bistec Asado o Longaniza Adobada -->
-        ${hasBistec ? `
-          <img class="pl-layer pl-taco-protein${animBistec ? ' pl-protein-drop' : ''}"
-               src="${FOOD_PHOTO.bistec}" alt="" decoding="async" />
-        ` : ''}
-        ${hasLonga ? `
-          <img class="pl-layer pl-taco-protein${animLonga ? ' pl-protein-drop' : ''}"
-               src="${FOOD_PHOTO.longaniza}" alt="" decoding="async" />
-        ` : ''}
+          ${hasTortilla ? `
+            <g class="${animBase ? 'svg-tortilla-drop' : ''}">
+              ${renderArtisanalTortillaSVG(tx, ty, `${uid}_tortFront`, false)}
+            </g>
+          ` : ''}
 
-        <!-- Cebolla picada en 3 oleadas desde arriba -->
-        ${hasCebolla ? renderPhotoWaveLayer(FOOD_PHOTO.cebollaWaves, FOOD_PHOTO.cebolla, 'pl-taco-cebolla', animCebolla, compact) : ''}
+          ${hasBistec ? renderTacoBistecSVG(tx, ty - 2, animBistec, compact) : ''}
+          ${hasLonga  ? renderTacoLonganizaSVG(tx, ty - 2, animLonga, compact) : ''}
 
-        <!-- Cilantro fresco en 3 oleadas desde arriba -->
-        ${hasCilantro ? renderPhotoWaveLayer(FOOD_PHOTO.cilantroWaves, FOOD_PHOTO.cilantro, 'pl-taco-cilantro', animCilantro, compact) : ''}
+          ${hasCebolla  ? renderOnionCubesSVG(onionCoords, animCebolla, compact) : ''}
+          ${hasCilantro ? renderCilantroLeavesSVG(cilantroCoords, animCilantro, compact) : ''}
 
-        <!-- Salsa Roja de molcajete con barrido sincronizado al bote -->
-        ${hasSalsa ? `
-          <img class="pl-layer pl-taco-salsa${animSalsa ? ' pl-sauce-wipe wipe-taco' : ''}"
-               src="${FOOD_PHOTO.salsaRoja}" alt="" decoding="async" />
-        ` : ''}
-      </div>
+          ${hasSalsa ? `
+            <g class="svg-sauce-layer${animSalsa ? ' svg-sauce-anim sauce-taco' : ''}">
+              <path class="svg-sauce-stroke" pathLength="100" d="${salsaPath}"
+                    fill="none" stroke="#6b0b03" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" opacity="0.28"/>
+              <path class="svg-sauce-stroke" pathLength="100" d="${salsaPath}"
+                    fill="none" stroke="#d42213" stroke-width="8.4" stroke-linecap="round" stroke-linejoin="round"/>
+              <path class="svg-sauce-stroke" pathLength="100" d="${salsaPath}"
+                    fill="none" stroke="#ff8273" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" opacity="0.68"/>
+              <g class="svg-sauce-specks">
+                <circle cx="${tx - 32}" cy="${ty - 5}" r="1.3" fill="#fad26b"/>
+                <circle cx="${tx - 8}"  cy="${ty + 3}" r="1.2" fill="#4f0a03"/>
+                <circle cx="${tx + 12}" cy="${ty - 4}" r="1.3" fill="#fad26b"/>
+                <circle cx="${tx + 32}" cy="${ty + 1}" r="1.2" fill="#4f0a03"/>
+                <circle cx="${tx + 2}"  cy="${ty - 2}" r="1.1" fill="#fad26b"/>
+              </g>
+            </g>
+          ` : ''}
+        </g>
 
-      ${!compact ? `
-        <svg class="pl-fx-overlay" viewBox="0 0 380 245" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          ${(hasBistec || hasLonga) ? renderSteamWispsSVG(isDoble ? 202 : 190, 114, animBistec || animLonga) : ''}
-          ${showTossBurst ? renderHandTossBurstSVG(isDoble ? 202 : 190, 44, tossColor) : ''}
+        ${!compact ? `
+          ${(hasBistec || hasLonga) ? renderSteamWispsSVG(tx, 108, animBistec || animLonga) : ''}
+          ${showTossBurst ? renderHandTossBurstSVG(tx, 42, tossColor) : ''}
           ${animSalsa ? renderSqueezeBottleSVG('salsa_roja', 'taco', uid) : ''}
-        </svg>
-      ` : ''}
+        ` : ''}
+      </svg>
     </div>
   `;
 }
@@ -2001,44 +2366,128 @@ function buildHotdogPlateSVG(state, opts = {}) {
     : null;
 
   const showTossBurst = animTomate || animCebolla || animChiles;
-  const tossColor = animChiles ? '#528f32' : animTomate ? '#e33522' : '#a89bc4';
+  const tossColor = animChiles ? '#528f32' : animTomate ? '#e33522' : '#8e83a8';
+
+  const ketchupPath = 'M 86 154 Q 100 137, 114 156 T 142 155 T 170 155 T 198 155 T 226 155 T 254 155 T 294 153';
+  const mostazaPath = 'M 92 158 Q 108 141, 122 160 T 150 159 T 178 159 T 206 159 T 234 159 T 262 159 T 290 157';
+  const mayoPath    = 'M 98 151 Q 112 136, 126 152 T 154 151 T 182 151 T 210 151 T 238 151 T 266 151 T 288 150';
+
+  const tomatoCoords = [
+    [104, 146, 7.2, -14], [128, 162, 7.4, 16], [154, 145, 7.0, 12], [178, 161, 7.5, -18],
+    [204, 146, 7.2, 10],  [230, 162, 7.0, -12],[254, 147, 7.2, 20], [276, 160, 6.8, -16],
+    [140, 152, 6.6, -8],  [192, 151, 6.8, 14], [242, 152, 6.8, -10],[116, 157, 6.6, 22],
+  ];
+  const onionCoords = [
+    [96,  156, 6.6, 14],  [118, 145, 6.8, -18],[144, 161, 6.8, 10], [166, 147, 7.0, -12],
+    [190, 161, 6.8, 20],  [216, 146, 6.8, -14],[240, 161, 6.6, 12], [264, 146, 6.8, -20],
+    [284, 155, 6.4, 16],  [132, 150, 6.4, -8], [202, 156, 6.5, 18], [252, 156, 6.5, -14],
+  ];
+  const chileCoords = [
+    [110, 152, 9.5, 7.2, -16], [148, 155, 9.8, 7.4, 14], [186, 151, 10, 7.5, -8],
+    [224, 156, 9.6, 7.2, 18],  [262, 152, 9.5, 7.2, -14], [282, 158, 8.6, 6.6, 12],
+  ];
+
+  const viewBox = compact ? '20 74 340 164' : '0 0 380 245';
 
   return `
-    <div class="photo-plate-stage stage-hotdog${compact ? ' is-compact' : ''}" data-uid="${uid}">
-      <div class="photo-dish-stack">
-        <!-- Plato de cerámica artesanal -->
-        <img class="pl-layer pl-plate pl-plate-dog" src="${FOOD_PHOTO.plate}" alt="" decoding="async" />
+    <div class="vector-plate-stage stage-hotdog${compact ? ' is-compact' : ''}" data-uid="${uid}">
+      <svg class="food-plate-svg" viewBox="${viewBox}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs>
+          <radialGradient id="${uid}_plateGrad" cx="44%" cy="38%" r="64%">
+            <stop offset="0%" stop-color="#ffffff"/>
+            <stop offset="70%" stop-color="#f7f1e8"/>
+            <stop offset="100%" stop-color="#e5dbcd"/>
+          </radialGradient>
+          <radialGradient id="${uid}_plateWell" cx="50%" cy="46%" r="58%">
+            <stop offset="0%" stop-color="#faf6f0"/>
+            <stop offset="100%" stop-color="#efe6d9"/>
+          </radialGradient>
+          <linearGradient id="${uid}_bunTop" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#f5c678"/>
+            <stop offset="55%" stop-color="#e39c44"/>
+            <stop offset="100%" stop-color="#be7324"/>
+          </linearGradient>
+          <linearGradient id="${uid}_bunFront" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#fae0a8"/>
+            <stop offset="28%" stop-color="#f0b662"/>
+            <stop offset="100%" stop-color="#cc7e29"/>
+          </linearGradient>
+          <linearGradient id="${uid}_sausageGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#e06743"/>
+            <stop offset="32%" stop-color="#c44423"/>
+            <stop offset="78%" stop-color="#9c2c12"/>
+            <stop offset="100%" stop-color="#701c09"/>
+          </linearGradient>
+        </defs>
 
-        <!-- Hot Dog artesanal a la parrilla en pan brioche -->
-        <img class="pl-layer pl-hotdog-base" src="${FOOD_PHOTO.hotdog}" alt="" decoding="async" />
+        <g class="svg-dish-stack">
+          ${renderCeramicPlateSVG(190, 166, 154, 66, uid)}
 
-        <!-- Aderezos brillantes con barrido sincronizado al bote squeeze -->
-        ${hasKetchup ? `
-          <img class="pl-layer pl-dog-sauce pl-dog-ketchup${animKetchup ? ' pl-sauce-wipe wipe-dog' : ''}"
-               src="${FOOD_PHOTO.ketchup}" alt="" decoding="async" />
-        ` : ''}
-        ${hasMostaza ? `
-          <img class="pl-layer pl-dog-sauce pl-dog-mostaza${animMostaza ? ' pl-sauce-wipe wipe-dog' : ''}"
-               src="${FOOD_PHOTO.mostaza}" alt="" decoding="async" />
-        ` : ''}
-        ${hasMayo ? `
-          <img class="pl-layer pl-dog-sauce pl-dog-mayo${animMayo ? ' pl-sauce-wipe wipe-dog' : ''}"
-               src="${FOOD_PHOTO.mayonesa}" alt="" decoding="async" />
-        ` : ''}
+          <!-- Sombra suave del Hot Dog sobre el plato -->
+          <ellipse cx="190" cy="186" rx="126" ry="22" fill="#3b230b" opacity="0.22"/>
 
-        <!-- Vegetales picados y chiles curados en 3 oleadas cayendo desde arriba -->
-        ${hasTomate ? renderPhotoWaveLayer(FOOD_PHOTO.tomateWaves, FOOD_PHOTO.tomate, 'pl-dog-tomate', animTomate, compact) : ''}
-        ${hasCebolla ? renderPhotoWaveLayer(FOOD_PHOTO.cebollaDogWaves, FOOD_PHOTO.cebollaDog, 'pl-dog-cebolla', animCebolla, compact) : ''}
-        ${hasChiles ? renderPhotoWaveLayer(FOOD_PHOTO.chilesWaves, FOOD_PHOTO.chiles, 'pl-dog-chiles', animChiles, compact) : ''}
-      </div>
+          <!-- Mitad superior/trasera del pan brioche dorado -->
+          <rect x="68" y="118" width="244" height="44" rx="22" fill="url(#${uid}_bunTop)" stroke="#9e5d19" stroke-width="1.8"/>
+          <path d="M 88 126 Q 190 119, 292 126" fill="none" stroke="#ffeac2" stroke-width="3.2" stroke-linecap="round" opacity="0.65"/>
+          <!-- Miga suave interior -->
+          <rect x="76" y="138" width="228" height="22" rx="11" fill="#faeccd"/>
 
-      ${!compact ? `
-        <svg class="pl-fx-overlay" viewBox="0 0 380 245" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          ${renderSteamWispsSVG(190, 102, false)}
+          <!-- Salchicha asada a la parrilla -->
+          <rect x="55" y="135" width="270" height="36" rx="18" fill="url(#${uid}_sausageGrad)" stroke="#631706" stroke-width="1.8"/>
+          <!-- Marcas de parrilla -->
+          <g stroke="#4a1004" stroke-width="2.6" stroke-linecap="round" opacity="0.58">
+            <path d="M 84 140 Q 90 153, 86 165"/>
+            <path d="M 118 139 Q 124 153, 120 166"/>
+            <path d="M 152 139 Q 158 153, 154 166"/>
+            <path d="M 186 139 Q 192 153, 188 166"/>
+            <path d="M 220 139 Q 226 153, 222 166"/>
+            <path d="M 254 139 Q 260 153, 256 166"/>
+            <path d="M 288 140 Q 294 153, 290 165"/>
+          </g>
+          <!-- Brillo jugoso continuo de la salchicha -->
+          <path d="M 70 144 Q 190 139, 310 144" fill="none" stroke="#ffaa8a" stroke-width="3" stroke-linecap="round" opacity="0.56"/>
+
+          <!-- Labio frontal del pan brioche abrazando la salchicha -->
+          <path d="M 68 160 Q 190 167, 312 160 L 312 172 C 312 186, 298 193, 282 193 L 98 193 C 82 193, 68 186, 68 172 Z"
+                fill="url(#${uid}_bunFront)" stroke="#9e5d19" stroke-width="1.8" stroke-linejoin="round"/>
+          <path d="M 78 164 Q 190 171, 302 164" fill="none" stroke="#fff3d6" stroke-width="2.2" stroke-linecap="round" opacity="0.72"/>
+
+          <!-- Aderezos brillantes sincronizados con el bote squeeze -->
+          ${hasKetchup ? `
+            <g class="svg-sauce-layer${animKetchup ? ' svg-sauce-anim sauce-dog' : ''}">
+              <path class="svg-sauce-stroke" pathLength="100" d="${ketchupPath}" fill="none" stroke="#750c04" stroke-width="8.5" stroke-linecap="round" opacity="0.28"/>
+              <path class="svg-sauce-stroke" pathLength="100" d="${ketchupPath}" fill="none" stroke="#de2214" stroke-width="6.4" stroke-linecap="round"/>
+              <path class="svg-sauce-stroke" pathLength="100" d="${ketchupPath}" fill="none" stroke="#ff968c" stroke-width="1.7" stroke-linecap="round" opacity="0.72"/>
+            </g>
+          ` : ''}
+
+          ${hasMostaza ? `
+            <g class="svg-sauce-layer${animMostaza ? ' svg-sauce-anim sauce-dog' : ''}">
+              <path class="svg-sauce-stroke" pathLength="100" d="${mostazaPath}" fill="none" stroke="#8a5f02" stroke-width="8.2" stroke-linecap="round" opacity="0.26"/>
+              <path class="svg-sauce-stroke" pathLength="100" d="${mostazaPath}" fill="none" stroke="#f5c016" stroke-width="6.0" stroke-linecap="round"/>
+              <path class="svg-sauce-stroke" pathLength="100" d="${mostazaPath}" fill="none" stroke="#fff7b8" stroke-width="1.6" stroke-linecap="round" opacity="0.8"/>
+            </g>
+          ` : ''}
+
+          ${hasMayo ? `
+            <g class="svg-sauce-layer${animMayo ? ' svg-sauce-anim sauce-dog' : ''}">
+              <path class="svg-sauce-stroke" pathLength="100" d="${mayoPath}" fill="none" stroke="#a6977d" stroke-width="7.8" stroke-linecap="round" opacity="0.52"/>
+              <path class="svg-sauce-stroke" pathLength="100" d="${mayoPath}" fill="none" stroke="#fffdf7" stroke-width="5.2" stroke-linecap="round"/>
+            </g>
+          ` : ''}
+
+          <!-- Vegetales y chiles cayendo desde arriba en 3 oleadas -->
+          ${hasTomate  ? renderTomatoCubesSVG(tomatoCoords, animTomate, compact) : ''}
+          ${hasCebolla ? renderOnionCubesSVG(onionCoords, animCebolla, compact) : ''}
+          ${hasChiles  ? renderJalapenoRingsSVG(chileCoords, animChiles, compact) : ''}
+        </g>
+
+        ${!compact ? `
+          ${renderSteamWispsSVG(190, 104, false)}
           ${showTossBurst ? renderHandTossBurstSVG(190, 42, tossColor) : ''}
           ${activeBottle ? renderSqueezeBottleSVG(activeBottle, 'hotdog', uid) : ''}
-        </svg>
-      ` : ''}
+        ` : ''}
+      </svg>
     </div>
   `;
 }
