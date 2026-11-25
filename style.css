@@ -8995,14 +8995,15 @@ body.apple-warm-theme .modal.client-ai-loyalty-modal.open,
 
 .ai-loyalty-seg-btn {
   flex: 1;
-  padding: 8px 10px;
+  padding: 8px 6px;
   border-radius: 9px;
   border: none;
   background: transparent;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 700;
   color: #57534e;
   cursor: pointer;
+  white-space: nowrap;
   transition: all 0.16s ease;
 }
 
@@ -9984,15 +9985,25 @@ body.apple-warm-theme .modal.client-ai-loyalty-modal.open,
 }
 
 .dineos-logo-badge {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: #dde8f8;
+  width: 30px;
+  height: 30px;
+  border-radius: 0;
+  background: transparent;
   color: #1c2433;
   font-size: 0.9rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  overflow: visible;
+  flex-shrink: 0;
+}
+
+.dineos-logo-img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  display: block;
+  mix-blend-mode: multiply;
 }
 
 .dineos-brand-name {
@@ -10396,7 +10407,7 @@ body.apple-warm-theme .modal.client-ai-loyalty-modal.open,
   overflow: visible;
 }
 
-/* Capa de Platón Diagonal de Porcelana Blanca (Fotografía de Estudio) */
+/* Capa de Platón / Fotografía Hero del Platillo Líder */
 .dineos-platter-layer {
   position: absolute;
   inset: 0px -10px 28px -8px;
@@ -10405,6 +10416,37 @@ body.apple-warm-theme .modal.client-ai-loyalty-modal.open,
   justify-content: center;
   pointer-events: none;
   z-index: 1;
+}
+
+.dineos-open-left:has(.dineos-hero-photo-wrap) {
+  justify-content: flex-end;
+  padding: 0 26px 8px 16px;
+}
+
+.dineos-open-left:has(.dineos-hero-photo-wrap) .dineos-open-top {
+  position: relative;
+  z-index: 4;
+  margin-top: auto;
+}
+
+.dineos-platter-layer:has(.dineos-hero-photo-wrap) {
+  inset: 0 0 342px 0;
+}
+
+.dineos-hero-photo-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 22px;
+  overflow: hidden;
+}
+
+.dineos-hero-photo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 42%;
+  display: block;
 }
 
 .dineos-platter-photo {
@@ -13479,4 +13521,1903 @@ body.apple-warm-theme #view-client .dock-tracker-bar {
   max-width: 520px;
   height: auto;
   filter: drop-shadow(0 14px 28px rgba(15, 23, 42, 0.08));
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   LIQUID GLASS RAIL CAPSULES + 3-COLUMN KANBAN KDS + FLUID MOTION SYSTEM
+   ═══════════════════════════════════════════════════════════════════════ */
+:root {
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-fluid: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ─── 1. BARRA LATERAL CON CÁPSULAS FLOTANTES LIQUID GLASS ──────────── */
+.dineos-left-rail {
+  z-index: 55;
+  overflow: visible;
+}
+
+.dineos-rail-group {
+  overflow: visible;
+}
+
+.dineos-rail-btn {
+  position: relative;
+  overflow: visible;
+  transition:
+    transform 0.32s var(--ease-spring),
+    border-color 0.2s var(--ease-out-expo),
+    background 0.22s var(--ease-out-expo),
+    color 0.2s ease,
+    box-shadow 0.28s var(--ease-out-expo);
+}
+
+.dineos-rail-btn svg {
+  transition: transform 0.34s var(--ease-spring), filter 0.22s ease;
+  will-change: transform;
+}
+
+.dineos-rail-btn:hover {
+  z-index: 10;
+  transform: scale(1.1) translateY(-1.5px);
+  box-shadow: 0 10px 24px -6px rgba(15, 23, 42, 0.22);
+}
+
+.dineos-rail-btn:active {
+  transform: scale(0.94);
+  transition-duration: 0.1s;
+}
+
+/* Micro-animación específica de cada símbolo SVG al pasar el cursor */
+.rail-ico-grid:hover svg  { transform: rotate(8deg) scale(1.08); }
+.rail-ico-board:hover svg { transform: translateY(-2px) scale(1.09); }
+.rail-ico-ai:hover svg    { transform: scale(1.12) rotate(-5deg); }
+.rail-ico-stock:hover svg { transform: translateY(-1.5px) scale(1.09); }
+.rail-ico-sales:hover svg { transform: scaleY(1.14) translateY(-1px); }
+.rail-ico-qrs:hover svg   { transform: scale(1.1); }
+.rail-ico-lock:hover svg  { transform: rotate(42deg) scale(1.06); }
+
+/* Cápsula flotante Liquid Glass (Desktop > 860px) */
+@media (min-width: 861px) {
+  .rail-glass-capsule {
+    position: absolute;
+    left: calc(100% + 14px);
+    top: 50%;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px 8px 12px;
+    min-width: max-content;
+    border-radius: 999px;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.88) 0%,
+      rgba(243, 246, 252, 0.72) 52%,
+      rgba(255, 255, 255, 0.84) 100%
+    );
+    backdrop-filter: blur(22px) saturate(210%) brightness(1.04);
+    -webkit-backdrop-filter: blur(22px) saturate(210%) brightness(1.04);
+    border: 1px solid rgba(255, 255, 255, 0.94);
+    box-shadow:
+      0 18px 38px -10px rgba(15, 23, 42, 0.2),
+      0 6px 14px -3px rgba(15, 23, 42, 0.08),
+      0 0 0 0.5px rgba(15, 23, 42, 0.08),
+      inset 0 1.5px 1px rgba(255, 255, 255, 0.96),
+      inset 0 -1px 2px rgba(15, 23, 42, 0.04);
+    color: #0f1115;
+    pointer-events: none;
+    overflow: hidden;
+    opacity: 0;
+    visibility: hidden;
+    transform-origin: left center;
+    transform: translate3d(-12px, -50%, 0) scale(0.88);
+    transition:
+      opacity 0.18s var(--ease-out-expo),
+      visibility 0s linear 0.18s,
+      transform 0.34s var(--ease-spring);
+  }
+
+  /* Destello especular líquido que recorre la cápsula al emerger */
+  .rail-glass-capsule::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      110deg,
+      transparent 20%,
+      rgba(255, 255, 255, 0.72) 48%,
+      transparent 76%
+    );
+    transform: translateX(-110%);
+    transition: transform 0.6s var(--ease-out-expo);
+    pointer-events: none;
+  }
+
+  .dineos-rail-btn:hover .rail-glass-capsule,
+  .dineos-rail-btn:focus-visible .rail-glass-capsule {
+    opacity: 1;
+    visibility: visible;
+    transform: translate3d(0, -50%, 0) scale(1);
+    transition:
+      opacity 0.2s var(--ease-out-expo),
+      visibility 0s linear 0s,
+      transform 0.36s var(--ease-spring);
+  }
+
+  .dineos-rail-btn:hover .rail-glass-capsule::after,
+  .dineos-rail-btn:focus-visible .rail-glass-capsule::after {
+    transform: translateX(110%);
+  }
+
+  .rgc-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: rgba(15, 23, 42, 0.24);
+    box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.05);
+    transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.24s var(--ease-spring);
+  }
+
+  .dineos-rail-btn.active .rgc-dot {
+    background: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2), 0 0 10px rgba(16, 185, 129, 0.45);
+    transform: scale(1.1);
+  }
+
+  .rail-ico-ai .rgc-dot {
+    background: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.16);
+  }
+
+  .rail-ico-lock .rgc-dot {
+    background: #ef4444;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.14);
+  }
+
+  .rgc-texts {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+    line-height: 1.18;
+  }
+
+  .rgc-title {
+    font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+    font-size: 0.79rem;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    color: #0b0c10;
+  }
+
+  .rgc-sub {
+    font-size: 0.65rem;
+    font-weight: 500;
+    color: #5b6372;
+    margin-top: 1px;
+  }
+
+  .rgc-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: #08080a;
+    color: #ffffff;
+    font-size: 0.68rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    margin-left: 2px;
+  }
+}
+
+@media (max-width: 860px) {
+  .rail-glass-capsule {
+    display: none !important;
+  }
+}
+
+/* ─── 2. TABLERO KANBAN KDS EN 3 COLUMNAS FLUIDAS ─────────────────────── */
+#view-kitchen.kds-dineos-theme .kds-board.is-kanban-mode {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 16px !important;
+  align-items: stretch !important;
+  padding: 4px 0 12px !important;
+  overflow: visible !important;
+}
+
+@media (max-width: 1120px) {
+  #view-kitchen.kds-dineos-theme .kds-board.is-kanban-mode {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 760px) {
+  #view-kitchen.kds-dineos-theme .kds-board.is-kanban-mode {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+.kds-kanban-col {
+  background: #f6f7fa;
+  border: 1px solid #e7eaf0;
+  border-radius: 22px;
+  padding: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 360px;
+  transition: border-color 0.22s ease, background 0.22s ease;
+}
+
+.kds-kanban-col.col-incoming {
+  background: linear-gradient(180deg, #fffdf6 0%, #f7f8fb 28%);
+  border-color: #ece6d3;
+}
+
+.kds-kanban-col.col-preparing {
+  background: linear-gradient(180deg, #f5f9ff 0%, #f6f7fa 28%);
+  border-color: #dce6f5;
+}
+
+.kds-kanban-col.col-ready {
+  background: linear-gradient(180deg, #f2fbf5 0%, #f5f9f6 34%);
+  border-color: #ccead6;
+}
+
+.kds-kanban-col-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 4px 10px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.kkc-title-group {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.kkc-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.col-incoming .kkc-dot  { background: #eab308; box-shadow: 0 0 0 4px rgba(234, 179, 8, 0.18); }
+.col-preparing .kkc-dot { background: #ff6b1a; box-shadow: 0 0 0 4px rgba(255, 107, 26, 0.18); }
+.col-ready .kkc-dot     { background: #16a34a; box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.2); }
+
+.kkc-texts {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.kkc-texts h3 {
+  margin: 0;
+  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: #0f1115;
+}
+
+.kkc-texts span {
+  font-size: 0.7rem;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.kkc-right-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.kkc-count {
+  min-width: 24px;
+  height: 24px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.09);
+  color: #0f1115;
+  font-size: 0.74rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kds-deliver-all-btn {
+  border: 1px solid #16a34a;
+  background: #16a34a;
+  color: #ffffff;
+  font-size: 0.69rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.22s var(--ease-spring), background 0.16s ease, box-shadow 0.2s ease;
+  box-shadow: 0 4px 10px -4px rgba(22, 163, 74, 0.45);
+}
+
+.kds-deliver-all-btn:hover {
+  background: #15803d;
+  transform: translateY(-1px);
+}
+
+.kds-deliver-all-btn:active {
+  transform: scale(0.95);
+}
+
+.kds-kanban-col-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+
+.kds-kanban-lane-empty {
+  flex: 1;
+  min-height: 150px;
+  border: 1px dashed rgba(15, 23, 42, 0.11);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.52);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 20px 14px;
+  text-align: center;
+  color: #848b99;
+}
+
+.kds-kanban-lane-empty span {
+  font-size: 1.45rem;
+  opacity: 0.72;
+}
+
+.kds-kanban-lane-empty p {
+  margin: 0;
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.kds-focus-banner {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 16px;
+  background: #f4f6fa;
+  border: 1px solid #e2e6ef;
+  font-size: 0.8rem;
+  color: #374151;
+}
+
+.kds-focus-banner button {
+  border: 1px solid #08080a;
+  background: #08080a;
+  color: #ffffff;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.22s var(--ease-spring), opacity 0.15s ease;
+}
+
+.kds-focus-banner button:hover {
+  transform: translateY(-1px);
+  opacity: 0.92;
+}
+
+.kds-focus-banner button:active {
+  transform: scale(0.95);
+}
+
+/* Tarjetas dentro de columnas Kanban y transiciones fluidas */
+#view-kitchen.kds-dineos-theme .order-card {
+  width: 100%;
+  transition:
+    transform 0.28s var(--ease-spring),
+    box-shadow 0.24s var(--ease-out-expo),
+    border-color 0.2s ease,
+    background 0.2s ease,
+    opacity 0.18s ease;
+}
+
+#view-kitchen.kds-dineos-theme .order-card.is-kanban-card {
+  background: #ffffff !important;
+  border-radius: 18px !important;
+  padding: 14px !important;
+  box-shadow: 0 4px 14px -8px rgba(15, 23, 42, 0.1) !important;
+}
+
+#view-kitchen.kds-dineos-theme .order-card.is-kanban-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 26px -12px rgba(15, 23, 42, 0.16) !important;
+}
+
+#view-kitchen.kds-dineos-theme .order-card.status-ready {
+  border-color: #86efac !important;
+  box-shadow: 0 8px 22px -12px rgba(22, 163, 74, 0.28) !important;
+}
+
+#view-kitchen.kds-dineos-theme .order-card.just-transitioned {
+  animation: kdsCardGlideIn 0.36s var(--ease-spring) both;
+}
+
+@keyframes kdsCardGlideIn {
+  0% {
+    opacity: 0.45;
+    transform: translate3d(-14px, 6px, 0) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+#view-kitchen.kds-dineos-theme .order-card.is-delivering-out {
+  opacity: 0 !important;
+  transform: translate3d(18px, -8px, 0) scale(0.94) !important;
+  pointer-events: none;
+}
+
+/* Botones de acción rápidos y táctiles en tickets */
+#view-kitchen.kds-dineos-theme .order-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+#view-kitchen.kds-dineos-theme .order-btn {
+  transition: transform 0.2s var(--ease-spring), filter 0.16s ease, background 0.16s ease, box-shadow 0.18s ease;
+}
+
+#view-kitchen.kds-dineos-theme .order-btn:hover {
+  transform: translateY(-1px);
+}
+
+#view-kitchen.kds-dineos-theme .order-btn:active {
+  transform: scale(0.95) !important;
+}
+
+#view-kitchen.kds-dineos-theme .order-btn.btn-sub-step {
+  background: #f1f3f7 !important;
+  color: #1f2430 !important;
+  border-color: #dce0e8 !important;
+}
+
+#view-kitchen.kds-dineos-theme .order-btn.btn-fast-deliver {
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%) !important;
+  color: #9a3412 !important;
+  border-color: #fdba74 !important;
+  font-weight: 700 !important;
+}
+
+#view-kitchen.kds-dineos-theme .order-btn.btn-deliver-final {
+  flex: 1;
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%) !important;
+  color: #ffffff !important;
+  border-color: #15803d !important;
+  font-weight: 700 !important;
+  box-shadow: 0 6px 16px -6px rgba(21, 128, 61, 0.55) !important;
+}
+
+/* Respiración sutil en timers urgentes */
+.order-timer.warn {
+  animation: kdsTimerBreathAmber 2.4s ease-in-out infinite;
+}
+
+.order-timer.alert {
+  animation: kdsTimerBreathRed 1.8s ease-in-out infinite;
+}
+
+@keyframes kdsTimerBreathAmber {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.25); }
+  50%      { box-shadow: 0 0 0 5px rgba(245, 158, 11, 0); }
+}
+
+@keyframes kdsTimerBreathRed {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.34); }
+  50%      { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+}
+
+/* ─── 3. MICRO-ANIMACIONES PREMIUM GLOBALES (COCINA + CLIENTE) ────────── */
+.kds-subview-enter {
+  animation: kdsSubviewGlide 0.28s var(--ease-out-expo) both;
+}
+
+@keyframes kdsSubviewGlide {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.hero-platter-swap {
+  animation: heroPlatterCrossFade 0.42s var(--ease-out-expo) both;
+}
+
+@keyframes heroPlatterCrossFade {
+  from {
+    opacity: 0;
+    transform: scale(0.95) rotate(-1.5deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+/* Tarjetas interactivas Bento en Dashboard Cocina */
+.dineos-mini-kpi,
+.dineos-prep-card,
+.dineos-sold-mini,
+.dineos-pastel-card,
+.dineos-dial-tile,
+.apple-kpi-card {
+  transition:
+    transform 0.28s var(--ease-spring),
+    box-shadow 0.26s var(--ease-out-expo),
+    border-color 0.2s ease,
+    background-color 0.2s ease !important;
+}
+
+.dineos-mini-kpi:hover,
+.dineos-prep-card:hover,
+.dineos-sold-mini:hover,
+.dineos-pastel-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 34px -18px rgba(15, 23, 42, 0.16) !important;
+}
+
+.dineos-mini-kpi:active,
+.dineos-prep-card:active,
+.dineos-sold-mini:active,
+.dineos-pastel-card:active,
+.dineos-dial-tile:active {
+  transform: scale(0.98);
+}
+
+.dineos-dial-tile:hover {
+  transform: translateY(-2px) scale(1.03);
+}
+
+/* Animaciones en Vista Cliente (Pinch Kitchen+Bar) */
+.pinch-dish-row {
+  position: relative;
+  border-radius: 16px;
+  padding-left: 8px;
+  padding-right: 8px;
+  margin-left: -8px;
+  margin-right: -8px;
+  transition:
+    background-color 0.2s var(--ease-out-expo),
+    transform 0.24s var(--ease-fluid);
+}
+
+.pinch-dish-row:hover {
+  background-color: #fafafa;
+}
+
+.pinch-dish-row:active {
+  transform: scale(0.992);
+}
+
+.pinch-dish-media {
+  transition: box-shadow 0.26s var(--ease-out-expo), transform 0.26s var(--ease-out-expo);
+}
+
+.pinch-dish-row:hover .pinch-dish-media {
+  box-shadow: 0 10px 22px -10px rgba(0, 0, 0, 0.18);
+}
+
+.pinch-real-img,
+.pinch-ph-svg svg {
+  transition: transform 0.38s var(--ease-out-expo);
+}
+
+.pinch-dish-row:hover .pinch-real-img,
+.pinch-dish-row:hover .pinch-ph-svg svg {
+  transform: scale(1.06);
+}
+
+.pinch-quick-add-btn {
+  transition:
+    transform 0.24s var(--ease-spring),
+    background 0.16s ease,
+    box-shadow 0.2s ease !important;
+}
+
+.pinch-quick-add-btn:hover {
+  transform: scale(1.08);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.22);
+}
+
+.pinch-quick-add-btn:active {
+  transform: scale(0.9) !important;
+}
+
+.pinch-quick-stepper {
+  animation: stepperPopIn 0.24s var(--ease-spring) both;
+}
+
+@keyframes stepperPopIn {
+  from {
+    opacity: 0;
+    transform: scale(0.84);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.pinch-cat-tab,
+.pinch-diet-chip,
+.fmode-tab,
+.dd-option-chip,
+.dd-qnote-chip {
+  transition:
+    transform 0.22s var(--ease-spring),
+    background 0.18s ease,
+    color 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.2s ease !important;
+}
+
+.pinch-diet-chip:active,
+.fmode-tab:active,
+.dd-option-chip:active,
+.dd-qnote-chip:active {
+  transform: scale(0.95);
+}
+
+/* Pop elástico del badge y barra de carrito */
+#bb-count.is-popping {
+  animation: cartBadgeBounce 0.42s var(--ease-spring);
+}
+
+@keyframes cartBadgeBounce {
+  0%   { transform: scale(1); }
+  38%  { transform: scale(1.36); }
+  72%  { transform: scale(0.92); }
+  100% { transform: scale(1); }
+}
+
+.dock-main-bar.pinch-floating-cart-bar.is-pulsing {
+  animation: cartBarNudge 0.34s var(--ease-spring);
+}
+
+@keyframes cartBarNudge {
+  0%   { transform: translateY(0) scale(1); }
+  40%  { transform: translateY(-2px) scale(1.018); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+/* Hojas modales estilo iOS / Apple Sheet con resorte limpio */
+.dish-detail-sheet,
+.dish-config-sheet {
+  transition: transform 0.36s var(--ease-out-expo) !important;
+}
+
+.bottom-sheet-cart {
+  transition: transform 0.36s var(--ease-out-expo) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   3 PIEZAS LEAN MVP ($0): INVITACIÓN A MESA + MINI-PERFIL + CALCULADORA SPLIT
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Botón compacto 👤 Gustos en barra superior */
+.prefs-header-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #f5f5f7;
+  border: 1px solid #e6e6e8;
+  color: #111111;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.22s var(--ease-spring), border-color 0.16s ease, background 0.16s ease;
+}
+
+.prefs-header-pill:hover {
+  background: #ececef;
+  border-color: #d2d2d8;
+}
+
+.prefs-header-pill:active {
+  transform: scale(0.94);
+}
+
+.prefs-header-pill.has-prefs {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+
+.prefs-active-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #16a34a;
+  flex-shrink: 0;
+}
+
+@media (max-width: 390px) {
+  .prefs-header-pill .prefs-lbl {
+    display: none;
+  }
+  .prefs-header-pill {
+    padding: 0 8px;
+  }
+}
+
+/* Pieza 1: Invitar amigos a la mesa + Bienvenida */
+.invite-welcome-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+  border: 1px solid #bbf7d0;
+  color: #14532d;
+  animation: kdsSubviewGlide 0.28s var(--ease-out-expo) both;
+}
+
+.iwb-ico {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.iwb-texts {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.iwb-texts strong {
+  font-size: 12.5px;
+  font-weight: 800;
+}
+
+.iwb-texts span {
+  font-size: 11px;
+  color: #166534;
+  line-height: 1.3;
+}
+
+.iwb-close {
+  border: none;
+  background: rgba(22, 101, 52, 0.1);
+  color: #14532d;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.table-invite-bar,
+.tracker-invite-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 11px;
+  border-radius: 14px;
+  background: #fafafa;
+  border: 1px solid #e7e7ec;
+}
+
+.tracker-invite-strip {
+  margin-bottom: 12px;
+  background: #ffffff;
+}
+
+.tib-left,
+.tis-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.tib-ico,
+.tis-ico {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.tib-texts {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.tib-texts strong {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #111111;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tib-texts span {
+  font-size: 10.5px;
+  color: #6b6b70;
+}
+
+.tis-label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #111111;
+}
+
+.tib-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.tib-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid #dedee4;
+  background: #ffffff;
+  color: #111111;
+  white-space: nowrap;
+  transition: transform 0.2s var(--ease-spring), background 0.16s ease, border-color 0.16s ease;
+}
+
+.tib-btn.wa {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  color: #15803d;
+}
+
+.tib-btn:hover {
+  transform: translateY(-1px);
+}
+
+.tib-btn:active {
+  transform: scale(0.94);
+}
+
+/* Pieza 2: Badges de alerta/compatibilidad en menú y panel de Mis Gustos */
+.pinch-badge.tone-pref-warn {
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.pinch-badge.tone-pref-ok {
+  background: #ecfdf5;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.dd-prefs-applied-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 11px;
+  margin-bottom: 4px;
+  border-radius: 10px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #166534;
+}
+
+.dd-prefs-applied-banner button {
+  border: none;
+  background: rgba(22, 101, 52, 0.12);
+  color: #14532d;
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pref-hero-card {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 13px 14px;
+  margin-bottom: 12px;
+}
+
+.phc-badge-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.phc-pill {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  background: #111111;
+  color: #ffffff;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+
+.phc-sync-txt {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.phc-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.phc-sub {
+  margin: 3px 0 0;
+  font-size: 12px;
+  color: #475569;
+  line-height: 1.4;
+}
+
+.pref-form-block {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 12px;
+}
+
+.pref-chips-grid,
+.pref-chips-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pref-chip {
+  border: 1.5px solid #e2e2e7;
+  background: #ffffff;
+  color: #27272a;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 11px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: transform 0.2s var(--ease-spring), background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+}
+
+.pref-chip:active {
+  transform: scale(0.94);
+}
+
+.pref-chip.selected {
+  background: #111111;
+  border-color: #111111;
+  color: #ffffff;
+}
+
+.pref-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.pref-save-btn {
+  flex: 1;
+}
+
+/* Pieza 3: Calculadora de Cuenta y Propina ($0) */
+.tracker-split-calc-card {
+  background: #ffffff;
+  border: 1px solid #e7e7ec;
+  border-radius: 20px;
+  padding: 15px 16px;
+  margin-bottom: 14px;
+  box-shadow: 0 8px 24px -16px rgba(15, 23, 42, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tsc-zero-badge {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #15803d;
+  background: #ecfdf5;
+  border: 1px solid #bbf7d0;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.tsc-mode-pills {
+  display: flex;
+  gap: 6px;
+  background: #f4f4f6;
+  padding: 4px;
+  border-radius: 12px;
+}
+
+.tsc-pill {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: #52525b;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 7px 6px;
+  border-radius: 9px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.16s var(--ease-spring);
+}
+
+.tsc-pill.active {
+  background: #111111;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
+}
+
+.tsc-people-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: #fafafa;
+  border: 1px solid #ececef;
+}
+
+.tsc-people-lbl {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #27272a;
+}
+
+.tsc-people-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tsc-step-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid #dcdce2;
+  background: #ffffff;
+  color: #111111;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tsc-people-stepper strong {
+  min-width: 18px;
+  text-align: center;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tsc-tip-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tsc-sub-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b6b70;
+}
+
+.tsc-tip-pills {
+  display: flex;
+  gap: 6px;
+}
+
+.tsc-tip-btn {
+  flex: 1;
+  height: 32px;
+  border-radius: 10px;
+  border: 1px solid #e2e2e7;
+  background: #ffffff;
+  color: #27272a;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.tsc-tip-btn.active {
+  background: #111111;
+  border-color: #111111;
+  color: #ffffff;
+}
+
+.tsc-result-box {
+  background: #fafafa;
+  border: 1px solid #ececef;
+  border-radius: 14px;
+  padding: 11px 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tsc-res-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12.5px;
+  color: #52525b;
+}
+
+.tsc-res-line strong {
+  color: #111111;
+  font-variant-numeric: tabular-nums;
+}
+
+.tsc-res-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 8px;
+  margin-top: 2px;
+  border-top: 1px dashed #dcdce2;
+}
+
+.tsc-res-total-texts {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.tsc-res-total-texts strong {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #111111;
+}
+
+.tsc-res-total-texts span {
+  font-size: 10.5px;
+  color: #6b6b70;
+}
+
+.tsc-res-grand {
+  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  color: #111111;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tsc-share-row {
+  display: flex;
+  gap: 8px;
+}
+
+.tsc-share-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 38px;
+  border-radius: 999px;
+  border: 1px solid #dedee4;
+  background: #ffffff;
+  color: #111111;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s var(--ease-spring), background 0.16s ease;
+}
+
+.tsc-share-btn.wa {
+  background: #16a34a;
+  border-color: #16a34a;
+  color: #ffffff;
+}
+
+.tsc-share-btn:active {
+  transform: scale(0.96);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   DINEOS EDITORIAL CLIENT UNIFICATION & MONOLINE SVG ICON SYSTEM
+   (Obsidian #08080a · Butter Yellow #fbf0bf · Ice Blue #edf4fc)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.ui-ico,
+svg.ui-ico {
+  width: 15px;
+  height: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  vertical-align: middle;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ui-ico svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.ui-ico.sm,
+svg.ui-ico.sm {
+  width: 13px;
+  height: 13px;
+}
+
+.ui-ico.md,
+svg.ui-ico.md {
+  width: 18px;
+  height: 18px;
+}
+
+.ui-ico.lg,
+svg.ui-ico.lg {
+  width: 22px;
+  height: 22px;
+}
+
+.ui-ico.xl,
+svg.ui-ico.xl {
+  width: 30px;
+  height: 30px;
+  opacity: 0.72;
+}
+
+.btn-ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Monogramas tipográficos limpios (cero emojis caricaturescos) */
+.cart-item-mono {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: #edf4fc;
+  border: 1px solid #d4e3f6;
+  color: #08080a;
+  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pcs-mono {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: #edf4fc;
+  border: 1px solid #d4e3f6;
+  color: #08080a;
+  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.lrc-mono {
+  min-width: 34px;
+  height: 34px;
+  padding: 0 7px;
+  border-radius: 10px;
+  background: #fbf0bf;
+  border: 1px solid #ecd98a;
+  color: #08080a;
+  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.dca-thumb-mono {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #08080a;
+  color: #ffffff;
+  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #ffffff;
+}
+
+/* Armonización DineOS Editorial en Vista Comensal (#view-client) */
+#view-client {
+  background: #ffffff;
+  color: #08080a;
+}
+
+#view-client .topnav-right {
+  gap: 5px;
+}
+
+#view-client .prefs-header-pill {
+  background: #fafbfc;
+  border-color: #e6e8ed;
+  color: #08080a;
+}
+
+#view-client .prefs-header-pill.has-prefs {
+  background: #edf4fc;
+  border-color: #c5daf4;
+  color: #08080a;
+}
+
+#view-client .prefs-active-dot {
+  background: #08080a;
+}
+
+#view-client .loyalty-header-pill {
+  background: #fbf0bf;
+  border: 1px solid #ecd98a;
+  color: #08080a;
+}
+
+#view-client .loyalty-header-pill .lhp-star,
+#view-client .loyalty-header-pill .ui-ico {
+  color: #08080a;
+}
+
+#view-client .ai-waiter-header-pill {
+  background: #08080a;
+  border-color: #08080a;
+  color: #ffffff;
+}
+
+.ui-label-with-ico {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#view-client .client-context-bar {
+  background: #fafbfc;
+  border: 1px solid #eceef2;
+}
+
+#view-client .client-context-bar:hover,
+#view-client .client-context-bar:active {
+  background: #edf4fc;
+  border-color: #c7dcf6;
+}
+
+/* Banner de bienvenida y caja de invitar amigos -> Ice Blue DineOS */
+#view-client .invite-welcome-banner {
+  background: #edf4fc;
+  border: 1px solid #cfe0f5;
+  color: #08080a;
+}
+
+#view-client .invite-welcome-banner .iwb-ico,
+#view-client .tib-ico,
+#view-client .tis-ico {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #cfe0f5;
+  color: #08080a;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+#view-client .iwb-texts span {
+  color: #3f4b5e;
+}
+
+#view-client .invite-welcome-banner .iwb-close {
+  background: #ffffff;
+  border: 1px solid #cfe0f5;
+  color: #08080a;
+}
+
+#view-client .table-invite-bar,
+#view-client .tracker-invite-strip {
+  background: #edf4fc;
+  border: 1px solid #d4e3f6;
+}
+
+#view-client .tib-texts strong {
+  color: #08080a;
+}
+
+#view-client .tib-texts span {
+  color: #4b5563;
+}
+
+#view-client .tib-btn {
+  border-radius: 999px;
+  border: 1px solid #d4d8e0;
+  background: #ffffff;
+  color: #08080a;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+#view-client .tib-btn.wa {
+  background: #08080a;
+  border-color: #08080a;
+  color: #ffffff;
+}
+
+/* Lo de Siempre & Club Lealtad -> Butter Yellow & Obsidian DineOS */
+#view-client .usual-ai-card,
+#view-client .usual-ai-card.compact-pinch {
+  background: #fdf9e6;
+  border: 1px solid #eee0a6;
+  box-shadow: 0 6px 18px -14px rgba(8, 8, 10, 0.14);
+}
+
+#view-client .usual-ai-kicker {
+  background: #08080a;
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+#view-client .usual-loyalty-pill {
+  background: #ffffff;
+  border: 1px solid #e6d692;
+  color: #08080a;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+#view-client .btn-usual-primary {
+  background: #08080a !important;
+  color: #ffffff !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+#view-client .btn-usual-secondary {
+  background: #ffffff;
+  border: 1px solid #e2d6a0;
+  color: #08080a;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.loyalty-wallet-card {
+  background: #08080a;
+  color: #ffffff;
+  border: 1px solid #1e2024;
+  box-shadow: 0 14px 28px -12px rgba(8, 8, 10, 0.35);
+}
+
+.lw-kicker {
+  color: #f5df89;
+}
+
+.lw-tier-pill {
+  background: #fbf0bf;
+  color: #08080a;
+  border-color: #fbf0bf;
+}
+
+.lw-progress-fill {
+  background: #f5df89;
+}
+
+/* Alertas & Gustos */
+.pref-hero-card {
+  background: #edf4fc;
+  border: 1px solid #d4e3f6;
+}
+
+.phc-pill {
+  background: #08080a;
+  color: #ffffff;
+}
+
+.pref-chip {
+  border-color: #e6e8ed;
+  background: #ffffff;
+  color: #08080a;
+}
+
+.pref-chip.selected {
+  background: #08080a;
+  border-color: #08080a;
+  color: #ffffff;
+}
+
+.dd-prefs-applied-banner {
+  background: #fdf9e6;
+  border: 1px solid #eee0a6;
+  color: #08080a;
+}
+
+.dd-prefs-applied-banner button {
+  background: #08080a;
+  color: #ffffff;
+}
+
+.pinch-badge.tone-pref-warn {
+  background: #fbf0bf;
+  color: #523e04;
+  border: 1px solid #ebd782;
+}
+
+.pinch-badge.tone-pref-ok {
+  background: #edf4fc;
+  color: #1c3f6b;
+  border: 1px solid #cfe0f5;
+}
+
+/* Calculadora Split -> Superficies Editorial Crisp */
+.tracker-split-calc-card {
+  background: #ffffff;
+  border: 1px solid #eceef2;
+  box-shadow: 0 8px 24px -18px rgba(8, 8, 10, 0.14);
+}
+
+.tsc-zero-badge {
+  background: #edf4fc;
+  border-color: #cfe0f5;
+  color: #08080a;
+}
+
+.tsc-pill.active {
+  background: #08080a;
+  color: #ffffff;
+}
+
+.tsc-share-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.tsc-share-btn.wa {
+  background: #08080a;
+  border-color: #08080a;
+  color: #ffffff;
+}
+
+/* Acciones en modal de detalle y toast */
+.dd-media-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Ajuste compacto del encabezado en móviles para evitar desbordes horizontales */
+@media (max-width: 480px) {
+  #view-client .topnav {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 6px;
+    padding: 0 12px;
+  }
+  #view-client .nav-brand-center {
+    min-width: 0;
+    overflow: hidden;
+  }
+  #view-client .brand-pinch-name {
+    font-size: 14.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #view-client .nav-brand-credits {
+    font-size: 8.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+  #view-client .loyalty-header-pill,
+  #view-client .ai-waiter-header-pill {
+    height: 28px;
+    padding: 0 8px;
+    font-size: 11px;
+  }
+  #view-client .topnav:has(#btn-client-back:not(.hidden)) #btn-header-prefs,
+  #view-client .topnav:has(#btn-client-back:not(.hidden)) .nav-brand-credits {
+    display: none;
+  }
+  #view-client .topnav:has(#btn-client-back:not(.hidden)) #btn-client-back {
+    padding: 5px 10px;
+    font-size: 11.5px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   DESLIZADOR "DESLIZA PARA PEDIR" (DINEOS SLIDE-TO-ORDER)
+   ═══════════════════════════════════════════════════════════════════════ */
+.order-slide-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.order-slide-track {
+  --slide-x: 0px;
+  --slide-progress: 0;
+  position: relative;
+  width: 100%;
+  height: 56px;
+  padding: 5px;
+  border-radius: 999px;
+  background: #08080a;
+  border: 1px solid #1d1e24;
+  box-shadow: 0 10px 26px -14px rgba(8, 8, 10, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.order-slide-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--slide-x) + 50px);
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(251, 240, 191, 0.14) 0%, rgba(251, 240, 191, 0.34) 100%);
+  pointer-events: none;
+  transition: width 0.36s var(--ease-spring), background 0.24s ease;
+}
+
+.order-slide-track.is-dragging .order-slide-fill {
+  transition: none;
+}
+
+.order-slide-label {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  padding: 0 18px 0 58px;
+  text-align: center;
+  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: rgba(255, 255, 255, 0.92);
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.6) 0%, #ffffff 50%, rgba(255, 255, 255, 0.6) 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: slideLabelShimmer 2.8s linear infinite;
+  opacity: calc(1 - var(--slide-progress) * 1.45);
+  pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.order-slide-confirmed-label {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-right: 42px;
+  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #ffffff;
+  opacity: 0;
+  transform: translateY(4px);
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.26s var(--ease-out-expo);
+}
+
+.order-slide-knob {
+  position: absolute;
+  left: 4px;
+  top: 4px;
+  z-index: 3;
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #fbf0bf;
+  color: #08080a;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  touch-action: none;
+  transform: translate3d(var(--slide-x), 0, 0);
+  transition: transform 0.36s var(--ease-spring), background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.order-slide-knob:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.order-slide-knob:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+.order-slide-track.is-dragging .order-slide-knob {
+  cursor: grabbing;
+  transition: background 0.2s ease, color 0.2s ease;
+  box-shadow: 0 6px 18px rgba(251, 240, 191, 0.32);
+}
+
+.order-slide-knob .slide-arrow-ico,
+.order-slide-knob .slide-check-ico {
+  width: 18px;
+  height: 18px;
+  position: absolute;
+  transition: opacity 0.18s ease, transform 0.22s var(--ease-spring);
+}
+
+.order-slide-knob .slide-check-ico {
+  opacity: 0;
+  transform: scale(0.5);
+}
+
+.order-slide-track.is-confirmed {
+  background: #15803d;
+  border-color: #166534;
+}
+
+.order-slide-track.is-confirmed .order-slide-fill {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.order-slide-track.is-confirmed .order-slide-label {
+  opacity: 0;
+}
+
+.order-slide-track.is-confirmed .order-slide-confirmed-label {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.order-slide-track.is-confirmed .order-slide-knob {
+  background: #ffffff;
+  color: #15803d;
+  cursor: default;
+}
+
+.order-slide-track.is-confirmed .slide-arrow-ico {
+  opacity: 0;
+  transform: scale(0.5);
+}
+
+.order-slide-track.is-confirmed .slide-check-ico {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.order-slide-track.is-error-bounce {
+  animation: orderSlideErrorShake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+.order-slide-cancel {
+  width: 100%;
+  height: 40px;
+  border-radius: 999px;
+}
+
+@keyframes slideLabelShimmer {
+  0%   { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+@keyframes orderSlideErrorShake {
+  10%, 90% { transform: translateX(-2px); }
+  20%, 80% { transform: translateX(4px); }
+  30%, 50%, 70% { transform: translateX(-5px); }
+  40%, 60% { transform: translateX(5px); }
+}
+
+/* Accesibilidad: respetar prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20261124v31" />
+  <link rel="stylesheet" href="style.css?v=20261124v46" />
 </head>
 <body class="apple-warm-theme">
 
@@ -26,6 +26,11 @@
   <header class="topnav">
     <div class="topnav-left">
       <button class="nav-btn-minimal hidden" id="btn-client-back" onclick="handleClientBack()">← Menú</button>
+      <button type="button" class="prefs-header-pill" id="btn-header-prefs" onclick="openClientAILoyaltyModal('profile')" title="Mis gustos y alergias">
+        <svg class="ui-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>
+        <span class="prefs-lbl">Gustos</span>
+        <span class="prefs-active-dot hidden" id="header-prefs-dot" aria-hidden="true"></span>
+      </button>
     </div>
 
     <div class="nav-brand-center">
@@ -42,12 +47,12 @@
 
     <div class="topnav-right">
       <button type="button" class="loyalty-header-pill" id="btn-header-loyalty" onclick="openClientAILoyaltyModal('loyalty')" title="Puntos · Programa de Lealtad">
-        <span class="loyalty-star-icon">⭐</span>
+        <svg class="ui-ico loyalty-star-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
         <span id="header-loyalty-pts">0</span>
         <span class="loyalty-pts-unit">pts</span>
       </button>
       <button type="button" class="ai-waiter-header-pill" id="btn-header-ai-waiter" onclick="openClientAILoyaltyModal('ai')" title="Mesero IA">
-        <span class="ai-sparkle-icon">✨</span>
+        <svg class="ui-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z"/></svg>
         <span>IA</span>
       </button>
       <button class="tracker-pill-btn hidden" id="btn-return-tracker" onclick="openActiveTracker()">
@@ -68,21 +73,24 @@
         <!-- Selector de Modalidad: En Mesa vs. Pickup vs. A Domicilio -->
         <div class="fulfillment-mode-tabs" id="fulfillment-mode-tabs">
           <button type="button" class="fmode-tab active" id="fmode-dine_in" onclick="setFulfillmentMode('dine_in')">
-            <span>🍽️ En Mesa</span>
+            <svg class="ui-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 13h18"/><path d="M5 13a7 7 0 0 1 14 0"/><path d="M12 6V4"/><path d="M4 17h16"/></svg>
+            <span>En Mesa</span>
           </button>
           <button type="button" class="fmode-tab" id="fmode-pickup" onclick="setFulfillmentMode('pickup')">
-            <span>🛍️ Pickup</span>
+            <svg class="ui-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8h12l-1 12H7L6 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>
+            <span>Pickup</span>
           </button>
           <button type="button" class="fmode-tab" id="fmode-delivery" onclick="setFulfillmentMode('delivery')">
-            <span>🛵 A Domicilio</span>
+            <svg class="ui-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="12" height="9" rx="1.5"/><path d="M14 10h4l3 3v3h-7v-6Z"/><circle cx="6.5" cy="17.5" r="1.5"/><circle cx="17.5" cy="17.5" r="1.5"/></svg>
+            <span>A Domicilio</span>
           </button>
         </div>
 
         <!-- Aviso de Pago Anticipado cuando elige Pickup o A Domicilio -->
         <div class="prepay-mode-banner hidden" id="prepay-mode-banner">
           <div class="prepay-banner-top">
-            <span class="prepay-badge" id="prepay-banner-badge">🔒 PAGO ANTICIPADO REQUERIDO</span>
-            <span class="prepay-wallets"> Pay · Stripe</span>
+            <span class="prepay-badge" id="prepay-banner-badge">PAGO ANTICIPADO REQUERIDO</span>
+            <span class="prepay-wallets">Apple Pay · Stripe</span>
           </div>
           <p class="prepay-banner-desc" id="prepay-banner-desc">
             Arma tu pedido y paga por adelantado desde tu celular para que cocina comience a prepararlo de inmediato.
@@ -93,17 +101,52 @@
         <button type="button" class="client-context-bar" id="client-context-bar" onclick="openIdentityPreselectModal()">
           <div class="ctx-left">
             <span class="ctx-dot"></span>
-            <span class="ctx-table-pill" id="ctx-table-pill">📍 Elegir Mesa</span>
+            <span class="ctx-table-pill" id="ctx-table-pill">Elegir Mesa</span>
             <span class="ctx-sep">·</span>
-            <span class="ctx-guest-pill" id="ctx-guest-pill">👤 Tu nombre</span>
+            <span class="ctx-guest-pill" id="ctx-guest-pill">Tu nombre</span>
           </div>
-          <span class="ctx-right-badge" id="ctx-group-pill">Cuentas separadas ✎</span>
+          <span class="ctx-right-badge" id="ctx-group-pill">Cuentas separadas</span>
         </button>
 
         <!-- Presencia en la mesa: quién más está pidiendo contigo -->
         <div class="table-presence-strip hidden" id="table-presence-strip">
           <div class="presence-avatars" id="presence-avatars"></div>
           <span class="presence-text" id="presence-text">Tu mesa</span>
+        </div>
+
+        <!-- Aviso amigable cuando entra mediante invitación de un amigo -->
+        <div class="invite-welcome-banner hidden" id="invite-welcome-banner">
+          <span class="iwb-ico" aria-hidden="true">
+            <svg class="ui-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </span>
+          <div class="iwb-texts">
+            <strong id="invite-welcome-title">Te uniste a la mesa</strong>
+            <span id="invite-welcome-sub">Cada quien pide a su ritmo en cuentas separadas.</span>
+          </div>
+          <button type="button" class="iwb-close" onclick="dismissInviteWelcome()" aria-label="Cerrar aviso">✕</button>
+        </div>
+
+        <!-- Pieza 1: Invitar amigos a esta mesa por WhatsApp o Link directo ($0) -->
+        <div class="table-invite-bar hidden" id="table-invite-bar">
+          <div class="tib-left">
+            <span class="tib-ico" aria-hidden="true">
+              <svg class="ui-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            </span>
+            <div class="tib-texts">
+              <strong id="table-invite-title">Invita amigos a tu mesa</strong>
+              <span id="table-invite-sub">Piden desde su celular · Cuentas separadas</span>
+            </div>
+          </div>
+          <div class="tib-actions">
+            <button type="button" class="tib-btn wa" onclick="shareTableInviteWhatsApp()">
+              <svg class="ui-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"/></svg>
+              <span>WhatsApp</span>
+            </button>
+            <button type="button" class="tib-btn copy" onclick="copyTableInviteLink()">
+              <svg class="ui-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              <span>Link</span>
+            </button>
+          </div>
         </div>
 
         <!-- Tarjeta compacta Mesero IA ("Lo de siempre") cuando ya hay historial -->
@@ -161,11 +204,11 @@
         </div>
         <div class="service-btns-row">
           <button type="button" class="btn-service-action" onclick="requestTableService('waiter')">
-            <span>🔔</span>
+            <svg class="ui-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
             <span>Llamar Mesero</span>
           </button>
           <button type="button" class="btn-service-action bill" onclick="requestTableService('bill')">
-            <span>🧾</span>
+            <svg class="ui-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 3h16v18l-3-2-2.5 2-2.5-2-2.5 2L7 19l-3 2V3Z"/><path d="M8 8h8"/><path d="M8 12h6"/></svg>
             <span>Pedir la Cuenta</span>
           </button>
         </div>
@@ -231,6 +274,20 @@
       <!-- Detalles de Entrega (Pickup / A Domicilio) -->
       <div class="tracker-fulfillment-box hidden" id="tracker-fulfillment-box"></div>
 
+      <!-- Pieza 1 (en Rastreador): Invitar amigos a la misma mesa -->
+      <div class="tracker-invite-strip hidden" id="tracker-invite-strip">
+        <div class="tis-left">
+          <span class="tis-ico" aria-hidden="true">
+            <svg class="ui-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          </span>
+          <span class="tis-label" id="tracker-invite-label">¿Vienen más amigos a tu mesa?</span>
+        </div>
+        <div class="tib-actions">
+          <button type="button" class="tib-btn wa sm" onclick="shareTableInviteWhatsApp()">WhatsApp</button>
+          <button type="button" class="tib-btn copy sm" onclick="copyTableInviteLink()">Copiar link</button>
+        </div>
+      </div>
+
       <!-- Quién está en tu mesa -->
       <div class="tracker-presence-card hidden" id="tracker-presence-card">
         <div class="minimal-group-title">
@@ -244,11 +301,11 @@
       <div class="tracker-order-summary receipt-card">
         <div class="tracker-split-tabs" id="tracker-split-tabs">
           <button type="button" class="split-tab active" id="tab-split-mine" onclick="setTrackerSplitView('mine')">
-            <span class="split-tab-title" id="tab-split-mine-label">👤 Mi Cuenta</span>
+            <span class="split-tab-title" id="tab-split-mine-label">Mi Cuenta</span>
             <span class="split-tab-amount" id="tab-split-mine-total">$0</span>
           </button>
           <button type="button" class="split-tab" id="tab-split-table" onclick="setTrackerSplitView('table')">
-            <span class="split-tab-title" id="tab-split-table-label">👥 Toda la Mesa</span>
+            <span class="split-tab-title" id="tab-split-table-label">Toda la Mesa</span>
             <span class="split-tab-amount" id="tab-split-table-total">$0</span>
           </button>
         </div>
@@ -275,11 +332,80 @@
         </div>
       </div>
 
+      <!-- Pieza 3: Calculadora Visual de Propina y División de la Cuenta ($0 comisiones) -->
+      <div class="tracker-split-calc-card" id="tracker-split-calculator">
+        <div class="minimal-group-title">
+          <span class="ui-label-with-ico">
+            <svg class="ui-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="11" x2="10" y2="11"/><line x1="14" y1="11" x2="16" y2="11"/><line x1="8" y1="16" x2="10" y2="16"/><line x1="14" y1="16" x2="16" y2="16"/></svg>
+            <span>DIVIDIR CUENTA Y PROPINA</span>
+          </span>
+          <span class="tsc-zero-badge">$0 comisiones</span>
+        </div>
+
+        <div class="tsc-mode-pills" role="tablist" aria-label="Modo para dividir cuenta">
+          <button type="button" class="tsc-pill active" id="tsc-mode-mine" onclick="setSplitCalcMode('mine')">Lo mío</button>
+          <button type="button" class="tsc-pill" id="tsc-mode-equal" onclick="setSplitCalcMode('equal')">Partes iguales</button>
+          <button type="button" class="tsc-pill" id="tsc-mode-table" onclick="setSplitCalcMode('table')">Toda la mesa</button>
+        </div>
+
+        <div class="tsc-people-row hidden" id="tsc-people-row">
+          <span class="tsc-people-lbl">Dividir entre personas:</span>
+          <div class="tsc-people-stepper">
+            <button type="button" class="tsc-step-btn" onclick="adjustSplitCalcPeople(-1)" aria-label="Menos personas">−</button>
+            <strong id="tsc-people-val">2</strong>
+            <button type="button" class="tsc-step-btn" onclick="adjustSplitCalcPeople(1)" aria-label="Más personas">+</button>
+          </div>
+        </div>
+
+        <div class="tsc-tip-block">
+          <span class="tsc-sub-label">Propina sugerida (opcional para el mesero):</span>
+          <div class="tsc-tip-pills" id="tsc-tip-pills">
+            <button type="button" class="tsc-tip-btn" data-tip="0" onclick="setSplitCalcTip(0)">0%</button>
+            <button type="button" class="tsc-tip-btn active" data-tip="10" onclick="setSplitCalcTip(10)">10%</button>
+            <button type="button" class="tsc-tip-btn" data-tip="15" onclick="setSplitCalcTip(15)">15%</button>
+            <button type="button" class="tsc-tip-btn" data-tip="18" onclick="setSplitCalcTip(18)">18%</button>
+            <button type="button" class="tsc-tip-btn" data-tip="20" onclick="setSplitCalcTip(20)">20%</button>
+          </div>
+        </div>
+
+        <div class="tsc-result-box">
+          <div class="tsc-res-line">
+            <span>Consumo base</span>
+            <strong id="tsc-res-base">$0.00</strong>
+          </div>
+          <div class="tsc-res-line">
+            <span id="tsc-res-tip-label">Propina (10%)</span>
+            <strong id="tsc-res-tip">$0.00</strong>
+          </div>
+          <div class="tsc-res-total">
+            <div class="tsc-res-total-texts">
+              <strong id="tsc-res-total-title">Total a pagar</strong>
+              <span id="tsc-res-total-sub">Directo en efectivo, terminal o transferencia</span>
+            </div>
+            <span class="tsc-res-grand" id="tsc-res-grand">$0.00</span>
+          </div>
+        </div>
+
+        <div class="tsc-share-row">
+          <button type="button" class="tsc-share-btn" onclick="copySplitCalculatorSummary()">
+            <svg class="ui-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <span>Copiar desglose</span>
+          </button>
+          <button type="button" class="tsc-share-btn wa" onclick="shareSplitCalculatorWhatsApp()">
+            <svg class="ui-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"/></svg>
+            <span>Mandar al grupo</span>
+          </button>
+        </div>
+      </div>
+
       <!-- PAGO DIGITAL EN MESA CON APPLE PAY & STRIPE CONNECT -->
       <div class="digital-pay-card" id="tracker-digital-pay-card">
         <div class="minimal-group-title">
-          <span>💳 PAGAR DESDE TU CELULAR (SIN ESPERAR)</span>
-          <span class="pay-methods-mini"> Pay · Stripe</span>
+          <span class="ui-label-with-ico">
+            <svg class="ui-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+            <span>PAGAR DESDE TU CELULAR</span>
+          </span>
+          <span class="pay-methods-mini">Apple Pay · Stripe</span>
         </div>
         <div class="digital-pay-btns">
           <button type="button" class="btn-apple-stripe-pay primary" id="btn-pay-my-share" onclick="openTrackerPaymentModal('mine')">
@@ -291,7 +417,7 @@
           </button>
           <button type="button" class="btn-apple-stripe-pay table-full hidden" id="btn-pay-full-table" onclick="openTrackerPaymentModal('table')">
             <span class="pay-btn-left">
-              <span>👥</span>
+              <svg class="ui-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
               <span id="btn-pay-full-table-text">Pagar Toda la Mesa</span>
             </span>
             <span class="pay-btn-amt" id="btn-pay-full-table-amt">$0</span>
@@ -311,21 +437,21 @@
       <!-- Asistencia y cuenta con mesero (solo visible en modo En Mesa) -->
       <div class="service-assistance-card" id="tracker-table-assistance-card">
         <div class="minimal-group-title">
-          <span>¿PREFIERES ASISTENCIA DEL PERSONAL?</span>
+          <span>ASISTENCIA DEL PERSONAL</span>
           <span class="service-live-tag" id="tracker-service-feedback">● En vivo</span>
         </div>
         <div class="service-btns-row">
           <button type="button" class="btn-service-action" onclick="requestTableService('waiter')">
-            <span>🔔</span>
+            <svg class="ui-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
             <span>Llamar Mesero</span>
           </button>
           <button type="button" class="btn-service-action bill" onclick="requestTableService('bill_individual')">
-            <span>🧾</span>
+            <svg class="ui-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 3h16v18l-3-2-2.5 2-2.5-2-2.5 2L7 19l-3 2V3Z"/><path d="M8 8h8"/><path d="M8 12h6"/></svg>
             <span id="btn-bill-my-share-label">Pedir Cuenta Física</span>
           </button>
         </div>
         <button type="button" class="btn-service-action bill-full hidden" id="btn-bill-full-table" onclick="requestTableService('bill_table')">
-          <span>👥</span>
+          <svg class="ui-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           <span id="btn-bill-full-table-label">Pedir Cuenta Física de Toda la Mesa</span>
         </button>
       </div>
@@ -408,7 +534,9 @@
 
           <div class="dd-section-block dd-config-launch-block" id="dd-config-launch-block">
             <button type="button" class="dd-config-launcher" id="dd-configurator-trigger" onclick="openDishConfigurator()">
-              <div class="dd-cl-icon" aria-hidden="true">✨</div>
+              <div class="dd-cl-icon" aria-hidden="true">
+                <svg class="ui-ico lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+              </div>
               <div class="dd-cl-body">
                 <span class="dd-cl-title" id="dd-cl-title">Personalizar platillo</span>
                 <span class="dd-cl-sub" id="dd-cl-sub">Quita ingredientes o agrega extras (tocino, aguacate, salsas...)</span>
@@ -424,6 +552,10 @@
           </div>
 
           <div class="dd-section-block">
+            <div class="dd-prefs-applied-banner hidden" id="dd-prefs-applied-banner">
+              <span id="dd-prefs-applied-text">Aplicamos tus gustos guardados</span>
+              <button type="button" onclick="openClientAILoyaltyModal('profile')">Editar</button>
+            </div>
             <span class="dd-section-label">INSTRUCCIONES PARA COCINA (OPCIONAL)</span>
             <div class="dd-quick-notes-row">
               <button type="button" class="dd-qnote-chip" onclick="appendDishQuickNote('Sin cebolla')">Sin cebolla</button>
@@ -553,9 +685,9 @@
   <div class="modal-overlay" id="modal-overlay" onclick="closeOrderModal()"></div>
   <div class="modal order-fulfillment-modal" id="order-modal">
     <div class="modal-fmode-tabs" id="modal-fmode-tabs">
-      <button type="button" class="mfmode-tab active" data-fmode="dine_in" onclick="setFulfillmentMode('dine_in')">🍽️ En Mesa</button>
-      <button type="button" class="mfmode-tab" data-fmode="pickup" onclick="setFulfillmentMode('pickup')">🛍️ Pickup</button>
-      <button type="button" class="mfmode-tab" data-fmode="delivery" onclick="setFulfillmentMode('delivery')">🛵 Domicilio</button>
+      <button type="button" class="mfmode-tab active" data-fmode="dine_in" onclick="setFulfillmentMode('dine_in')">En Mesa</button>
+      <button type="button" class="mfmode-tab" data-fmode="pickup" onclick="setFulfillmentMode('pickup')">Pickup</button>
+      <button type="button" class="mfmode-tab" data-fmode="delivery" onclick="setFulfillmentMode('delivery')">Domicilio</button>
     </div>
 
     <span class="step-label" id="order-modal-kicker">CUENTAS SEPARADAS POR MESA</span>
@@ -591,9 +723,9 @@
     <div class="modal-field-block hidden" id="modal-block-pickup">
       <label class="modal-field-label" for="pickup-time-input">3. ¿CUÁNDO PASAS A RECOGER?</label>
       <div class="quick-table-chips" id="pickup-time-chips">
-        <button type="button" class="table-chip selected" onclick="selectPickupTimeChip('Lo antes posible (15-20 min)')">⚡ Lo antes posible (15-20 min)</button>
-        <button type="button" class="table-chip" onclick="selectPickupTimeChip('En 30 minutos')">🕒 En 30 min</button>
-        <button type="button" class="table-chip" onclick="selectPickupTimeChip('En 45 minutos')">🕓 En 45 min</button>
+        <button type="button" class="table-chip selected" onclick="selectPickupTimeChip('Lo antes posible (15-20 min)')">Lo antes posible (15-20 min)</button>
+        <button type="button" class="table-chip" onclick="selectPickupTimeChip('En 30 minutos')">En 30 min</button>
+        <button type="button" class="table-chip" onclick="selectPickupTimeChip('En 45 minutos')">En 45 min</button>
       </div>
       <input class="modal-input" id="pickup-time-input" type="text" value="Lo antes posible (15-20 min)" placeholder="Ej: En 20 minutos" maxlength="40" />
     </div>
@@ -605,20 +737,44 @@
       <label class="modal-field-label" for="delivery-notes-input" style="margin-top:6px;">4. INTERIOR / REFERENCIAS PARA EL REPARTIDOR</label>
       <input class="modal-input" id="delivery-notes-input" type="text" placeholder="Ej: Depto 302, portón negro" maxlength="70" />
       <div class="delivery-fee-pill">
-        <span>🛵 Envío a domicilio</span>
+        <span>Envío a domicilio</span>
         <span>+$25.00 MXN</span>
       </div>
     </div>
 
     <!-- Aviso de pago anticipado obligatorio en Pickup / Domicilio -->
     <div class="modal-prepay-note hidden" id="modal-prepay-note">
-      <span>🔒</span>
+      <svg class="ui-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
       <span>Para procesar órdenes de <strong>Pickup</strong> o <strong>A Domicilio</strong>, se realiza el pago anticipado con <strong>Apple Pay</strong> o <strong>Tarjeta</strong> en el siguiente paso.</span>
     </div>
 
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeOrderModal()">Cancelar</button>
-      <button class="btn-confirm" id="btn-submit-order" onclick="submitOrder()">Confirmar y Pedir</button>
+    <!-- Deslizar para pedir (previene envíos accidentales a cocina) -->
+    <div class="order-slide-wrap" id="order-slide-wrap">
+      <div class="order-slide-track" id="order-slide-track">
+        <div class="order-slide-fill" id="order-slide-fill" aria-hidden="true"></div>
+        <span class="order-slide-label" id="order-slide-label">Desliza para pedir</span>
+        <span class="order-slide-confirmed-label" id="order-slide-confirmed-label" aria-hidden="true">✓ Enviando a cocina...</span>
+        <div
+          class="order-slide-knob"
+          id="order-slide-knob"
+          role="slider"
+          tabindex="0"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuenow="0"
+          aria-label="Desliza hacia la derecha para confirmar tu pedido"
+        >
+          <svg class="ui-ico slide-arrow-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          <svg class="ui-ico slide-check-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+      </div>
+      <button type="button" class="btn-cancel order-slide-cancel" onclick="closeOrderModal()">Cancelar</button>
+    </div>
+
+    <!-- Botones estándar únicamente cuando se pre-selecciona mesa/nombre ("Guardar Datos") -->
+    <div class="modal-actions hidden" id="order-identity-actions">
+      <button type="button" class="btn-cancel" onclick="closeOrderModal()">Cancelar</button>
+      <button type="button" class="btn-confirm" id="btn-submit-order" onclick="submitOrder()">Guardar Datos</button>
     </div>
   </div>
 
@@ -627,7 +783,9 @@
   <div class="modal payment-checkout-modal" id="payment-modal">
     <div class="pay-modal-top">
       <div class="pay-merchant-badge">
-        <span class="pay-lock-dot">🔒</span>
+        <span class="pay-lock-dot" aria-hidden="true">
+          <svg class="ui-ico sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </span>
         <span>Pago directo a <strong class="brand-escandon">Escandon</strong></span>
       </div>
       <span class="pay-connect-acct" id="pay-connect-acct-id">acct_escandon_mx</span>
@@ -654,7 +812,7 @@
         <span id="pay-sum-subtotal">$0.00</span>
       </div>
       <div class="pay-sum-row hidden" id="pay-sum-delivery-row">
-        <span>🛵 Envío a domicilio</span>
+        <span>Envío a domicilio</span>
         <span id="pay-sum-delivery">$25.00</span>
       </div>
       <div class="pay-sum-row">
@@ -680,7 +838,9 @@
         <span class="ap-sheet-card">Visa •••• 4242 · Wallet</span>
       </div>
       <div class="ap-sheet-body">
-        <div class="ap-faceid-ring" id="ap-faceid-ring">☺</div>
+        <div class="ap-faceid-ring" id="ap-faceid-ring">
+          <svg class="ui-ico lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V6a2 2 0 0 1 2-2h2"/><path d="M16 4h2a2 2 0 0 1 2 2v2"/><path d="M4 16v2a2 2 0 0 0 2 2h2"/><path d="M16 20h2a2 2 0 0 0 2-2v-2"/><path d="M9 10v1"/><path d="M15 10v1"/><path d="M9.5 15a3.5 3.5 0 0 0 5 0"/></svg>
+        </div>
         <span class="ap-faceid-status" id="ap-faceid-status">Verificando Face ID...</span>
       </div>
     </div>
@@ -705,7 +865,7 @@
     <div class="modal-actions" style="margin-top:12px;">
       <button type="button" class="btn-cancel" onclick="closePaymentModal()">Cancelar</button>
       <button type="button" class="btn-confirm btn-stripe-submit" id="btn-stripe-submit" onclick="payWithStripeCard()">
-        🔒 Pagar con Tarjeta
+        Pagar con Tarjeta
       </button>
     </div>
   </div>
@@ -728,10 +888,16 @@
     <div class="ai-loyalty-modal-top">
       <div class="ai-loyalty-seg-tabs" role="tablist">
         <button type="button" class="ai-loyalty-seg-btn active" id="tab-client-ai" onclick="switchClientAILoyaltyTab('ai')">
-          <span>✨ Mesero IA</span>
+          <svg class="ui-ico sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z"/></svg>
+          <span>Mesero IA</span>
         </button>
         <button type="button" class="ai-loyalty-seg-btn" id="tab-client-loyalty" onclick="switchClientAILoyaltyTab('loyalty')">
-          <span>⭐ Puntos Escandón</span>
+          <svg class="ui-ico sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <span>Puntos</span>
+        </button>
+        <button type="button" class="ai-loyalty-seg-btn" id="tab-client-profile" onclick="switchClientAILoyaltyTab('profile')">
+          <svg class="ui-ico sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>
+          <span>Mis Gustos</span>
         </button>
       </div>
       <button type="button" class="ai-modal-close-btn" onclick="closeClientAILoyaltyModal()" aria-label="Cerrar">✕</button>
@@ -740,7 +906,9 @@
     <!-- PESTAÑA 1: MESERO IA (CHAT NATURAL · "PIDE LO DE SIEMPRE") -->
     <div class="ai-loyalty-pane" id="pane-client-ai">
       <div class="ai-waiter-hero compact-chat-head">
-        <div class="ai-chat-emblem" aria-hidden="true">✨</div>
+        <div class="ai-chat-emblem" aria-hidden="true">
+          <svg class="ui-ico lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z"/></svg>
+        </div>
         <div class="ai-waiter-hero-texts">
           <div class="ai-waiter-head-row">
             <span class="step-label">MESERO IA · MEMORIA DE PEDIDOS</span>
@@ -754,19 +922,19 @@
       <!-- Chips rápidos de 1 toque -->
       <div class="ai-quick-chips-row" id="client-ai-quick-chips">
         <button type="button" class="ai-quick-chip featured" onclick="runClientAIQuickPrompt('Pide lo de siempre')">
-          ⚡ Pide lo de siempre
+          Pide lo de siempre
         </button>
         <button type="button" class="ai-quick-chip" onclick="runClientAIQuickPrompt('Quiero 1 Pinch Burger y 1 Mexican Coke')">
-          🍔 Pinch Burger + Coke
+          Pinch Burger + Coke
         </button>
         <button type="button" class="ai-quick-chip" onclick="runClientAIQuickPrompt('Quiero 1 Pinch Nachos y 1 K-town Guac')">
-          🧀 Pinch Nachos + Guac
+          Pinch Nachos + Guac
         </button>
         <button type="button" class="ai-quick-chip" onclick="runClientAIQuickPrompt('¿Cuántos puntos tengo?')">
-          ⭐ Mis puntos
+          Mis puntos
         </button>
         <button type="button" class="ai-quick-chip" onclick="runClientAIQuickPrompt('Manda mi pedido a cocina')">
-          🚀 Enviar a comanda
+          Enviar a comanda
         </button>
       </div>
 
@@ -789,6 +957,11 @@
     <!-- PESTAÑA 2: PROGRAMA DE LEALTAD · PUNTOS ESCANDÓN -->
     <div class="ai-loyalty-pane hidden" id="pane-client-loyalty">
       <div id="client-loyalty-panel-content"></div>
+    </div>
+
+    <!-- PESTAÑA 3: MINI-PERFIL DE GUSTOS Y ALERGIAS (LOCAL EN DISPOSITIVO · $0) -->
+    <div class="ai-loyalty-pane hidden" id="pane-client-profile">
+      <div id="client-profile-panel-content"></div>
     </div>
   </div>
 
@@ -836,8 +1009,8 @@
     <header class="dineos-topbar no-print">
       <div class="dineos-top-left">
         <div class="dineos-brand-mark" onclick="setKDSSubView('comandas')" title="Ir a Cocina">
-          <span class="dineos-logo-badge">◈</span>
-          <span class="dineos-brand-name brand-escandon">ESCANDON</span>
+          <span class="dineos-logo-badge"><img src="assets/crowed-logo.png?v=20261124v46" alt="Logo Crowed" class="dineos-logo-img" /></span>
+          <span class="dineos-brand-name brand-escandon" data-fixed-brand="1">Crowed</span>
           <span class="kds-status dineos-live-dot" id="kds-status" title="Sincronización en vivo">●</span>
         </div>
 
@@ -881,7 +1054,7 @@
           <button type="button" class="dineos-circle-btn" onclick="copyCustomerLink()" title="Copiar link directo para clientes">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>
           </button>
-          <button type="button" class="dineos-circle-btn" onclick="setKDSSubView('board')" title="Comandas activas en tablero">
+          <button type="button" class="dineos-circle-btn" onclick="openKDSKanbanBoard()" title="Comandas activas en tablero">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
             <span class="dineos-notif-badge" id="dineos-alerts-badge">0</span>
           </button>
@@ -900,36 +1073,86 @@
     <!-- CUERPO PRINCIPAL: BARRA LATERAL VERTICAL DE ÍCONOS + ÁREA DE TRABAJO -->
     <div class="dineos-app-shell">
 
-      <!-- RAIL LATERAL IZQUIERDO DE 7 ÍCONOS CIRCULARES (RÉPLICA EXACTA DINEOS) -->
+      <!-- RAIL LATERAL IZQUIERDO DE 7 ÍCONOS CIRCULARES CON CÁPSULAS LIQUID GLASS -->
       <aside class="dineos-left-rail no-print" aria-label="Navegación de Cocina">
         <div class="dineos-rail-group" role="tablist">
-          <button type="button" class="dineos-rail-btn active" id="btn-kds-comandas" onclick="setKDSSubView('comandas')" title="Dashboard Cocina">
+          <button type="button" class="dineos-rail-btn rail-ico-grid active" id="btn-kds-comandas" onclick="setKDSSubView('comandas')" aria-label="Cocina — Dashboard en vivo">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.6"/><rect x="14" y="3" width="7" height="7" rx="1.6"/><rect x="3" y="14" width="7" height="7" rx="1.6"/><rect x="14" y="14" width="7" height="7" rx="1.6"/></svg>
             <span class="rail-mob-label">Cocina</span>
+            <span class="rail-glass-capsule" aria-hidden="true">
+              <span class="rgc-dot"></span>
+              <span class="rgc-texts">
+                <strong class="rgc-title">Cocina</strong>
+                <small class="rgc-sub">Dashboard en vivo</small>
+              </span>
+            </span>
           </button>
-          <button type="button" class="dineos-rail-btn" id="btn-rail-board" onclick="setKDSSubView('board')" title="Tablero de Comandas">
+          <button type="button" class="dineos-rail-btn rail-ico-board" id="btn-rail-board" onclick="openKDSKanbanBoard()" aria-label="Comandas — Tablero Kanban activo">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 10h14v7a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3v-7Z"/><path d="M3 10h18"/><path d="M9 6h6"/></svg>
             <span class="rail-mob-label">Pedidos</span>
+            <span class="rail-glass-capsule" aria-hidden="true">
+              <span class="rgc-dot"></span>
+              <span class="rgc-texts">
+                <strong class="rgc-title">Comandas</strong>
+                <small class="rgc-sub">Tablero Kanban activo</small>
+              </span>
+              <span class="rgc-count hidden" id="rail-capsule-orders-count">0</span>
+            </span>
           </button>
-          <button type="button" class="dineos-rail-btn" id="btn-rail-copilot" onclick="toggleKitchenAICopilot()" title="Copiloto IA Operativo">
+          <button type="button" class="dineos-rail-btn rail-ico-ai" id="btn-rail-copilot" onclick="toggleKitchenAICopilot()" aria-label="Copiloto IA — Asistente operativo">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3h16v18l-3-2-2.5 2-2.5-2-2.5 2L7 19l-3 2V3Z"/><path d="M8 8h8"/><path d="M8 12h6"/></svg>
             <span class="rail-mob-label">IA</span>
+            <span class="rail-glass-capsule" aria-hidden="true">
+              <span class="rgc-dot"></span>
+              <span class="rgc-texts">
+                <strong class="rgc-title">Copiloto IA</strong>
+                <small class="rgc-sub">Asistente operativo</small>
+              </span>
+            </span>
           </button>
-          <button type="button" class="dineos-rail-btn" id="btn-kds-stock" onclick="setKDSSubView('stock')" title="Insumos PEPS y Stock 86">
+          <button type="button" class="dineos-rail-btn rail-ico-stock" id="btn-kds-stock" onclick="setKDSSubView('stock')" aria-label="Insumos y 86 — Control PEPS y stock">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
             <span class="rail-mob-label">Insumos</span>
+            <span class="rail-glass-capsule" aria-hidden="true">
+              <span class="rgc-dot"></span>
+              <span class="rgc-texts">
+                <strong class="rgc-title">Insumos &amp; 86</strong>
+                <small class="rgc-sub">Control PEPS y stock</small>
+              </span>
+            </span>
           </button>
-          <button type="button" class="dineos-rail-btn" id="btn-kds-sales" onclick="setKDSSubView('sales')" title="Dashboard de Ventas y Excel">
+          <button type="button" class="dineos-rail-btn rail-ico-sales" id="btn-kds-sales" onclick="setKDSSubView('sales')" aria-label="Ventas — Finanzas y corte Excel">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
             <span class="rail-mob-label">Ventas</span>
+            <span class="rail-glass-capsule" aria-hidden="true">
+              <span class="rgc-dot"></span>
+              <span class="rgc-texts">
+                <strong class="rgc-title">Ventas</strong>
+                <small class="rgc-sub">Finanzas y corte Excel</small>
+              </span>
+            </span>
           </button>
-          <button type="button" class="dineos-rail-btn" id="btn-kds-qrs" onclick="setKDSSubView('qrs')" title="Códigos QR por Mesa">
+          <button type="button" class="dineos-rail-btn rail-ico-qrs" id="btn-kds-qrs" onclick="setKDSSubView('qrs')" aria-label="Códigos QR — Mesas e impresión">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="15" y="3" width="6" height="6" rx="1"/><rect x="3" y="15" width="6" height="6" rx="1"/><path d="M15 15h2v2h-2z"/><path d="M19 15h2v6h-6v-2h4z"/></svg>
             <span class="rail-mob-label">QRs</span>
+            <span class="rail-glass-capsule" aria-hidden="true">
+              <span class="rgc-dot"></span>
+              <span class="rgc-texts">
+                <strong class="rgc-title">Códigos QR</strong>
+                <small class="rgc-sub">Mesas e impresión</small>
+              </span>
+            </span>
           </button>
-          <button type="button" class="dineos-rail-btn rail-lock-btn" onclick="lockKDSAndExit()" title="Bloquear panel y salir">
+          <button type="button" class="dineos-rail-btn rail-lock-btn rail-ico-lock" onclick="lockKDSAndExit()" aria-label="Bloquear — Cerrar sesión KDS">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.85 1 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
             <span class="rail-mob-label">Salir</span>
+            <span class="rail-glass-capsule" aria-hidden="true">
+              <span class="rgc-dot"></span>
+              <span class="rgc-texts">
+                <strong class="rgc-title">Bloquear</strong>
+                <small class="rgc-sub">Cerrar sesión KDS</small>
+              </span>
+            </span>
           </button>
         </div>
       </aside>
@@ -973,7 +1196,7 @@
 
                 <!-- Zona inferior izquierda: Tarjeta blanca flotante Preparación Actual + Sparkline abierto -->
                 <div class="dineos-open-bottom">
-                  <div class="dineos-prep-card" onclick="setKDSSubView('board')">
+                  <div class="dineos-prep-card" onclick="openKDSKanbanBoard()">
                     <div class="dineos-prep-top">
                       <div class="dineos-prep-lead">
                         <span class="dineos-prep-ico" aria-hidden="true">
@@ -981,7 +1204,7 @@
                         </span>
                         <div class="dineos-prep-label-col">
                           <span class="dineos-prep-title">Preparación actual</span>
-                          <span class="dineos-prep-eta" id="dineos-prep-eta">⏱ ETA: 0 min</span>
+                          <span class="dineos-prep-eta" id="dineos-prep-eta">ETA: 0 min</span>
                         </div>
                       </div>
                       <span class="dineos-black-arrow-btn" aria-hidden="true">↗</span>
@@ -1009,7 +1232,7 @@
 
                 <!-- FILA 1: 4 TARJETAS KPI MINIMALISTAS BLANCAS -->
                 <div class="dineos-top-kpis" id="kds-live-kpi-row">
-                  <div class="dineos-mini-kpi" onclick="setKDSSubView('board')">
+                  <div class="dineos-mini-kpi" onclick="openKDSKanbanBoard()">
                     <div class="dmk-head">
                       <span class="dmk-ico">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M2 18h20"/><path d="M4 18a8 8 0 0 1 16 0"/><path d="M12 6v4"/><path d="M10 6h4"/></svg>
@@ -1029,7 +1252,7 @@
                     <div class="dmk-val" id="dineos-kpi-avail">15</div>
                   </div>
 
-                  <div class="dineos-mini-kpi" onclick="setKDSSubView('board')">
+                  <div class="dineos-mini-kpi" onclick="openKDSKanbanBoard()">
                     <div class="dmk-head">
                       <span class="dmk-ico">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
@@ -1115,7 +1338,7 @@
                   </div>
 
                   <!-- Tarjeta Pastel Azul Cielo: Ocupación y Canales -->
-                  <div class="dineos-pastel-card blue" onclick="setKDSSubView('board')">
+                  <div class="dineos-pastel-card blue" onclick="openKDSKanbanBoard()">
                     <div class="dpc-head">
                       <div class="dpc-title-wrap">
                         <span class="dpc-ico">
@@ -1187,7 +1410,7 @@
                 <div class="kds-filters-bar dineos-filters-bar">
                   <div class="kds-filters">
                     <button class="kds-filter active" data-filter="all" onclick="setKDSFilter('all', this)">
-                      <span>Todos</span>
+                      <span>Vista Kanban</span>
                       <span class="filter-count" id="kds-count-all">0</span>
                     </button>
                     <button class="kds-filter" data-filter="pending" onclick="setKDSFilter('pending', this)">
@@ -1217,7 +1440,9 @@
               <!-- Tablero Grid de Comandas -->
               <div class="kds-board" id="kds-board">
                 <div class="kds-empty" id="kds-empty">
-                  <div class="kds-empty-icon">🍽️</div>
+                  <div class="kds-empty-icon">
+                    <svg class="ui-ico xl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 13h18"/><path d="M5 13a7 7 0 0 1 14 0"/><path d="M12 6V4"/><path d="M4 17h16"/></svg>
+                  </div>
                   <p class="kds-empty-title">Sin comandas activas</p>
                   <p class="kds-empty-sub">Los pedidos entrantes de mesa, pickup y domicilio aparecerán al instante aquí.</p>
                 </div>
@@ -1237,7 +1462,7 @@
           <div class="sales-header-actions">
             <span class="sales-tenant-badge"><span class="brand-escandon">Escandon</span> · Corte Activo</span>
             <button type="button" class="btn-export-quick" onclick="exportCurrentShiftOrMonthExcel()">
-              📥 Exportar Excel (.xlsx)
+              Exportar Excel (.xlsx)
             </button>
             <button class="btn-sales-back" onclick="setKDSSubView('comandas')">← Cocina</button>
           </div>
@@ -1247,16 +1472,16 @@
         <div class="stock-subtab-bar sales-subtab-bar">
           <div class="stock-segmented-pill" role="tablist">
             <button type="button" class="stock-seg-btn active" id="btn-sales-tab-overview" onclick="setSalesSubTab('overview')">
-              📊 Resumen &amp; Gráficas
+              Resumen &amp; Gráficas
             </button>
             <button type="button" class="stock-seg-btn" id="btn-sales-tab-categories" onclick="setSalesSubTab('categories')">
-              🍽️ Categorías &amp; Actividad
+              Categorías &amp; Actividad
             </button>
             <button type="button" class="stock-seg-btn" id="btn-sales-tab-excel" onclick="setSalesSubTab('excel')">
-              📥 Reporte Excel (.xlsx)
+              Reporte Excel (.xlsx)
             </button>
             <button type="button" class="stock-seg-btn" id="btn-sales-tab-history" onclick="setSalesSubTab('history')">
-              📅 Historial &amp; Cierre
+              Historial &amp; Cierre
             </button>
           </div>
         </div>
@@ -1395,7 +1620,7 @@
             </div>
             <div class="excel-preview-btns">
               <button type="button" class="btn-export-excel-sm" onclick="exportCurrentShiftOrMonthExcel()">
-                📥 Descargar .XLSX
+                Descargar .XLSX
               </button>
             </div>
           </div>
@@ -1440,14 +1665,14 @@
               </div>
             </div>
 
-            <div class="history-products-line" id="hist-products">🫒 0 · 🍔 0 · 🥩 0 · 🍟 0 · 🥧 0 · 🥤 0</div>
+            <div class="history-products-line" id="hist-products">Bites 0 · Burgers 0 · Entrees 0 · Sides 0 · Postres 0 · Bebidas 0</div>
 
             <div class="history-days-list" id="hist-days-list">
               <p class="history-empty">Sin ventas registradas este mes</p>
             </div>
 
             <div class="history-export-row">
-              <button class="btn-export-excel" onclick="exportSelectedMonthExcel()">📥 Exportar mes (.xlsx)</button>
+              <button class="btn-export-excel" onclick="exportSelectedMonthExcel()">Exportar mes (.xlsx)</button>
               <button class="btn-export-secondary" onclick="exportAllHistoryExcel()">Exportar todo</button>
             </div>
           </div>
@@ -1459,7 +1684,9 @@
                 <h3 class="apple-surface-title">Cierre de Turno</h3>
                 <p class="apple-surface-sub">Corte diario y reinicio seguro de contadores</p>
               </div>
-              <span class="apple-status-circle tone-amber">⏱</span>
+              <span class="apple-status-circle tone-amber" aria-hidden="true">
+                <svg class="ui-ico sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+              </span>
             </div>
 
             <p class="shift-close-explain">
@@ -1495,7 +1722,7 @@
               + Agregar Insumo
             </button>
             <button type="button" class="btn-seed-demo" onclick="copyRestockShoppingList()">
-              📋 Lista de Compras
+              Lista de Compras
             </button>
             <button class="btn-sales-back" onclick="setKDSSubView('comandas')">← Cocina</button>
           </div>
@@ -1505,16 +1732,16 @@
         <div class="stock-subtab-bar">
           <div class="stock-segmented-pill" role="tablist">
             <button type="button" class="stock-seg-btn active" id="btn-stock-tab-inventory" onclick="setStockSubTab('inventory')">
-              📦 Catálogo de Insumos
+              Catálogo de Insumos
             </button>
             <button type="button" class="stock-seg-btn" id="btn-stock-tab-alerts" onclick="setStockSubTab('alerts')">
-              ⚠️ Alertas &amp; Compras <span class="seg-count-badge hidden" id="inv-tab-alerts-badge">0</span>
+              Alertas &amp; Compras <span class="seg-count-badge hidden" id="inv-tab-alerts-badge">0</span>
             </button>
             <button type="button" class="stock-seg-btn" id="btn-stock-tab-mode86" onclick="setStockSubTab('mode86')">
-              ⚡ Modo 86 Rápido
+              Modo 86 Rápido
             </button>
             <button type="button" class="stock-seg-btn" id="btn-stock-tab-movements" onclick="setStockSubTab('movements')">
-              📋 Movimientos
+              Movimientos
             </button>
           </div>
           <div class="stock-auto86-wrap">
@@ -1534,7 +1761,7 @@
             <div class="apple-kpi-card" onclick="setInventoryFilter('all')">
               <div class="apple-card-head">
                 <span class="apple-card-label">Insumos Registrados</span>
-                <span class="apple-corner-btn subtle" aria-hidden="true">📦</span>
+                <span class="apple-corner-btn subtle" aria-hidden="true">↗</span>
               </div>
               <div class="apple-kpi-split">
                 <div class="apple-kpi-body">
@@ -1575,7 +1802,7 @@
             <div class="apple-kpi-card">
               <div class="apple-card-head">
                 <span class="apple-card-label">Descuento por Receta</span>
-                <span class="apple-corner-btn subtle" aria-hidden="true">⚡</span>
+                <span class="apple-corner-btn subtle" aria-hidden="true">↗</span>
               </div>
               <div class="apple-kpi-body">
                 <div class="apple-kpi-number compact" id="inv-kpi-deductions">0 órdenes</div>
@@ -1591,22 +1818,22 @@
                 Todos <span class="filter-count" id="inv-cnt-all">0</span>
               </button>
               <button type="button" class="kds-filter" data-inv-filter="restock" onclick="setInventoryFilter('restock')">
-                ⚠️ Por pedir <span class="filter-count" id="inv-cnt-restock">0</span>
+                Por pedir <span class="filter-count" id="inv-cnt-restock">0</span>
               </button>
               <button type="button" class="kds-filter" data-inv-filter="expiry" onclick="setInventoryFilter('expiry')">
-                ⏳ Caducidad <span class="filter-count" id="inv-cnt-expiry">0</span>
+                Caducidad <span class="filter-count" id="inv-cnt-expiry">0</span>
               </button>
               <button type="button" class="kds-filter" data-inv-filter="Proteínas" onclick="setInventoryFilter('Proteínas')">
-                🥩 Proteínas
+                Proteínas
               </button>
               <button type="button" class="kds-filter" data-inv-filter="Panadería y Pastas" onclick="setInventoryFilter('Panadería y Pastas')">
-                🍞 Panadería y Pastas
+                Panadería y Pastas
               </button>
               <button type="button" class="kds-filter" data-inv-filter="Verduras y Salsas" onclick="setInventoryFilter('Verduras y Salsas')">
-                🌿 Verduras y Salsas
+                Verduras y Salsas
               </button>
               <button type="button" class="kds-filter" data-inv-filter="Bebidas" onclick="setInventoryFilter('Bebidas')">
-                🥤 Bebidas
+                Bebidas
               </button>
             </div>
             <div class="kds-search-pill inv-search-pill">
@@ -1634,7 +1861,7 @@
                 <h3 class="apple-surface-title">Atención Requerida · Compras &amp; Caducidades</h3>
                 <p class="apple-surface-sub">Calculado en tiempo real según tus pedidos y fechas de vencimiento PEPS</p>
               </div>
-              <button type="button" class="btn-seed-demo" onclick="copyRestockShoppingList()">📋 Copiar Lista</button>
+              <button type="button" class="btn-seed-demo" onclick="copyRestockShoppingList()">Copiar Lista</button>
             </div>
             <div class="inv-alerts-list" id="inv-urgent-alerts-list"></div>
           </div>
@@ -1699,7 +1926,7 @@
           </label>
           <div class="history-export-row">
             <button type="button" class="btn-export-excel" onclick="printTableQRCards()">
-              🖨️ Imprimir / Guardar PDF de QRs
+              Imprimir / Guardar PDF de QRs
             </button>
           </div>
         </div>
@@ -1741,11 +1968,11 @@
         <div class="modal-field-block">
           <label class="modal-field-label" for="inv-category-input">CATEGORÍA</label>
           <select class="modal-input inv-select" id="inv-category-input">
-            <option value="Proteínas">🥩 Proteínas y Mariscos</option>
-            <option value="Panadería y Pastas">🍞 Panadería y Pastas</option>
-            <option value="Verduras y Salsas">🌿 Verduras, Quesos y Salsas</option>
-            <option value="Bebidas">🥤 Bebidas y Aguas Frescas</option>
-            <option value="Otros">📦 Otros / Repostería</option>
+            <option value="Proteínas">Proteínas y Mariscos</option>
+            <option value="Panadería y Pastas">Panadería y Pastas</option>
+            <option value="Verduras y Salsas">Verduras, Quesos y Salsas</option>
+            <option value="Bebidas">Bebidas y Aguas Frescas</option>
+            <option value="Otros">Otros / Repostería</option>
           </select>
         </div>
 
@@ -1783,33 +2010,33 @@
         <div class="modal-field-block span-2">
           <label class="modal-field-label" for="inv-recipe-link-input">VÍNCULO AUTOMÁTICO CON PEDIDOS (RECETA)</label>
           <select class="modal-input inv-select" id="inv-recipe-link-input">
-            <option value="manual">📦 Solo inventario manual (sin descuento automático)</option>
-            <option value="pinch_beef_patty">🥩 Pinch Burger 8 oz (+ Carne extra)</option>
-            <option value="pinch_angus_steak">🥩 Entraña Certified Angus 8 oz</option>
-            <option value="pinch_ribs_pork">🥩 Costillar Baby Back / Panceta BBQ</option>
-            <option value="pinch_chicken_thigh">🥩 Muslo de Pollo Frito</option>
-            <option value="pinch_cured_meats">🥩 Pavo y Jamón Curados en Casa</option>
-            <option value="pinch_seafood">🥩 Mariscos (Camarón / Mahi Mahi / Bacalao)</option>
-            <option value="pinch_bacon">🥩 Tocino Ahumado (BLT + Extra Tocino)</option>
-            <option value="pinch_eggs">🥩 Huevos Orgánicos (+ Extra Huevo)</option>
-            <option value="pinch_brioche">🍞 Pan Brioche Artesanal</option>
-            <option value="pinch_cuban_bread">🍞 Pan Cubano Hecho en Casa</option>
-            <option value="pinch_pasta">🍞 Pasta Tagliatelle &amp; Bucatini</option>
-            <option value="pinch_blue_totopos">🍞 Totopos de Maíz Azul</option>
-            <option value="pinch_potatoes">🌿 Papas Frescas (Corte en Casa / Puré)</option>
-            <option value="pinch_avocado">🌿 Aguacate Hass &amp; Guacamole (+ Extra)</option>
-            <option value="pinch_cheese">🌿 Quesos (Suizo / Parmigiano / Chipotle)</option>
-            <option value="pinch_aioli">🌿 Alioli Casa, Trufa y Picante (+ Extras)</option>
-            <option value="pinch_guava_bbq">🌿 Salsa BBQ de Guayaba (+ Extra)</option>
-            <option value="pinch_greens">🌿 Arúgula, Lechuga, Coles y Broccolini</option>
-            <option value="pinch_caramel_onion">🌿 Cebollas Caramelizadas y al Mojo</option>
-            <option value="pinch_desserts_base">📦 Repostería Casa (Postres)</option>
-            <option value="drink_agua_jamaica">🥤 Bebida · Agua de Jamaica (500 ml)</option>
-            <option value="drink_agua_horchata">🥤 Bebida · Agua de Horchata (500 ml)</option>
-            <option value="drink_mexican_coke">🥤 Bebida · Mexican Coke (Vidrio 12 oz)</option>
-            <option value="drink_mexican_sprite">🥤 Bebida · Mexican Sprite (Vidrio 12 oz)</option>
-            <option value="drink_saratoga">🥤 Bebida · Saratoga Sparkling Water</option>
-            <option value="drink_cans_12oz">🥤 Bebida · Refrescos en Lata 12 oz</option>
+            <option value="manual">Solo inventario manual (sin descuento automático)</option>
+            <option value="pinch_beef_patty">Pinch Burger 8 oz (+ Carne extra)</option>
+            <option value="pinch_angus_steak">Entraña Certified Angus 8 oz</option>
+            <option value="pinch_ribs_pork">Costillar Baby Back / Panceta BBQ</option>
+            <option value="pinch_chicken_thigh">Muslo de Pollo Frito</option>
+            <option value="pinch_cured_meats">Pavo y Jamón Curados en Casa</option>
+            <option value="pinch_seafood">Mariscos (Camarón / Mahi Mahi / Bacalao)</option>
+            <option value="pinch_bacon">Tocino Ahumado (BLT + Extra Tocino)</option>
+            <option value="pinch_eggs">Huevos Orgánicos (+ Extra Huevo)</option>
+            <option value="pinch_brioche">Pan Brioche Artesanal</option>
+            <option value="pinch_cuban_bread">Pan Cubano Hecho en Casa</option>
+            <option value="pinch_pasta">Pasta Tagliatelle &amp; Bucatini</option>
+            <option value="pinch_blue_totopos">Totopos de Maíz Azul</option>
+            <option value="pinch_potatoes">Papas Frescas (Corte en Casa / Puré)</option>
+            <option value="pinch_avocado">Aguacate Hass &amp; Guacamole (+ Extra)</option>
+            <option value="pinch_cheese">Quesos (Suizo / Parmigiano / Chipotle)</option>
+            <option value="pinch_aioli">Alioli Casa, Trufa y Picante (+ Extras)</option>
+            <option value="pinch_guava_bbq">Salsa BBQ de Guayaba (+ Extra)</option>
+            <option value="pinch_greens">Arúgula, Lechuga, Coles y Broccolini</option>
+            <option value="pinch_caramel_onion">Cebollas Caramelizadas y al Mojo</option>
+            <option value="pinch_desserts_base">Repostería Casa (Postres)</option>
+            <option value="drink_agua_jamaica">Bebida · Agua de Jamaica (500 ml)</option>
+            <option value="drink_agua_horchata">Bebida · Agua de Horchata (500 ml)</option>
+            <option value="drink_mexican_coke">Bebida · Mexican Coke (Vidrio 12 oz)</option>
+            <option value="drink_mexican_sprite">Bebida · Mexican Sprite (Vidrio 12 oz)</option>
+            <option value="drink_saratoga">Bebida · Saratoga Sparkling Water</option>
+            <option value="drink_cans_12oz">Bebida · Refrescos en Lata 12 oz</option>
           </select>
         </div>
 
@@ -1859,7 +2086,7 @@
     <!-- BOTÓN FLOTANTE Y PANEL DEL COPILOTO IA OPERATIVO DEL RESTAURANTE (TIEMPO REAL) -->
     <div class="kds-copilot-fab-wrap no-print" id="kds-copilot-fab-wrap">
       <button type="button" class="kds-copilot-fab-main" id="btn-kds-fab-open" onclick="toggleKitchenAICopilot(true)">
-        <span class="copilot-spark">✨</span>
+        <span class="copilot-spark">✦</span>
         <span>Copiloto IA</span>
       </button>
     </div>
@@ -1872,7 +2099,7 @@
             <span class="copilot-live-dot"></span>
             <span class="step-label">COPILOTO OPERATIVO · RAZONAMIENTO EN VIVO</span>
           </div>
-          <h3 class="kds-copilot-title">✨ Copiloto IA · <span class="brand-escandon">Escandon</span></h3>
+          <h3 class="kds-copilot-title">✦ Copiloto IA · <span class="brand-escandon">Escandon</span></h3>
           <p class="kds-copilot-sub">Respuestas directas sobre mesas, comandas, carne, insumos y ventas.</p>
         </div>
         <div class="kds-copilot-head-actions">
@@ -1886,22 +2113,22 @@
       <!-- Preguntas y Comandos Rápidos en 1 Toque -->
       <div class="ai-quick-chips-row kds-copilot-chips" id="kds-copilot-quick-chips">
         <button type="button" class="ai-quick-chip featured" onclick="runKitchenAIQuickPrompt('¿Cuánto he vendido hoy?')">
-          💰 ¿Cuánto he vendido?
+          ¿Cuánto he vendido?
         </button>
         <button type="button" class="ai-quick-chip" onclick="runKitchenAIQuickPrompt('¿He vendido burgers?')">
-          🍔 ¿He vendido burgers?
+          ¿He vendido burgers?
         </button>
         <button type="button" class="ai-quick-chip" onclick="runKitchenAIQuickPrompt('Oye, ¿la mesa 2 qué había pedido?')">
-          🍽️ ¿Qué pidió Mesa 2?
+          ¿Qué pidió Mesa 2?
         </button>
         <button type="button" class="ai-quick-chip" onclick="runKitchenAIQuickPrompt('¿Cuánta carne queda?')">
-          🥩 ¿Cuánta carne queda?
+          ¿Cuánta carne queda?
         </button>
         <button type="button" class="ai-quick-chip" onclick="runKitchenAIQuickPrompt('¿En qué parte se ve lo de insumos?')">
-          📦 ¿Dónde veo insumos?
+          ¿Dónde veo insumos?
         </button>
         <button type="button" class="ai-quick-chip" onclick="runKitchenAIQuickPrompt('¿Qué insumos están bajos o por caducar?')">
-          ⚠️ Alertas de stock
+          Alertas de stock
         </button>
       </div>
 
@@ -1931,6 +2158,6 @@
 
 <!-- Sincronización multi-dispositivo en tiempo real -->
 <script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
-<script src="app.js?v=20261124v31"></script>
+<script src="app.js?v=20261124v46"></script>
 </body>
 </html>

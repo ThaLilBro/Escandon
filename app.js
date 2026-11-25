@@ -91,6 +91,47 @@ const STATUS_META = {
 
 const ORDER_PHASES = ['pending', 'received', 'preparing', 'ready'];
 
+// Sistema unificado de íconos SVG monoline DineOS (cero emojis genéricos de UI)
+const DINEOS_UI_ICONS = {
+  user:     '<circle cx="12" cy="8" r="4"/><path d="M5 20a7 7 0 0 1 14 0"/>',
+  users:    '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  star:     '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+  spark:    '<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z"/>',
+  utensils: '<path d="M3 13h18"/><path d="M5 13a7 7 0 0 1 14 0"/><path d="M12 6V4"/><path d="M4 17h16"/>',
+  bag:      '<path d="M6 8h12l-1 12H7L6 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',
+  truck:    '<rect x="2" y="7" width="12" height="9" rx="1.5"/><path d="M14 10h4l3 3v3h-7v-6Z"/><circle cx="6.5" cy="17.5" r="1.5"/><circle cx="17.5" cy="17.5" r="1.5"/>',
+  bell:     '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+  receipt:  '<path d="M4 3h16v18l-3-2-2.5 2-2.5-2-2.5 2L7 19l-3 2V3Z"/><path d="M8 8h8"/><path d="M8 12h6"/>',
+  clock:    '<circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/>',
+  flame:    '<path d="M12 3c2 3 5 5.2 5 9a5 5 0 1 1-10 0c0-2.1 1-4 2.5-5.5 0 2 1 3 2.5 3.5-1-2.3-1-4.5 0-7Z"/>',
+  camera:   '<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',
+  video:    '<polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/>',
+  search:   '<circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.2" y2="16.2"/>',
+  box:      '<path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>',
+  check:    '<polyline points="20 6 9 17 4 12"/>',
+  alert:    '<circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>',
+};
+
+function uiIcon(name, cls = '') {
+  const paths = DINEOS_UI_ICONS[name] || DINEOS_UI_ICONS.spark;
+  const classAttr = cls ? `ui-ico ${cls}` : 'ui-ico';
+  return `<svg class="${classAttr}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+}
+
+function getDishMonogram(item) {
+  if (!item) return 'PK';
+  if (item.monogram) return String(item.monogram).toUpperCase().slice(0, 2);
+  const dishId = item.dishId || (String(item.key || '').startsWith('dish:') ? String(item.key).slice(5).split('|')[0] : '');
+  if (dishId && typeof PINCH_MENU_ITEMS !== 'undefined') {
+    const found = PINCH_MENU_ITEMS.find(d => d.id === dishId);
+    if (found && found.monogram) return found.monogram;
+  }
+  const clean = String(item.name || 'PK').replace(/[^A-Za-zÀ-ÿ0-9 ]/g, '').trim();
+  const words = clean.split(/\s+/).filter(Boolean);
+  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+  return clean.slice(0, 2).toUpperCase() || 'PK';
+}
+
 // ══════════════════════════════════════════════
 //  ILUSTRACIONES VECTORIALES ARTESANALES DETALLADAS (100% SVG INTEGRADO)
 //  - Cero imágenes externas rotas: nítido en cualquier pantalla y conexión
@@ -1096,15 +1137,47 @@ let soldOutItems         = []; // Claves de ingredientes/bebidas agotados (Modo 
 let serviceCalls         = []; // Solicitudes activas de mesa (Llamar mesero / Pedir cuenta)
 let myOrderIds           = []; // IDs de órdenes creadas por este cliente
 let activeTrackedOrderId = null;
+const trackedOrdersCache = new Map();
 let cartOpen             = false;
 let kdsFilter            = 'all';
 let kdsSubView           = 'comandas'; // 'comandas' | 'board' | 'sales' | 'stock' | 'qrs'
+let lastMovedOrderMeta   = null; // { id, status, ts } para animación fluida entre columnas Kanban
+const deliveringOrderIds = new Set();
+let prevCartTotalQty     = 0;
 let orderCounter         = 0;
 let kdsUnlocked          = false;
 let upsellOfferedForCart = false;
 let pendingServiceType   = null; // 'waiter' | 'bill_individual' | 'bill_table'
 let currentGuestName     = '';   // Nombre del comensal en este dispositivo (ej: 'Ana')
 let trackerSplitMode     = 'mine'; // 'mine' (Mi Cuenta) | 'table' (Toda la Mesa)
+let invitedByGuest       = '';   // Amigo que compartió el enlace directo a mesa (?invita=...)
+let inviteWelcomeDismissed = false;
+let splitCalcState       = { mode: 'mine', tipPct: 10, people: 2, userEditedPeople: false };
+
+const CUSTOMER_PREFS_STORAGE_KEY = 'kds-global-customer-prefs-v1';
+const CUSTOMER_AVOID_OPTIONS = [
+  { id: 'sin_cebolla',   label: 'Sin cebolla' },
+  { id: 'sin_cilantro',  label: 'Sin cilantro' },
+  { id: 'sin_picante',   label: 'Sin picante' },
+  { id: 'sin_lacteos',   label: 'Sin lácteos' },
+  { id: 'sin_mariscos',  label: 'Sin mariscos' },
+  { id: 'sin_gluten',    label: 'Sin gluten' },
+  { id: 'sin_nueces',    label: 'Sin nueces / pistacho' },
+  { id: 'vegetariano',   label: 'Solo Vegetariano' },
+];
+const CUSTOMER_DONENESS_OPTIONS = [
+  { id: '',             label: 'Sin definir' },
+  { id: 'Término Medio', label: 'Término Medio' },
+  { id: '3/4',          label: '3/4' },
+  { id: 'Bien Cocido',  label: 'Bien Cocido' },
+  { id: 'Rojo / Azul',  label: 'Rojo / Azul' },
+];
+let customerPrefs = {
+  name: '',
+  avoid: [],
+  preferredDoneness: '',
+  autoNote: '',
+};
 
 // Estado del nuevo menú Pinch Kitchen+Bar y visor Full-Screen
 let pinchActiveCategory       = 'pinch_bites';
@@ -1281,7 +1354,7 @@ function checkAndNotifyNewServiceCalls() {
     const isBill = newestUnseen.type === 'bill';
     showCustomPushBanner({
       ledClass: isBill ? 'led-received' : 'led-preparing',
-      kicker: isBill ? '🧾 SOLICITUD DE CUENTA EN MESA' : '🔔 LLAMADA DE MESERO EN MESA',
+      kicker: isBill ? 'SOLICITUD DE CUENTA EN MESA' : 'LLAMADA DE MESERO EN MESA',
       message: isBill
         ? `${newestUnseen.table} pide la cuenta${newestUnseen.total ? ` ($${newestUnseen.total})` : ''}`
         : `${newestUnseen.table} solicita al mesero en su mesa`,
@@ -1398,6 +1471,7 @@ function applyTenantBranding() {
     document.documentElement.style.setProperty('--brand-orange-soft', profile.accentSoft);
   }
   document.querySelectorAll('.brand-escandon').forEach(el => {
+    if (el.dataset && el.dataset.fixedBrand === '1') return;
     el.textContent = profile.name;
   });
   const acctEl = document.getElementById('pay-connect-acct-id');
@@ -1596,7 +1670,7 @@ function handleIncomingEvent(type, payload, fromRemote = false) {
         if (fromRemote && currentView === 'kitchen' && kdsUnlocked) {
           showCustomPushBanner({
             ledClass: 'led-ready',
-            kicker: `💳 PAGO DIGITAL RECIBIDO · ${(payload.paymentLabel || 'APPLE PAY').toUpperCase()}`,
+            kicker: `PAGO DIGITAL RECIBIDO · ${(payload.paymentLabel || 'APPLE PAY').toUpperCase()}`,
             message: `${payload.table || 'Mesa'}${payload.guestName ? ` (${payload.guestName})` : ''} liquidó $${payload.amountPaid || 0}`,
           });
           playClientReadyDing();
@@ -1627,13 +1701,29 @@ function mergeRemoteStateSnapshot(snapshot) {
   if (isShiftReset) {
     orderCounter = 0;
     completedOrders = [];
-    orders = [];
+    const nowMs = Date.now();
+    const recentLocalOrders = orders.filter(o =>
+      o && (myOrderIds.includes(o.id) || o.deviceId === DEVICE_ID) && (nowMs - (Number(o.createdAt) || 0) < 15000)
+    );
+    orders = recentLocalOrders;
     serviceCalls = [];
   } else {
     if (typeof snapshot.orderCounter === 'number' && snapshot.orderCounter > orderCounter) {
       orderCounter = snapshot.orderCounter;
     }
-    orders = snapshot.orders;
+    const snapIds = new Set(snapshot.orders.map(o => o && o.id).filter(Boolean));
+    const snapCompletedIds = new Set(
+      (Array.isArray(snapshot.completedOrders) ? snapshot.completedOrders : []).map(o => o && o.id).filter(Boolean)
+    );
+    const nowMs = Date.now();
+    const recentLocalPending = orders.filter(o =>
+      o &&
+      !snapIds.has(o.id) &&
+      !snapCompletedIds.has(o.id) &&
+      (myOrderIds.includes(o.id) || o.deviceId === DEVICE_ID) &&
+      (nowMs - (Number(o.createdAt) || 0) < 15000)
+    );
+    orders = snapshot.orders.concat(recentLocalPending);
     if (Array.isArray(snapshot.completedOrders)) {
       completedOrders = snapshot.completedOrders;
     }
@@ -1659,6 +1749,8 @@ function mergeRemoteStateSnapshot(snapshot) {
     }
     renderDrinksSection();
     if (currentStation) renderBuilderWorkspace();
+    if (clientMode === 'tracker') renderClientTracker();
+    updateHeaderTrackerPill();
   }
   renderKDSStockPanel();
 
@@ -2054,7 +2146,7 @@ function copyCustomerLink() {
 
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(customerUrl).then(() => {
-      showKDSToast(`🔗 Link para clientes copiado`);
+      showKDSToast(`Link para clientes copiado`);
     }).catch(() => {
       prompt('Copia este link para tus clientes:', customerUrl);
     });
@@ -2067,12 +2159,14 @@ function copyCustomerLink() {
 //  2. VISTA CLIENTE · SELECCIÓN DIRECTA POR TOQUES (TAP-TO-SELECT)
 // ══════════════════════════════════════════════
 function initClientView() {
+  if (typeof loadCustomerPrefs === 'function') loadCustomerPrefs();
   if (typeof loadLoyaltyProfile === 'function') loadLoyaltyProfile();
   renderPinchCategoryTabs();
   renderPinchMenu();
   initPinchScrollSpy();
   updateClientContextBar();
   if (typeof renderClientLoyaltyHeaderAndBanner === 'function') renderClientLoyaltyHeaderAndBanner();
+  if (typeof updateHeaderPrefsIndicator === 'function') updateHeaderPrefsIndicator();
 
   // Si el cliente tiene una orden activa en seguimiento, restaurar el modo correspondiente
   const trackedOrder = activeTrackedOrderId ? orders.find(o => o.id === activeTrackedOrderId) : null;
@@ -2094,6 +2188,7 @@ function setClientSubMode(mode) {
   const builderBarEl  = document.getElementById('dock-builder-bar');
   const trackerBarEl  = document.getElementById('dock-tracker-bar');
   const backBtnEl     = document.getElementById('btn-client-back');
+  const prefsBtnEl    = document.getElementById('btn-header-prefs');
 
   if (mode === 'tracker') {
     if (menuFlowEl)    menuFlowEl.classList.add('hidden');
@@ -2105,6 +2200,7 @@ function setClientSubMode(mode) {
       backBtnEl.textContent = '← Menú';
       backBtnEl.classList.remove('hidden');
     }
+    if (prefsBtnEl) prefsBtnEl.classList.add('hidden');
     renderClientTracker();
   } else {
     if (menuFlowEl)    menuFlowEl.classList.remove('hidden');
@@ -2116,6 +2212,7 @@ function setClientSubMode(mode) {
       backBtnEl.textContent = '← Menú';
       backBtnEl.classList.add('hidden');
     }
+    if (prefsBtnEl) prefsBtnEl.classList.remove('hidden');
   }
 
   updateHeaderTrackerPill();
@@ -3311,12 +3408,12 @@ function renderCart() {
             ${item.option ? `<span class="cart-mod-pill is-opt">${escapeHTML(item.option)}</span>` : ''}
             ${extrasArr.map(e => `<span class="cart-mod-pill is-extra">+${escapeHTML(e.name)}</span>`).join('')}
             ${removedArr.map(r => `<span class="cart-mod-pill is-sin">Sin ${escapeHTML(r)}</span>`).join('')}
-            ${item.note ? `<span class="cart-mod-pill is-note">📝 ${escapeHTML(item.note)}</span>` : ''}
+            ${item.note ? `<span class="cart-mod-pill is-note">Nota: ${escapeHTML(item.note)}</span>` : ''}
           </div>`
         : '';
       return `
         <div class="cart-item">
-          <span class="cart-item-emoji">${item.emoji || '🍽️'}</span>
+          <span class="cart-item-mono">${escapeHTML(getDishMonogram(item))}</span>
           <div class="cart-item-info">
             <div class="cart-item-name">${escapeHTML(item.name)}</div>
             ${richModsHtml}
@@ -3347,11 +3444,24 @@ function renderCart() {
   }
 
   if (mainBarEl)  mainBarEl.classList.toggle('is-empty', cartItems.length === 0 && !summary.ready);
-  if (bbCountEl)  bbCountEl.textContent  = totalQty;
+  if (bbCountEl) {
+    bbCountEl.textContent = totalQty;
+    if (totalQty > prevCartTotalQty && totalQty > 0) {
+      bbCountEl.classList.remove('is-popping');
+      void bbCountEl.offsetWidth;
+      bbCountEl.classList.add('is-popping');
+      if (mainBarEl) {
+        mainBarEl.classList.remove('is-pulsing');
+        void mainBarEl.offsetWidth;
+        mainBarEl.classList.add('is-pulsing');
+      }
+    }
+  }
+  prevCartTotalQty = totalQty;
   if (totalEl)    totalEl.textContent    = formatMenuPrice(effectiveTotal);
   if (bbTotalEl)  bbTotalEl.textContent  = formatMenuPrice(effectiveTotal);
 
-  const ctaLabel = isDelivery ? '🔒 Pagar Envío →' : (isPickup ? '🔒 Pagar Pickup →' : 'Pedir →');
+  const ctaLabel = isDelivery ? 'Pagar Envío →' : (isPickup ? 'Pagar Pickup →' : 'Pedir →');
   if (pedirBar)   pedirBar.textContent   = ctaLabel;
   if (pedirSheet) pedirSheet.textContent = ctaLabel;
 
@@ -3359,7 +3469,7 @@ function renderCart() {
     if (totalQty > 0) {
       bbStatusTxt.textContent = `Ver Pedido (${totalQty} ${totalQty === 1 ? 'item' : 'items'})`;
     } else if (summary.ready) {
-      bbStatusTxt.textContent = `${summary.emoji} ${summary.name}`;
+      bbStatusTxt.textContent = summary.name;
     } else {
       bbStatusTxt.textContent = 'Tu pedido';
     }
@@ -3382,18 +3492,18 @@ function renderCart() {
   if (tableLineEl) {
     if (isDelivery) {
       const addr = readTenantStorage('delivery-address') || '';
-      tableLineEl.textContent = addr ? `🛵 Domicilio (+$25) · ${addr}` : '🛵 Envío a domicilio (+$25) · Pago anticipado';
+      tableLineEl.textContent = addr ? `Domicilio (+$25) · ${addr}` : 'Envío a domicilio (+$25) · Pago anticipado';
     } else if (isPickup) {
       const pTime = readTenantStorage('pickup-time') || 'Lo antes posible';
-      tableLineEl.textContent = `🛍️ Pickup · ${pTime}`;
+      tableLineEl.textContent = `Pickup · ${pTime}`;
     } else {
       const savedTable = presetTableFromURL || readTenantStorage('last-table') || '';
       if (savedTable) {
         const g = getTableGroupSummary(savedTable);
         const others = g.diners.filter(d => !d.isMe).length;
         tableLineEl.textContent = others > 0
-          ? `📍 ${savedTable} · ${g.diners.length} personas · Mesa ${formatMenuPrice(g.tableTotal)}`
-          : `📍 ${savedTable} · Toca para revisar`;
+          ? `${savedTable} · ${g.diners.length} personas · Mesa ${formatMenuPrice(g.tableTotal)}`
+          : `${savedTable} · Toca para revisar`;
       } else {
         tableLineEl.textContent = totalQty > 0 ? 'Toca para revisar o confirmar' : 'Toca para ver tu pedido';
       }
@@ -3471,7 +3581,7 @@ function openUpsellModal() {
   listEl.innerHTML = avail.map(drink => `
     <button type="button" class="upsell-drink-btn" onclick="acceptUpsellDrink('${drink.id}')">
       <div class="upsell-drink-left">
-        <span class="upsell-drink-emoji">${drink.emoji}</span>
+        <span class="cart-item-mono">${escapeHTML(getDishMonogram(drink))}</span>
         <span class="upsell-drink-name">${escapeHTML(drink.name)}</span>
       </div>
       <span class="upsell-drink-cta">+ ${formatMenuPrice(drink.price)} · Agregar</span>
@@ -3601,11 +3711,11 @@ function setFulfillmentMode(mode) {
   if (prepayBanner) {
     if (valid === 'pickup') {
       prepayBanner.classList.remove('hidden');
-      if (prepayBadge) prepayBadge.textContent = '🛍️ PICKUP EN SUCURSAL · PAGO ANTICIPADO';
+      if (prepayBadge) prepayBadge.textContent = 'PICKUP EN SUCURSAL · PAGO ANTICIPADO';
       if (prepayDesc)  prepayDesc.textContent  = 'Paga por adelantado con Apple Pay o Tarjeta para que cocina prepare tu orden al instante y recógela sin hacer fila.';
     } else if (valid === 'delivery') {
       prepayBanner.classList.remove('hidden');
-      if (prepayBadge) prepayBadge.textContent = '🛵 ENVÍO A DOMICILIO (+$25) · PAGO ANTICIPADO';
+      if (prepayBadge) prepayBadge.textContent = 'ENVÍO A DOMICILIO (+$25) · PAGO ANTICIPADO';
       if (prepayDesc)  prepayDesc.textContent  = 'Ingresa tu dirección y realiza el pago anticipado seguro con Apple Pay o Stripe para procesar y enviar tu pedido.';
     } else {
       prepayBanner.classList.add('hidden');
@@ -3641,7 +3751,9 @@ function syncOrderModalFieldsForMode() {
   const blockDeliv  = document.getElementById('modal-block-delivery');
   const prepayNote  = document.getElementById('modal-prepay-note');
   const guestLabel  = document.getElementById('guest-name-label');
-  const submitBtn   = document.getElementById('btn-submit-order');
+  const submitBtn       = document.getElementById('btn-submit-order');
+  const slideWrap       = document.getElementById('order-slide-wrap');
+  const identityActions = document.getElementById('order-identity-actions');
 
   if (blockTable)  blockTable.classList.toggle('hidden', valid !== 'dine_in');
   if (blockPhone)  blockPhone.classList.toggle('hidden', valid === 'dine_in');
@@ -3666,14 +3778,14 @@ function syncOrderModalFieldsForMode() {
     if (guestLabel) guestLabel.textContent = '2. TU NOMBRE (COMENSAL)';
   }
 
+  if (slideWrap)       slideWrap.classList.toggle('hidden', Boolean(identityPreselectOnly));
+  if (identityActions) identityActions.classList.toggle('hidden', !identityPreselectOnly);
+
   if (submitBtn) {
-    if (identityPreselectOnly) {
-      submitBtn.textContent = 'Guardar Datos';
-    } else if (valid === 'pickup' || valid === 'delivery') {
-      submitBtn.textContent = '🔒 Ir al Pago Anticipado →';
-    } else {
-      submitBtn.textContent = 'Confirmar y Pedir';
-    }
+    submitBtn.textContent = 'Guardar Datos';
+  }
+  if (typeof updateOrderSliderLabel === 'function') {
+    updateOrderSliderLabel();
   }
 }
 
@@ -3689,16 +3801,16 @@ function updateClientContextBar() {
   const savedPTime = readTenantStorage('pickup-time') || '15-20 min';
 
   if (currentFulfillmentMode === 'pickup') {
-    tablePill.textContent = `🛍️ Pickup (${savedPTime})`;
-    guestPill.textContent = savedGuest ? `👤 ${savedGuest}` : '👤 Tu nombre';
-    groupPill.textContent = '🔒 Pago Anticipado ✎';
+    tablePill.textContent = `Pickup (${savedPTime})`;
+    guestPill.textContent = savedGuest || 'Tu nombre';
+    groupPill.textContent = 'Pago Anticipado';
   } else if (currentFulfillmentMode === 'delivery') {
-    tablePill.textContent = savedAddr ? `🛵 ${savedAddr.slice(0, 22)}${savedAddr.length > 22 ? '…' : ''}` : '🛵 Ingresar dirección';
-    guestPill.textContent = savedGuest ? `👤 ${savedGuest}` : '👤 Tu nombre';
-    groupPill.textContent = '+$25 envío · Pagar ✎';
+    tablePill.textContent = savedAddr ? `${savedAddr.slice(0, 22)}${savedAddr.length > 22 ? '…' : ''}` : 'Ingresar dirección';
+    guestPill.textContent = savedGuest || 'Tu nombre';
+    groupPill.textContent = '+$25 envío · Pagar';
   } else {
-    tablePill.textContent = savedTable ? `📍 ${savedTable}` : '📍 Elegir Mesa';
-    guestPill.textContent = savedGuest ? `👤 ${savedGuest}` : '👤 Tu nombre';
+    tablePill.textContent = savedTable || 'Elegir Mesa';
+    guestPill.textContent = savedGuest || 'Tu nombre';
   }
 
   // Saludo personalizado
@@ -3741,19 +3853,292 @@ function updateClientContextBar() {
     }
   }
 
+  // Barra de invitación a la mesa (WhatsApp / Link directo $0) + Bienvenida por invitación
+  const inviteBarEl   = document.getElementById('table-invite-bar');
+  const inviteTitleEl = document.getElementById('table-invite-title');
+  const welcomeEl     = document.getElementById('invite-welcome-banner');
+  const welcomeTitEl  = document.getElementById('invite-welcome-title');
+  const welcomeSubEl  = document.getElementById('invite-welcome-sub');
+
+  const isShareableTable = Boolean(
+    currentFulfillmentMode === 'dine_in' &&
+    savedTable &&
+    savedTable.trim().toLowerCase() !== 'mostrador'
+  );
+
+  if (inviteBarEl) {
+    inviteBarEl.classList.toggle('hidden', !isShareableTable);
+    if (isShareableTable && inviteTitleEl) {
+      inviteTitleEl.textContent = `Invita amigos a ${savedTable}`;
+    }
+  }
+
+  if (welcomeEl) {
+    const showWelcome = Boolean(isShareableTable && invitedByGuest && !inviteWelcomeDismissed);
+    welcomeEl.classList.toggle('hidden', !showWelcome);
+    if (showWelcome) {
+      if (welcomeTitEl) welcomeTitEl.textContent = `${invitedByGuest} te invitó a ${savedTable}`;
+      if (welcomeSubEl) welcomeSubEl.textContent = savedGuest
+        ? `Pides como ${savedGuest} · Cada quien en su cuenta o dividen al final.`
+        : 'Toca arriba en "Tu nombre" para identificarte y pedir juntos.';
+    }
+  }
+
   if (currentFulfillmentMode === 'dine_in') {
     if (savedTable && diners.length > 1) {
-      groupPill.textContent = `👥 ${diners.length} · $${groupInfo.tableTotal}`;
+      groupPill.textContent = `${diners.length} personas · $${groupInfo.tableTotal}`;
       return;
     }
-    groupPill.textContent = (savedTable && savedGuest) ? 'Cuenta individual ✎' : 'Cuentas separadas ✎';
+    groupPill.textContent = (savedTable && savedGuest) ? 'Cuenta individual' : 'Cuentas separadas';
   }
+}
+
+function normalizeMesaInputParam(raw) {
+  const clean = String(raw || '').trim().replace(/\s+/g, ' ');
+  if (!clean) return '';
+  if (/^\d+$/.test(clean)) return `Mesa ${clean}`;
+  return clean;
+}
+
+function getActiveShareableTable() {
+  const trackedOrder = activeTrackedOrderId ? orders.find(o => o.id === activeTrackedOrderId) : null;
+  if (clientMode === 'tracker' && trackedOrder && trackedOrder.table && (trackedOrder.fulfillmentMode || 'dine_in') === 'dine_in') {
+    return normalizeTableName(trackedOrder.table);
+  }
+  const raw = presetTableFromURL || readTenantStorage('last-table') || '';
+  return raw ? normalizeTableName(raw) : '';
+}
+
+function buildTableInviteURL(tableName, hostName) {
+  const url = new URL(window.location.href);
+  url.search = '';
+  url.hash = '';
+  if (tenantId && tenantId !== 'escandon') {
+    url.searchParams.set('r', tenantId);
+  }
+  url.searchParams.set('mesa', tableName);
+  url.searchParams.set('modo', 'mesa');
+  if (hostName) {
+    url.searchParams.set('invita', hostName);
+  }
+  return url.toString();
+}
+
+function copyTextWithFallback(text) {
+  if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+    return navigator.clipboard.writeText(text).catch(() => copyViaHiddenTextarea(text));
+  }
+  return Promise.resolve(copyViaHiddenTextarea(text));
+}
+
+function copyViaHiddenTextarea(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); } catch (e) {}
+  document.body.removeChild(ta);
+}
+
+function copyTableInviteLink() {
+  const tableName = getActiveShareableTable();
+  if (!tableName || tableName.toLowerCase() === 'mostrador') {
+    showToast('Elige primero tu mesa para compartir el enlace');
+    openIdentityPreselectModal();
+    return;
+  }
+  const hostName = (currentGuestName || customerPrefs.name || readTenantStorage('guest-name') || '').trim();
+  const inviteUrl = buildTableInviteURL(tableName, hostName);
+  copyTextWithFallback(inviteUrl).then(() => {
+    hapticTap(10);
+    showToast(`Link de ${tableName} copiado para compartir`);
+  });
+}
+
+function shareTableInviteWhatsApp() {
+  const tableName = getActiveShareableTable();
+  if (!tableName || tableName.toLowerCase() === 'mostrador') {
+    showToast('Elige primero tu mesa para invitar por WhatsApp');
+    openIdentityPreselectModal();
+    return;
+  }
+  const hostName = (currentGuestName || customerPrefs.name || readTenantStorage('guest-name') || '').trim();
+  const inviteUrl = buildTableInviteURL(tableName, hostName);
+  const restName = getActiveTenantProfile().displayName || 'Pinch Kitchen+Bar';
+  const msg = `${hostName ? `${hostName} te invita a` : 'Únete a'} la ${tableName} en ${restName}.\nAbre este enlace para pedir en la misma mesa (cuentas separadas o divididas):\n${inviteUrl}`;
+  const waUrl = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+  window.open(waUrl, '_blank', 'noopener,noreferrer');
+  showToast(`Invitación lista para ${tableName}`);
+}
+
+function dismissInviteWelcome() {
+  inviteWelcomeDismissed = true;
+  const welcomeEl = document.getElementById('invite-welcome-banner');
+  if (welcomeEl) welcomeEl.classList.add('hidden');
 }
 
 function openIdentityPreselectModal() {
   unlockAudioContext();
   identityPreselectOnly = true;
   openOrderModalDirect();
+}
+
+// ─── CONTROL TÁCTIL "DESLIZA PARA PEDIR" (DINEOS SLIDE-TO-ORDER) ────────
+let orderSliderInitialized = false;
+let orderSliderDragging    = false;
+let orderSliderLocked      = false;
+let orderSliderProgress    = 0;
+let orderSliderStartX      = 0;
+let orderSliderMaxTravel   = 220;
+let orderSliderPointerId   = null;
+
+function updateOrderSliderLabel() {
+  const labelEl     = document.getElementById('order-slide-label');
+  const confLabelEl = document.getElementById('order-slide-confirmed-label');
+  if (!labelEl) return;
+
+  const foodSubtotal = typeof getCartTotal === 'function' ? getCartTotal() : 0;
+  const disc         = typeof getActiveCartLoyaltyDiscount === 'function' ? getActiveCartLoyaltyDiscount(foodSubtotal) : 0;
+  const fee          = currentFulfillmentMode === 'delivery' ? (getActiveTenantProfile().deliveryFee || 25) : 0;
+  const grand        = Math.max(0, foodSubtotal - disc) + fee;
+  const priceSuffix  = grand > 0 ? ` · ${formatMenuPrice(grand)}` : '';
+
+  if (currentFulfillmentMode === 'pickup' || currentFulfillmentMode === 'delivery') {
+    labelEl.textContent = `Desliza para ir al pago${priceSuffix}`;
+    if (confLabelEl) confLabelEl.textContent = '✓ Abriendo pago...';
+  } else {
+    labelEl.textContent = `Desliza para pedir${priceSuffix}`;
+    if (confLabelEl) confLabelEl.textContent = '✓ Enviando a cocina...';
+  }
+}
+
+function setOrderSliderPosition(px, animate = false) {
+  const track = document.getElementById('order-slide-track');
+  const knob  = document.getElementById('order-slide-knob');
+  if (!track || !knob) return;
+
+  const maxT     = Math.max(1, orderSliderMaxTravel || (track.clientWidth - knob.offsetWidth - 8));
+  const clamped  = Math.max(0, Math.min(maxT, Number(px) || 0));
+  const progress = clamped / maxT;
+
+  orderSliderProgress = progress;
+  track.classList.toggle('is-dragging', !animate);
+  track.style.setProperty('--slide-x', `${clamped.toFixed(1)}px`);
+  track.style.setProperty('--slide-progress', progress.toFixed(4));
+  knob.setAttribute('aria-valuenow', String(Math.round(progress * 100)));
+}
+
+function resetOrderSlider(withBounce = false) {
+  const track = document.getElementById('order-slide-track');
+  const knob  = document.getElementById('order-slide-knob');
+  orderSliderDragging  = false;
+  orderSliderLocked    = false;
+  orderSliderProgress  = 0;
+  orderSliderPointerId = null;
+
+  if (track) {
+    track.classList.remove('is-dragging', 'is-confirmed', 'is-error-bounce');
+    track.style.setProperty('--slide-x', '0px');
+    track.style.setProperty('--slide-progress', '0');
+    if (withBounce) {
+      hapticTap(20);
+      void track.offsetWidth;
+      track.classList.add('is-error-bounce');
+      setTimeout(() => track.classList.remove('is-error-bounce'), 420);
+    }
+  }
+  if (knob) {
+    knob.setAttribute('aria-valuenow', '0');
+  }
+}
+
+function completeOrderSlider() {
+  if (orderSliderLocked) return;
+  const track = document.getElementById('order-slide-track');
+  const knob  = document.getElementById('order-slide-knob');
+  if (track && knob) {
+    orderSliderMaxTravel = Math.max(1, track.clientWidth - knob.offsetWidth - 8);
+  }
+  orderSliderLocked   = true;
+  orderSliderDragging = false;
+  setOrderSliderPosition(orderSliderMaxTravel, true);
+  if (track) {
+    track.classList.remove('is-dragging');
+    track.classList.add('is-confirmed');
+  }
+  hapticTap(18);
+
+  setTimeout(() => {
+    const ok = submitOrder();
+    if (ok === false) {
+      resetOrderSlider(true);
+    }
+  }, 220);
+}
+
+function initOrderSlideControl() {
+  if (orderSliderInitialized) return;
+  const track = document.getElementById('order-slide-track');
+  const knob  = document.getElementById('order-slide-knob');
+  if (!track || !knob) return;
+  orderSliderInitialized = true;
+
+  knob.addEventListener('pointerdown', (e) => {
+    if ((e.button && e.button !== 0) || orderSliderLocked || identityPreselectOnly) return;
+    e.preventDefault();
+    unlockAudioContext();
+    orderSliderMaxTravel = Math.max(1, track.clientWidth - knob.offsetWidth - 8);
+    orderSliderDragging  = true;
+    orderSliderStartX    = e.clientX;
+    orderSliderPointerId = e.pointerId;
+    try { knob.setPointerCapture(e.pointerId); } catch (_) {}
+    track.classList.add('is-dragging');
+  });
+
+  window.addEventListener('pointermove', (e) => {
+    if (!orderSliderDragging || orderSliderLocked) return;
+    const dx = e.clientX - orderSliderStartX;
+    setOrderSliderPosition(dx, false);
+    if (orderSliderProgress >= 0.86) {
+      try {
+        if (orderSliderPointerId !== null && knob.hasPointerCapture && knob.hasPointerCapture(orderSliderPointerId)) {
+          knob.releasePointerCapture(orderSliderPointerId);
+        }
+      } catch (_) {}
+      completeOrderSlider();
+    }
+  });
+
+  const finishDrag = () => {
+    if (!orderSliderDragging || orderSliderLocked) return;
+    orderSliderDragging = false;
+    try {
+      if (orderSliderPointerId !== null && knob.hasPointerCapture && knob.hasPointerCapture(orderSliderPointerId)) {
+        knob.releasePointerCapture(orderSliderPointerId);
+      }
+    } catch (_) {}
+    orderSliderPointerId = null;
+
+    if (orderSliderProgress >= 0.80) {
+      completeOrderSlider();
+    } else {
+      setOrderSliderPosition(0, true);
+    }
+  };
+
+  window.addEventListener('pointerup', finishDrag);
+  window.addEventListener('pointercancel', finishDrag);
+
+  knob.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      e.stopPropagation();
+      completeOrderSlider();
+    }
+  });
 }
 
 function openOrderModalDirect() {
@@ -3780,6 +4165,9 @@ function openOrderModalDirect() {
 
   syncOrderModalFieldsForMode();
   syncQuickTableChipSelection();
+  initOrderSlideControl();
+  resetOrderSlider(false);
+  updateOrderSliderLabel();
 
   if ('Notification' in window && Notification.permission === 'default') {
     try { Notification.requestPermission(); } catch (e) {}
@@ -3800,6 +4188,7 @@ function openOrderModalDirect() {
 
 function closeOrderModal() {
   identityPreselectOnly = false;
+  resetOrderSlider(false);
   syncOrderModalFieldsForMode();
   document.getElementById('modal-overlay').classList.remove('open');
   document.getElementById('order-modal').classList.remove('open');
@@ -3872,19 +4261,19 @@ function submitOrder() {
   if (identityPreselectOnly) {
     closeOrderModal();
     const label = currentFulfillmentMode === 'delivery'
-      ? `🛵 Domicilio · ${guestVal}`
-      : (currentFulfillmentMode === 'pickup' ? `🛍️ Pickup · ${guestVal}` : `${tableVal} · 👤 ${guestVal}`);
-    showToast(`✓ ${label} guardado`);
-    return;
+      ? `Domicilio · ${guestVal}`
+      : (currentFulfillmentMode === 'pickup' ? `Pickup · ${guestVal}` : `${tableVal} · ${guestVal}`);
+    showToast(`${label} guardado`);
+    return true;
   }
 
-  if (cartItems.length === 0) return;
+  if (cartItems.length === 0) return false;
 
   // En modo A Domicilio, verificar que haya puesto dirección antes de pasar al pago
   if (currentFulfillmentMode === 'delivery' && !addrVal) {
     if (addrInputEl) addrInputEl.focus();
-    showToast('📍 Ingresa tu dirección de entrega para continuar');
-    return;
+    showToast('Ingresa tu dirección de entrega para continuar');
+    return false;
   }
 
   const foodSubtotal  = getCartTotal();
@@ -3945,7 +4334,7 @@ function submitOrder() {
       table: tableVal,
       guestName: guestVal,
     });
-    return;
+    return true;
   }
 
   // Modo En Mesa: enviar comanda a cocina de inmediato (puede pagar su cuenta separada desde el Tracker)
@@ -3956,6 +4345,7 @@ function submitOrder() {
     paymentLabel: '',
     tipAmount: 0,
   });
+  return true;
 }
 
 function dispatchConfirmedOrderToKitchen(orderData) {
@@ -3969,6 +4359,7 @@ function dispatchConfirmedOrderToKitchen(orderData) {
   };
 
   orders.push(order);
+  trackedOrdersCache.set(order.id, order);
   myOrderIds.push(order.id);
   activeTrackedOrderId = order.id;
   deductInventoryForOrder(order, { silent: true });
@@ -4094,18 +4485,20 @@ function selectPaymentTipPct(pct) {
   if (tipEl)    tipEl.textContent   = `$${tip.toFixed(2)}`;
   if (grandEl)  grandEl.textContent = `$${grand.toFixed(2)} MXN`;
   if (apSubEl)  apSubEl.textContent = `Pagar $${grand.toFixed(2)} MXN`;
-  if (stripeBtn) stripeBtn.textContent = `🔒 Pagar $${grand.toFixed(2)} con Tarjeta`;
+  if (stripeBtn) stripeBtn.textContent = `Pagar $${grand.toFixed(2)} con Tarjeta`;
 }
 
 function openTrackerPaymentModal(scope) {
   unlockAudioContext();
-  const order = activeTrackedOrderId ? orders.find(o => o.id === activeTrackedOrderId) : null;
+  const rec = findTrackedOrderRecord(activeTrackedOrderId);
+  const order = rec ? rec.order : null;
   if (!order) return;
 
   const groupInfo = getTableGroupSummary(order.table, order);
   const isTable   = scope === 'table';
   const normTable = normalizeTableName(order.table).toLowerCase();
   const tableOrders = orders.filter(o => o && normalizeTableName(o.table).toLowerCase() === normTable);
+  if (!tableOrders.some(o => o.id === order.id)) tableOrders.push(order);
 
   const targetOrders = isTable
     ? tableOrders
@@ -4133,11 +4526,11 @@ function payWithApplePayWallet() {
   const statusEl = document.getElementById('ap-faceid-status');
 
   if (bioBox) bioBox.classList.remove('hidden');
-  if (ringEl) ringEl.textContent = '☺';
+  if (ringEl) ringEl.innerHTML = uiIcon('clock', 'lg');
   if (statusEl) statusEl.textContent = 'Verificando Face ID con Apple Wallet...';
 
   setTimeout(() => {
-    if (ringEl) ringEl.textContent = '✓';
+    if (ringEl) ringEl.innerHTML = uiIcon('check', 'lg');
     if (statusEl) statusEl.textContent = '¡Pago Autorizado con Apple Pay!';
     playClientReadyDing();
     setTimeout(() => {
@@ -4198,7 +4591,7 @@ function payWithStripeCard() {
   const last4 = rawNum.slice(-4);
   if (btnEl) {
     btnEl.disabled = true;
-    btnEl.textContent = '🔒 Procesando con Stripe...';
+    btnEl.textContent = 'Procesando con Stripe...';
   }
 
   setTimeout(() => {
@@ -4280,12 +4673,34 @@ function completeDigitalPayment({ paymentMethod, paymentLabel, paymentRef }) {
   showToast(`✓ Pagado con ${paymentLabel} ($${session.grandTotal})`);
 }
 
+function findTrackedOrderRecord(orderId) {
+  if (!orderId) return null;
+  const active = orders.find(o => o.id === orderId);
+  if (active) {
+    trackedOrdersCache.set(active.id, active);
+    return { order: active, isDelivered: false };
+  }
+  const done = completedOrders.find(o => o.id === orderId);
+  if (done) {
+    trackedOrdersCache.set(done.id, done);
+    return { order: done, isDelivered: true };
+  }
+  const cached = trackedOrdersCache.get(orderId);
+  if (cached) {
+    return { order: cached, isDelivered: true };
+  }
+  return null;
+}
+
 // ─── Sistema de Grupos por Mesa y Cuentas Separadas (Split Bill) ──
 function getTableGroupSummary(tableName, referenceOrder = null) {
   const normTable = normalizeTableName(tableName).toLowerCase();
   const tableOrders = orders.filter(
     o => o && normalizeTableName(o.table).toLowerCase() === normTable
   );
+  if (referenceOrder && !tableOrders.some(o => o.id === referenceOrder.id)) {
+    tableOrders.push(referenceOrder);
+  }
 
   // Determinar el nombre del comensal actual
   const refGuest = (referenceOrder && referenceOrder.guestName)
@@ -4373,8 +4788,8 @@ function setTrackerSplitView(mode) {
 // ─── Llamar al Mesero / Pedir la Cuenta (Individual o Grupal) ──
 function getConfirmedSessionTable() {
   if (presetTableFromURL) return presetTableFromURL;
-  const activeOrder = activeTrackedOrderId ? orders.find(o => o.id === activeTrackedOrderId) : null;
-  if (clientMode === 'tracker' && activeOrder && activeOrder.table) return activeOrder.table;
+  const rec = findTrackedOrderRecord(activeTrackedOrderId);
+  if (clientMode === 'tracker' && rec && rec.order && rec.order.table) return rec.order.table;
   return '';
 }
 
@@ -4422,7 +4837,8 @@ function confirmServiceTableModal() {
 }
 
 function dispatchServiceCall(type, table) {
-  const activeOrder = activeTrackedOrderId ? orders.find(o => o.id === activeTrackedOrderId) : null;
+  const rec         = findTrackedOrderRecord(activeTrackedOrderId);
+  const activeOrder = rec ? rec.order : null;
   const groupInfo   = getTableGroupSummary(table, activeOrder);
   const isBill      = type === 'bill' || type === 'bill_individual' || type === 'bill_table';
   const billScope   = type === 'bill_table' ? 'table' : 'individual';
@@ -4472,8 +4888,8 @@ function dispatchServiceCall(type, table) {
   showCustomPushBanner({
     ledClass: isBill ? 'led-received' : 'led-ready',
     kicker: isBill
-      ? (billScope === 'table' ? '👥 CUENTA GRUPAL SOLICITADA' : '👤 TU CUENTA INDIVIDUAL SOLICITADA')
-      : '🔔 MESERO NOTIFICADO EN COCINA',
+      ? (billScope === 'table' ? 'CUENTA GRUPAL SOLICITADA' : 'TU CUENTA INDIVIDUAL SOLICITADA')
+      : 'MESERO NOTIFICADO EN COCINA',
     message: isBill
       ? (billScope === 'table'
           ? `Llevarán la cuenta completa de ${table} ($${callTotal})`
@@ -4483,15 +4899,17 @@ function dispatchServiceCall(type, table) {
   playClientReadyDing();
 
   showToast(isBill
-    ? `🧾 Cuenta solicitada (${billScope === 'table' ? 'Mesa completa' : guestName || table}: $${callTotal})`
-    : `🔔 Mesero notificado para ${table}`);
+    ? `Cuenta solicitada (${billScope === 'table' ? 'Mesa completa' : guestName || table}: $${callTotal})`
+    : `Mesero notificado para ${table}`);
 }
 
 function renderClientTracker() {
   updateClientContextBar();
   if (clientMode !== 'tracker') return;
 
-  const order = activeTrackedOrderId ? orders.find(o => o.id === activeTrackedOrderId) : null;
+  const rec       = findTrackedOrderRecord(activeTrackedOrderId);
+  const order     = rec ? rec.order : null;
+  const isDelivered = rec ? rec.isDelivered : true;
   const heroEl    = document.getElementById('tracker-hero-card');
   const numEl     = document.getElementById('tracker-order-num');
   const tableEl   = document.getElementById('tracker-table-name');
@@ -4505,7 +4923,7 @@ function renderClientTracker() {
   const receiptMetaEl = document.getElementById('receipt-meta');
 
   if (!order) {
-    // Si la orden ya fue entregada/cerrada en cocina, mostrar confirmación final limpia
+    // Si la orden aún no existe en memoria, mostrar confirmación limpia y actualizar calculadora
     if (heroEl)     heroEl.dataset.status = 'ready';
     if (mainLedEl)  mainLedEl.className = 'led-dot led-ready';
     if (titleEl)    titleEl.textContent = 'Entregado';
@@ -4515,23 +4933,33 @@ function renderClientTracker() {
       stepEl.classList.add('done');
       stepEl.classList.remove('current');
     });
+    if (typeof renderTrackerSplitCalculator === 'function') {
+      renderTrackerSplitCalculator();
+    }
     return;
   }
 
-  const meta      = STATUS_META[order.status] || STATUS_META.pending;
+  const meta      = isDelivered
+    ? {
+        stepIndex: 4,
+        label: 'Entregado',
+        ledClass: 'led-ready',
+        desc: 'Tu pedido fue entregado. ¡Buen provecho!',
+      }
+    : (STATUS_META[order.status] || STATUS_META.pending);
   const fMode     = order.fulfillmentMode || 'dine_in';
   const isRemote  = fMode === 'pickup' || fMode === 'delivery';
   const groupInfo = getTableGroupSummary(order.table, order);
   const myDiner   = groupInfo.myDiner;
   const hasGroup  = !isRemote && groupInfo.diners.length > 1;
 
-  if (heroEl)    heroEl.dataset.status = order.status;
+  if (heroEl)    heroEl.dataset.status = isDelivered ? 'ready' : order.status;
   if (numEl)     numEl.textContent   = `ORDEN #${String(order.num).padStart(3, '0')}`;
   if (tableEl) {
     if (fMode === 'pickup') {
-      tableEl.textContent = `🛍️ Pickup · ${order.guestName || 'Cliente'}`;
+      tableEl.textContent = `Pickup · ${order.guestName || 'Cliente'}`;
     } else if (fMode === 'delivery') {
-      tableEl.textContent = `🛵 A Domicilio · ${order.guestName || 'Cliente'}`;
+      tableEl.textContent = `A Domicilio · ${order.guestName || 'Cliente'}`;
     } else {
       tableEl.textContent = myDiner.guestName ? `${order.table} · ${myDiner.guestName}` : order.table;
     }
@@ -4540,7 +4968,7 @@ function renderClientTracker() {
   if (titleEl)   titleEl.textContent = meta.label;
   if (descEl)    descEl.textContent  = meta.desc;
   if (progressEl) {
-    const pct = [12, 40, 70, 100][meta.stepIndex] || 12;
+    const pct = isDelivered ? 100 : ([12, 40, 70, 100][meta.stepIndex] || 12);
     progressEl.style.width = `${pct}%`;
   }
   if (receiptMetaEl) {
@@ -4569,14 +4997,14 @@ function renderClientTracker() {
     if (fMode === 'pickup') {
       fulfillBox.classList.remove('hidden');
       fulfillBox.innerHTML = `
-        <div class="tf-row"><span class="tf-label">Modalidad</span><span class="tf-val">🛍️ Pickup (Para Llevar)</span></div>
+        <div class="tf-row"><span class="tf-label">Modalidad</span><span class="tf-val">Pickup (Para Llevar)</span></div>
         <div class="tf-row"><span class="tf-label">Recolección</span><span class="tf-val">${escapeHTML(order.pickupTime || 'Lo antes posible')}</span></div>
         ${order.customerPhone ? `<div class="tf-row"><span class="tf-label">WhatsApp / Tel</span><span class="tf-val">${escapeHTML(order.customerPhone)}</span></div>` : ''}
       `;
     } else if (fMode === 'delivery') {
       fulfillBox.classList.remove('hidden');
       fulfillBox.innerHTML = `
-        <div class="tf-row"><span class="tf-label">Modalidad</span><span class="tf-val">🛵 Envío a Domicilio (+$${order.deliveryFee || 25})</span></div>
+        <div class="tf-row"><span class="tf-label">Modalidad</span><span class="tf-val">Envío a Domicilio (+$${order.deliveryFee || 25})</span></div>
         <div class="tf-row"><span class="tf-label">Dirección</span><span class="tf-val">${escapeHTML(order.deliveryAddress || '—')}</span></div>
         ${order.deliveryNotes ? `<div class="tf-row"><span class="tf-label">Referencias</span><span class="tf-val">${escapeHTML(order.deliveryNotes)}</span></div>` : ''}
         ${order.customerPhone ? `<div class="tf-row"><span class="tf-label">WhatsApp / Tel</span><span class="tf-val">${escapeHTML(order.customerPhone)}</span></div>` : ''}
@@ -4594,7 +5022,17 @@ function renderClientTracker() {
     stepEl.classList.toggle('current', idx === meta.stepIndex);
   });
 
-  // Presencia en la mesa (avatares + estado de cada comensal)
+  // Presencia en la mesa (avatares + estado de cada comensal) + Botón Invitar
+  const trackerInviteEl  = document.getElementById('tracker-invite-strip');
+  const trackerInvLbl    = document.getElementById('tracker-invite-label');
+  const canInviteTracker = Boolean(!isRemote && order.table && order.table.trim().toLowerCase() !== 'mostrador');
+  if (trackerInviteEl) {
+    trackerInviteEl.classList.toggle('hidden', !canInviteTracker);
+    if (canInviteTracker && trackerInvLbl) {
+      trackerInvLbl.textContent = `¿Vienen más amigos a ${order.table}?`;
+    }
+  }
+
   const presenceCard  = document.getElementById('tracker-presence-card');
   const presenceList  = document.getElementById('tracker-presence-list');
   const presenceTitle = document.getElementById('tracker-presence-title');
@@ -4700,7 +5138,7 @@ function renderClientTracker() {
       <div class="tracker-item-row">
         <span class="ti-left">
           <span class="tracker-item-qty">${it.qty}×</span>
-          <span class="ti-name">${it.emoji || ''} ${escapeHTML(it.name)}${customLine ? `<small class="ti-custom-note">${escapeHTML(customLine)}</small>` : ''}</span>
+          <span class="ti-name">${escapeHTML(it.name)}${customLine ? `<small class="ti-custom-note">${escapeHTML(customLine)}</small>` : ''}</span>
         </span>
         <span class="ti-amount">${formatMenuPrice(it.price * it.qty)}</span>
       </div>
@@ -4736,7 +5174,7 @@ function renderClientTracker() {
     const myItems = myDiner.items && myDiner.items.length > 0 ? myDiner.items : order.items;
     const loyaltyDiscRow = (Number(order.loyaltyDiscount) > 0)
       ? `<div class="tracker-item-row loyalty-discount-row">
-           <span class="ti-left"><span class="tracker-item-qty">⭐</span><span class="ti-name">Canje: ${escapeHTML(order.loyaltyRewardLabel || 'Puntos Escandón')}</span></span>
+           <span class="ti-left"><span class="tracker-item-qty">VIP</span><span class="ti-name">Canje: ${escapeHTML(order.loyaltyRewardLabel || 'Puntos Escandón')}</span></span>
            <span class="ti-amount">-$${order.loyaltyDiscount}</span>
          </div>`
       : '';
@@ -4746,8 +5184,172 @@ function renderClientTracker() {
   const receiptFootEl = document.getElementById('receipt-foot-text');
   if (receiptFootEl) {
     const ptsEarned = Number(order.loyaltyPointsEarned) || Math.max(1, Math.round(Number(order.total) || 0));
-    receiptFootEl.innerHTML = `⭐ <strong>+${ptsEarned} Puntos Escandón</strong> acumulados · IVA incluido`;
+    receiptFootEl.innerHTML = `<strong>+${ptsEarned} Puntos Escandón</strong> acumulados · IVA incluido`;
   }
+
+  if (typeof renderTrackerSplitCalculator === 'function') {
+    renderTrackerSplitCalculator(order, groupInfo);
+  }
+}
+
+// ─── Pieza 3: Calculadora Visual de Cuenta y Propina ($0 Comisiones) ────
+function setSplitCalcMode(mode) {
+  splitCalcState.mode = ['mine', 'equal', 'table'].includes(mode) ? mode : 'mine';
+  if (splitCalcState.mode === 'equal' && !splitCalcState.userEditedPeople) {
+    const rec = findTrackedOrderRecord(activeTrackedOrderId);
+    const order = rec ? rec.order : null;
+    if (order) {
+      const g = getTableGroupSummary(order.table, order);
+      splitCalcState.people = Math.max(2, g.diners.length || 2);
+    }
+  }
+  renderTrackerSplitCalculator();
+}
+
+function adjustSplitCalcPeople(delta) {
+  splitCalcState.userEditedPeople = true;
+  splitCalcState.people = Math.max(2, Math.min(24, (Number(splitCalcState.people) || 2) + delta));
+  renderTrackerSplitCalculator();
+}
+
+function setSplitCalcTip(pct) {
+  splitCalcState.tipPct = Math.max(0, Math.min(30, Number(pct) || 0));
+  renderTrackerSplitCalculator();
+}
+
+function computeTrackerSplitCalcData(orderArg = null, groupArg = null) {
+  const rec = orderArg ? { order: orderArg } : findTrackedOrderRecord(activeTrackedOrderId);
+  const order = rec ? rec.order : null;
+  if (!order) return null;
+  const fMode = order.fulfillmentMode || 'dine_in';
+  const isRemote = fMode === 'pickup' || fMode === 'delivery';
+  const groupInfo = groupArg || getTableGroupSummary(order.table, order);
+
+  const myBase = Number(groupInfo.myTotal) || Number(order.total) || 0;
+  const tableBase = Number(groupInfo.tableTotal) || myBase;
+  const peopleCount = Math.max(2, Number(splitCalcState.people) || Math.max(2, groupInfo.diners.length || 2));
+
+  let activeMode = isRemote ? 'mine' : splitCalcState.mode;
+  let baseShown = myBase;
+  if (activeMode === 'equal') {
+    baseShown = tableBase / peopleCount;
+  } else if (activeMode === 'table') {
+    baseShown = tableBase;
+  }
+
+  const tipPct = Number(splitCalcState.tipPct) || 0;
+  const tipAmount = Math.round(baseShown * (tipPct / 100) * 100) / 100;
+  const grandAmount = Math.round((baseShown + tipAmount) * 100) / 100;
+
+  return {
+    order,
+    isRemote,
+    groupInfo,
+    activeMode,
+    peopleCount,
+    myBase,
+    tableBase,
+    baseShown: Math.round(baseShown * 100) / 100,
+    tipPct,
+    tipAmount,
+    grandAmount,
+    tableTipTotal: Math.round(tableBase * (tipPct / 100) * 100) / 100,
+    tableGrandTotal: Math.round((tableBase * (1 + tipPct / 100)) * 100) / 100,
+  };
+}
+
+function renderTrackerSplitCalculator(orderArg = null, groupArg = null) {
+  const cardEl = document.getElementById('tracker-split-calculator');
+  if (!cardEl) return;
+
+  const data = computeTrackerSplitCalcData(orderArg, groupArg);
+  if (!data) {
+    cardEl.classList.add('hidden');
+    return;
+  }
+  cardEl.classList.remove('hidden');
+
+  const btnMine  = document.getElementById('tsc-mode-mine');
+  const btnEqual = document.getElementById('tsc-mode-equal');
+  const btnTable = document.getElementById('tsc-mode-table');
+  const peopleRow = document.getElementById('tsc-people-row');
+  const peopleVal = document.getElementById('tsc-people-val');
+  const baseEl   = document.getElementById('tsc-res-base');
+  const tipLblEl = document.getElementById('tsc-res-tip-label');
+  const tipEl    = document.getElementById('tsc-res-tip');
+  const totTitEl = document.getElementById('tsc-res-total-title');
+  const totSubEl = document.getElementById('tsc-res-total-sub');
+  const grandEl  = document.getElementById('tsc-res-grand');
+
+  if (btnMine)  btnMine.classList.toggle('active', data.activeMode === 'mine');
+  if (btnEqual) {
+    btnEqual.classList.toggle('hidden', data.isRemote);
+    btnEqual.classList.toggle('active', data.activeMode === 'equal');
+  }
+  if (btnTable) {
+    btnTable.classList.toggle('hidden', data.isRemote);
+    btnTable.classList.toggle('active', data.activeMode === 'table');
+  }
+  if (peopleRow) peopleRow.classList.toggle('hidden', data.isRemote || data.activeMode !== 'equal');
+  if (peopleVal) peopleVal.textContent = String(data.peopleCount);
+
+  document.querySelectorAll('#tsc-tip-pills .tsc-tip-btn').forEach(btn => {
+    btn.classList.toggle('active', Number(btn.dataset.tip) === data.tipPct);
+  });
+
+  if (baseEl) baseEl.textContent = formatMenuPrice(data.baseShown);
+  if (tipLblEl) tipLblEl.textContent = `Propina (${data.tipPct}%)`;
+  if (tipEl) tipEl.textContent = formatMenuPrice(data.tipAmount);
+  if (grandEl) grandEl.textContent = formatMenuPrice(data.grandAmount);
+
+  if (totTitEl && totSubEl) {
+    if (data.activeMode === 'equal') {
+      totTitEl.textContent = `Toca por persona (÷ ${data.peopleCount})`;
+      totSubEl.textContent = `Total mesa con propina: ${formatMenuPrice(data.tableGrandTotal)} MXN`;
+    } else if (data.activeMode === 'table') {
+      totTitEl.textContent = `Total de ${data.order.table}`;
+      totSubEl.textContent = 'Directo en efectivo, terminal o transferencia';
+    } else {
+      const meName = data.groupInfo.myDiner.guestName || 'tu parte';
+      totTitEl.textContent = `Tu cuenta (${meName})`;
+      totSubEl.textContent = 'Directo en efectivo, terminal o transferencia';
+    }
+  }
+}
+
+function buildSplitCalculatorShareText() {
+  const data = computeTrackerSplitCalcData();
+  if (!data) return '';
+  const restName = getActiveTenantProfile().displayName || 'Pinch Kitchen+Bar';
+  const mesaLabel = data.isRemote ? `Orden #${String(data.order.num).padStart(3, '0')}` : data.order.table;
+
+  if (data.activeMode === 'equal') {
+    return `Cuenta ${mesaLabel} · ${restName}\n• Consumo mesa: ${formatMenuPrice(data.tableBase)}\n• Propina (${data.tipPct}%): ${formatMenuPrice(data.tableTipTotal)}\n• Total mesa: ${formatMenuPrice(data.tableGrandTotal)}\n• Dividido entre ${data.peopleCount}: *${formatMenuPrice(data.grandAmount)} c/u*`;
+  }
+  if (data.activeMode === 'table') {
+    const dinersLines = data.groupInfo.diners.length > 1
+      ? `\n\nPor persona (sin propina):\n` + data.groupInfo.diners.map(d => `- ${d.guestName}: ${formatMenuPrice(d.total)}`).join('\n')
+      : '';
+    return `Cuenta Completa ${mesaLabel} · ${restName}\n• Consumo: ${formatMenuPrice(data.baseShown)}\n• Propina (${data.tipPct}%): ${formatMenuPrice(data.tipAmount)}\n• Total: *${formatMenuPrice(data.grandAmount)}*${dinersLines}`;
+  }
+  const meName = data.groupInfo.myDiner.guestName || 'Mi cuenta';
+  return `${meName} (${mesaLabel}) · ${restName}\n• Consumo: ${formatMenuPrice(data.baseShown)}\n• Propina (${data.tipPct}%): ${formatMenuPrice(data.tipAmount)}\n• Total a pagar: *${formatMenuPrice(data.grandAmount)}*`;
+}
+
+function copySplitCalculatorSummary() {
+  const text = buildSplitCalculatorShareText();
+  if (!text) return;
+  copyTextWithFallback(text).then(() => {
+    hapticTap(8);
+    showToast('Desglose de cuenta copiado');
+  });
+}
+
+function shareSplitCalculatorWhatsApp() {
+  const text = buildSplitCalculatorShareText();
+  if (!text) return;
+  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
+  showToast('Resumen listo para enviar');
 }
 
 
@@ -4821,6 +5423,14 @@ function toggleKDSQRsView() {
   setKDSSubView('qrs');
 }
 
+function openKDSKanbanBoard() {
+  kdsFilter = 'all';
+  document.querySelectorAll('.dineos-filters-bar .kds-filter').forEach(b => {
+    b.classList.toggle('active', b.dataset.filter === 'all');
+  });
+  setKDSSubView('board');
+}
+
 function setKDSSubView(subView) {
   const valid = ['comandas', 'board', 'sales', 'stock', 'qrs'];
   kdsSubView = valid.includes(subView) ? subView : 'comandas';
@@ -4848,6 +5458,20 @@ function setKDSSubView(subView) {
   if (salesBtn)    salesBtn.classList.toggle('active', kdsSubView === 'sales');
   if (stockBtn)    stockBtn.classList.toggle('active', kdsSubView === 'stock');
   if (qrsBtn)      qrsBtn.classList.toggle('active', kdsSubView === 'qrs');
+
+  const activeMap = {
+    comandas: comandasEl,
+    board: boardEl,
+    sales: salesEl,
+    stock: stockEl,
+    qrs: qrsEl,
+  };
+  const activeEl = activeMap[kdsSubView];
+  if (activeEl) {
+    activeEl.classList.remove('kds-subview-enter');
+    void activeEl.offsetWidth;
+    activeEl.classList.add('kds-subview-enter');
+  }
 
   resetKDSScrollTop();
   renderKDSServiceAlerts();
@@ -4896,14 +5520,14 @@ function renderKDSServiceAlerts() {
   container.classList.remove('hidden');
   container.innerHTML = serviceCalls.map(call => {
     const isBill = call.type === 'bill';
-    let title = `🔔 ${call.table} · LLAMA AL MESERO`;
+    let title = `${call.table} · LLAMA AL MESERO`;
     if (isBill) {
       if (call.billScope === 'table') {
-        title = `👥 ${call.table} · PIDE CUENTA DE TODA LA MESA`;
+        title = `${call.table} · PIDE CUENTA DE TODA LA MESA`;
       } else if (call.guestName) {
-        title = `👤 ${call.table} (${call.guestName}) · PIDE SU CUENTA INDIVIDUAL`;
+        title = `${call.table} (${call.guestName}) · PIDE SU CUENTA INDIVIDUAL`;
       } else {
-        title = `🧾 ${call.table} · PIDE LA CUENTA`;
+        title = `${call.table} · PIDE LA CUENTA`;
       }
     }
 
@@ -4944,7 +5568,7 @@ function resolveServiceCall(callId) {
 // ─── Panel de Stock / Agotar Producto con 1 Clic (Modo 86) ──
 function getKDSStockGroups() {
   return PINCH_MENU_CATEGORIES.map(cat => ({
-    title: `${cat.emoji} ${cat.title.toUpperCase()} (${PINCH_MENU_ITEMS.filter(i => i.category === cat.id).length})`,
+    title: `${cat.title.toUpperCase()} (${PINCH_MENU_ITEMS.filter(i => i.category === cat.id).length})`,
     items: PINCH_MENU_ITEMS
       .filter(i => i.category === cat.id)
       .map(it => ({
@@ -4993,11 +5617,11 @@ const INVENTORY_RECIPE_META = {
 };
 
 const INVENTORY_CATEGORY_META = {
-  'Proteínas':         { emoji: '🥩', tone: 'tone-orange' },
-  'Panadería y Pastas':{ emoji: '🍞', tone: 'tone-amber' },
-  'Verduras y Salsas': { emoji: '🌿', tone: 'tone-sage' },
-  'Bebidas':           { emoji: '🥤', tone: 'tone-sky' },
-  'Otros':             { emoji: '📦', tone: 'tone-plum' },
+  'Proteínas':         { emoji: 'PR', tone: 'tone-orange' },
+  'Panadería y Pastas':{ emoji: 'PP', tone: 'tone-amber' },
+  'Verduras y Salsas': { emoji: 'VS', tone: 'tone-sage' },
+  'Bebidas':           { emoji: 'BB', tone: 'tone-sky' },
+  'Otros':             { emoji: 'OT', tone: 'tone-plum' },
 };
 
 let inventoryItems     = [];
@@ -5673,7 +6297,7 @@ function deductInventoryForOrder(order, { silent = false } = {}) {
   publishCloudSync('INVENTORY_UPDATE', { inventoryItems, inventoryMovements, autoMode86Enabled });
 
   if (!silent && depletedNames.length > 0 && kdsUnlocked) {
-    showKDSToast(`⚠️ Stock agotado: ${depletedNames.join(', ')}`);
+    showKDSToast(`Stock agotado: ${depletedNames.join(', ')}`);
   }
   return deductions;
 }
@@ -5947,7 +6571,7 @@ function renderInventoryDashboard() {
   if (visible.length === 0) {
     gridEl.innerHTML = `
       <div class="kds-empty inv-empty-state">
-        <div class="kds-empty-icon">📦</div>
+        <div class="kds-empty-icon">${uiIcon('box', 'xl')}</div>
         <p class="kds-empty-title">Sin insumos en esta vista</p>
         <p class="kds-empty-sub">Agrega un nuevo insumo o cambia el filtro para ver todo tu inventario.</p>
         <button type="button" class="btn-kds-empty-action" onclick="openInventoryModal()">+ Agregar Insumo</button>
@@ -5957,7 +6581,7 @@ function renderInventoryDashboard() {
     gridEl.innerHTML = visible.map(({ item, health }) => {
       const catMeta = INVENTORY_CATEGORY_META[item.category] || INVENTORY_CATEGORY_META['Otros'];
       const recipeMeta = INVENTORY_RECIPE_META[item.recipeLink] || INVENTORY_RECIPE_META.manual;
-      const statusLabel = health.status === 'out' ? '✕ Agotado' : (health.status === 'low' ? '⚠ Stock Bajo' : '● Óptimo');
+      const statusLabel = health.status === 'out' ? 'Agotado' : (health.status === 'low' ? 'Stock Bajo' : 'Óptimo');
       const statusCls = health.status === 'out' ? 'st-out' : (health.status === 'low' ? 'st-low' : 'st-ok');
       const servingsText = health.servings !== null
         ? `~${health.servings} ${recipeMeta.unitHint || 'porciones'}`
@@ -5986,7 +6610,7 @@ function renderInventoryDashboard() {
             </div>
             <div class="inv-badges-col">
               <span class="inv-servings-pill">${escapeHTML(servingsText)}</span>
-              <span class="inv-expiry-pill exp-${health.expiry.tone}">⏳ ${escapeHTML(health.expiry.label)}</span>
+              <span class="inv-expiry-pill exp-${health.expiry.tone}">${escapeHTML(health.expiry.label)}</span>
             </div>
           </div>
 
@@ -5998,13 +6622,13 @@ function renderInventoryDashboard() {
           </div>
 
           <div class="inv-recipe-strip">
-            <span>⚡ ${escapeHTML(recipeLine)}</span>
+            <span>${escapeHTML(recipeLine)}</span>
           </div>
 
           <div class="inv-card-actions">
             <button type="button" class="inv-act-btn primary" onclick="openInventoryRestockModal('${item.id}', 'in')">+ Entrada</button>
             <button type="button" class="inv-act-btn warn" onclick="openInventoryRestockModal('${item.id}', 'waste')">− Merma</button>
-            <button type="button" class="inv-act-btn" onclick="openInventoryModal('${item.id}')">✎ Editar</button>
+            <button type="button" class="inv-act-btn" onclick="openInventoryModal('${item.id}')">Editar</button>
           </div>
         </div>
       `;
@@ -6039,12 +6663,7 @@ function populateInventoryRecipeSelectOptions() {
   const sel = document.getElementById('inv-recipe-link-input');
   if (!sel) return;
   sel.innerHTML = Object.entries(INVENTORY_RECIPE_META).map(([key, meta]) => {
-    const prefix = key === 'manual' ? '📦 '
-      : key.startsWith('drink_') ? '🥤 '
-      : key.includes('brioche') || key.includes('bread') || key.includes('pasta') || key.includes('totopos') ? '🍞 '
-      : key.includes('beef') || key.includes('angus') || key.includes('ribs') || key.includes('chicken') || key.includes('cured') || key.includes('seafood') || key.includes('bacon') || key.includes('eggs') ? '🥩 '
-      : '🌿 ';
-    return `<option value="${key}">${prefix}${escapeHTML(meta.label)}</option>`;
+    return `<option value="${key}">${escapeHTML(meta.label)}</option>`;
   }).join('');
 }
 
@@ -6251,25 +6870,25 @@ function copyRestockShoppingList() {
     .filter(e => e.health.needsRestock || e.health.needsExpiryAction);
 
   if (urgent.length === 0) {
-    showKDSToast('✓ Todo tu inventario está óptimo, no falta nada por pedir');
+    showKDSToast('Todo tu inventario está óptimo, no falta nada por pedir');
     return;
   }
 
   const lines = [
-    `📋 LISTA DE COMPRAS & CADUCIDADES — ${profile.name.toUpperCase()}`,
+    `LISTA DE COMPRAS & CADUCIDADES — ${profile.name.toUpperCase()}`,
     `Fecha: ${new Date().toLocaleDateString('es-MX')}`,
     '',
   ];
   urgent.forEach(({ item, health }) => {
-    const tag = health.status === 'out' ? '🔴 AGOTADO' : (health.status === 'low' ? '🟡 BAJO' : '⏳ CADUCIDAD');
+    const tag = health.status === 'out' ? 'AGOTADO' : (health.status === 'low' ? 'BAJO' : 'CADUCIDAD');
     const suggest = health.suggestedOrderQty > 0 ? ` → Pedir +${formatQtyUnit(health.suggestedOrderQty, item.unit)}` : '';
-    lines.push(`${tag} · ${item.name}: queda ${formatQtyUnit(item.stock, item.unit)} (${health.expiry.label})${suggest}`);
+    lines.push(`[${tag}] ${item.name}: queda ${formatQtyUnit(item.stock, item.unit)} (${health.expiry.label})${suggest}`);
   });
 
   const text = lines.join('\n');
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text).then(() => {
-      showKDSToast(`📋 Lista copiada (${urgent.length} insumos por atender)`);
+      showKDSToast(`Lista copiada (${urgent.length} insumos por atender)`);
     }).catch(() => showKDSToast(`Lista generada (${urgent.length} insumos)`));
   } else {
     showKDSToast(`Lista generada (${urgent.length} insumos)`);
@@ -6860,8 +7479,8 @@ function renderKDSLiveKPIs() {
   if (chefThumbsEl && !chefThumbsEl.dataset.ready) {
     chefThumbsEl.dataset.ready = '1';
     chefThumbsEl.innerHTML = `
-      <span class="dca-thumb dca-thumb-emoji" aria-hidden="true">🍔</span>
-      <span class="dca-thumb dca-thumb-emoji" aria-hidden="true">🥩</span>
+      <span class="dca-thumb dca-thumb-mono" aria-hidden="true">BG</span>
+      <span class="dca-thumb dca-thumb-mono" aria-hidden="true">SS</span>
       <span class="dca-count" id="dineos-chef-avail-pill">+${availSlots}</span>
     `;
   } else {
@@ -6890,6 +7509,12 @@ function renderKDSLiveKPIs() {
   if (badgeEl) {
     badgeEl.textContent = String(notifCount);
     badgeEl.classList.toggle('hidden', notifCount === 0);
+  }
+
+  const railOrdersBadge = document.getElementById('rail-capsule-orders-count');
+  if (railOrdersBadge) {
+    railOrdersBadge.textContent = String(orders.length);
+    railOrdersBadge.classList.toggle('hidden', orders.length === 0);
   }
 
   // Conteo de canales de todo el turno (activas + cerradas)
@@ -6981,12 +7606,18 @@ function renderKDSLiveKPIs() {
 
   if (heroArtEl && heroArtEl.dataset.renderedDish !== heroKey) {
     heroArtEl.dataset.renderedDish = heroKey;
+    const visualMarkup = heroKey === 'pinch_burger'
+      ? `<div class="dineos-hero-photo-wrap"><img src="assets/pinch-burger-hero.jpg?v=20261124v43" alt="Pinch Burger" class="dineos-hero-photo-img" /></div>`
+      : buildDineOSPinchHeroPlatterSVG(heroKey);
     heroArtEl.innerHTML = `
-      ${buildDineOSPinchHeroPlatterSVG(heroKey)}
+      ${visualMarkup}
       <span class="dineos-hotspot h1" onclick="setKDSSubView('stock')" title="Ver stock de proteínas y cortes"></span>
       <span class="dineos-hotspot h2" onclick="setKDSSubView('stock')" title="Ver stock de panadería y pastas"></span>
       <span class="dineos-hotspot h3" onclick="setKDSSubView('stock')" title="Ver stock de verduras, quesos y salsas"></span>
     `;
+    heroArtEl.classList.remove('hero-platter-swap');
+    void heroArtEl.offsetWidth;
+    heroArtEl.classList.add('hero-platter-swap');
   }
 
   // Progreso de preparación del turno (5 bloques 4x3 puntitos + %)
@@ -7062,6 +7693,129 @@ function setKDSFilter(filter, btn) {
   renderKDS();
 }
 
+function buildKDSOrderCardHTML(order, { compactKanban = false } = {}) {
+  const meta = STATUS_META[order.status] || STATUS_META.pending;
+  const elapsed = Math.floor((Date.now() - order.createdAt) / 60000);
+  const timerClass = elapsed >= 20 ? 'alert' : elapsed >= 10 ? 'warn' : '';
+  const timerTxt = elapsed < 1 ? '< 1 min' : `${elapsed} min`;
+  const fMode = order.fulfillmentMode || 'dine_in';
+  const isRemote = fMode === 'pickup' || fMode === 'delivery';
+  const tableGroup = getTableGroupSummary(order.table, order);
+  const hasTableGroup = !isRemote && (tableGroup.diners.length > 1 || tableGroup.tableOrdersCount > 1);
+  const avatar = getAvatarInitialsAndTone(order.guestName, order.table);
+
+  const justTransitioned = Boolean(
+    lastMovedOrderMeta &&
+    lastMovedOrderMeta.id === order.id &&
+    (Date.now() - lastMovedOrderMeta.ts < 850)
+  );
+
+  const payBadgeHtml = order.paid
+    ? `<span class="kds-pay-badge">✓ Pagado · ${escapeHTML(order.paymentLabel || 'Apple Pay')}</span>`
+    : `<span class="kds-unpaid-badge">En cuenta</span>`;
+
+  let fulfillmentBannerHtml = '';
+  if (fMode === 'pickup') {
+    fulfillmentBannerHtml = `
+      <div class="kds-fulfillment-banner mode-pickup">
+        <span>Pickup · ${escapeHTML(order.pickupTime || 'Lo antes posible')}</span>
+        ${order.customerPhone ? `<span class="kds-fulfillment-sub">Tel: ${escapeHTML(order.customerPhone)}</span>` : ''}
+      </div>
+    `;
+  } else if (fMode === 'delivery') {
+    fulfillmentBannerHtml = `
+      <div class="kds-fulfillment-banner mode-delivery">
+        <span>A Domicilio (+$${order.deliveryFee || 25})</span>
+        <span class="kds-fulfillment-sub">${escapeHTML(order.deliveryAddress || 'Sin dirección')}${order.deliveryNotes ? ` · ${escapeHTML(order.deliveryNotes)}` : ''}</span>
+        ${order.customerPhone ? `<span class="kds-fulfillment-sub">Tel: ${escapeHTML(order.customerPhone)}</span>` : ''}
+      </div>
+    `;
+  }
+
+  const actionsBtns = (() => {
+    if (order.status === 'pending') return `
+      <button class="order-btn btn-primary-step" onclick="changeOrderStatus(${order.id}, 'preparing')">▶ Cocinar</button>
+      <button class="order-btn btn-sub-step" onclick="changeOrderStatus(${order.id}, 'received')" title="Confirmar recepción en barra">✓ Recibir</button>
+      <button class="order-btn btn-delete" onclick="deleteOrder(${order.id})" title="Cancelar orden">✕</button>
+    `;
+    if (order.status === 'received') return `
+      <button class="order-btn btn-primary-step" onclick="changeOrderStatus(${order.id}, 'preparing')">Pasar a Fuego</button>
+      <button class="order-btn" onclick="changeOrderStatus(${order.id}, 'pending')" title="Regresar a pendientes">↩</button>
+    `;
+    if (order.status === 'preparing') return `
+      <button class="order-btn btn-ready" onclick="changeOrderStatus(${order.id}, 'ready')">✓ Marcar Listo</button>
+      <button class="order-btn btn-fast-deliver" onclick="readyAndDeliverOrder(${order.id})" title="Marcar listo y entregar en 1 clic">Listo y Entregar</button>
+      <button class="order-btn" onclick="changeOrderStatus(${order.id}, 'received')" title="Regresar">↩</button>
+    `;
+    return `
+      <button class="order-btn btn-deliver-final" onclick="deliverOrder(${order.id})">✓ Entregar Orden</button>
+      <button class="order-btn" onclick="changeOrderStatus(${order.id}, 'preparing')" title="Volver a preparación">↩ Fuego</button>
+    `;
+  })();
+
+  return `
+    <div class="order-card status-${order.status}${compactKanban ? ' is-kanban-card' : ''}${justTransitioned ? ' just-transitioned' : ''}" id="order-${order.id}">
+      <div class="order-card-header">
+        <div class="order-card-id-group">
+          <span class="order-num">#${String(order.num).padStart(3, '0')}</span>
+          <span class="order-timer ${timerClass}" data-order-id="${order.id}">${timerTxt}</span>
+        </div>
+        <span class="status-badge badge-${order.status}">
+          <span class="led-dot ${meta.ledClass}"></span>
+          <span>${meta.label}</span>
+        </span>
+      </div>
+
+      <div class="order-guest-strip">
+        <div class="order-avatar ${avatar.tone}">${escapeHTML(avatar.initials)}</div>
+        <div class="order-guest-meta">
+          <span class="order-table">${escapeHTML(order.table)}</span>
+          <span class="order-guest-sub">${order.guestName ? escapeHTML(order.guestName) : 'Comensal'}</span>
+        </div>
+        <div class="order-price-col">
+          <span class="order-price-val">${formatMoney(order.total)}</span>
+          ${payBadgeHtml}
+        </div>
+      </div>
+
+      ${fulfillmentBannerHtml}
+      ${(order.loyaltyDiscount > 0 || order.viaMeseroAI) ? `
+        <div class="kds-ai-loyalty-strip">
+          ${order.viaMeseroAI ? `<span class="kds-ai-order-tag">✦ Mesero IA</span>` : ''}
+          ${order.loyaltyDiscount > 0 ? `<span class="kds-loyalty-order-tag">Canje: ${escapeHTML(order.loyaltyRewardLabel || 'Recompensa')} (-$${order.loyaltyDiscount})</span>` : ''}
+        </div>
+      ` : ''}
+      ${hasTableGroup ? `
+        <div class="kds-table-group-pill">
+          ${escapeHTML(order.table)} · ${tableGroup.diners.length} ${tableGroup.diners.length === 1 ? 'comensal' : 'comensales'} · Mesa: ${formatMoney(tableGroup.tableTotal)}
+        </div>
+      ` : ''}
+
+      <div class="order-items-list">
+        ${order.items.map(it => {
+          const extArr = Array.isArray(it.extras) ? it.extras : [];
+          const sinArr = Array.isArray(it.removed) ? it.removed : [];
+          const hasModTags = Boolean(it.option || extArr.length > 0 || sinArr.length > 0 || it.note);
+          const modTagsHtml = hasModTags
+            ? `<span class="kds-mod-tags">
+                ${it.option ? `<span class="kds-mod-tag mod-opt">${escapeHTML(it.option)}</span>` : ''}
+                ${extArr.length > 0 ? `<span class="kds-mod-tag mod-extra">+ EXTRAS: ${extArr.map(e => escapeHTML(e.name)).join(', ')}</span>` : ''}
+                ${sinArr.length > 0 ? `<span class="kds-mod-tag mod-sin">SIN: ${sinArr.map(r => escapeHTML(r)).join(', ')}</span>` : ''}
+                ${it.note ? `<span class="order-item-note">Nota: ${escapeHTML(it.note)}</span>` : ''}
+              </span>`
+            : '';
+          return `
+          <div class="order-item-row">
+            <span class="order-item-qty">${it.qty}×</span>
+            <span class="order-item-name">${escapeHTML(it.name)}${modTagsHtml}</span>
+          </div>`;
+        }).join('')}
+      </div>
+
+      <div class="order-actions">${actionsBtns}</div>
+    </div>`;
+}
+
 function renderKDS() {
   if (!kdsUnlocked) return;
   renderKDSLiveKPIs();
@@ -7069,16 +7823,14 @@ function renderKDS() {
   const board = document.getElementById('kds-board');
   if (!board) return;
 
-  let filtered = kdsFilter === 'all'
-    ? orders
-    : orders.filter(o => o.status === kdsFilter);
+  let baseOrders = orders.slice();
 
   if (kdsChannelFilter !== 'all') {
-    filtered = filtered.filter(o => (o.fulfillmentMode || 'dine_in') === kdsChannelFilter);
+    baseOrders = baseOrders.filter(o => (o.fulfillmentMode || 'dine_in') === kdsChannelFilter);
   }
 
   if (kdsSearchQuery) {
-    filtered = filtered.filter(o => {
+    baseOrders = baseOrders.filter(o => {
       const hay = [
         String(o.num || ''),
         `#${String(o.num || '').padStart(3, '0')}`,
@@ -7091,130 +7843,101 @@ function renderKDS() {
     });
   }
 
-  if (filtered.length === 0) {
-    board.innerHTML = `
-      <div class="kds-empty" id="kds-empty">
-        <div class="kds-empty-icon">${kdsSearchQuery ? '⌕' : '🍽️'}</div>
-        <p class="kds-empty-title">${kdsSearchQuery ? 'Sin resultados para tu búsqueda' : 'Sin comandas activas'}</p>
-        <p class="kds-empty-sub">${kdsSearchQuery ? 'Prueba con otro número de mesa, cliente o limpia el filtro.' : 'Los pedidos entrantes de mesa, pickup y domicilio aparecerán al instante aquí.'}</p>
-      </div>`;
-    return;
-  }
+  // MODO KANBAN UNIFICADO EN 3 COLUMNAS (SIN BRINCOS DE PESTAÑA)
+  if (kdsFilter === 'all') {
+    if (baseOrders.length === 0 && kdsSearchQuery) {
+      board.classList.remove('is-kanban-mode');
+      board.innerHTML = `
+        <div class="kds-empty" id="kds-empty">
+          <div class="kds-empty-icon">⌕</div>
+          <p class="kds-empty-title">Sin resultados para tu búsqueda</p>
+          <p class="kds-empty-sub">Prueba con otro número de mesa, cliente o limpia el filtro.</p>
+        </div>`;
+    } else {
+      board.classList.add('is-kanban-mode');
+      const colIncoming  = baseOrders.filter(o => o.status === 'pending' || o.status === 'received');
+      const colPreparing = baseOrders.filter(o => o.status === 'preparing');
+      const colReady     = baseOrders.filter(o => o.status === 'ready');
 
-  board.innerHTML = filtered.map(order => {
-    const meta = STATUS_META[order.status] || STATUS_META.pending;
-    const elapsed = Math.floor((Date.now() - order.createdAt) / 60000);
-    const timerClass = elapsed >= 20 ? 'alert' : elapsed >= 10 ? 'warn' : '';
-    const timerTxt = elapsed < 1 ? '< 1 min' : `${elapsed} min`;
-    const fMode = order.fulfillmentMode || 'dine_in';
-    const isRemote = fMode === 'pickup' || fMode === 'delivery';
-    const tableGroup = getTableGroupSummary(order.table, order);
-    const hasTableGroup = !isRemote && (tableGroup.diners.length > 1 || tableGroup.tableOrdersCount > 1);
-    const avatar = getAvatarInitialsAndTone(order.guestName, order.table);
+      const lanes = [
+        {
+          id: 'incoming',
+          title: 'Entrantes',
+          sub: 'Por recibir / iniciar',
+          emptyIcon: uiIcon('bell', 'xl'),
+          emptyText: 'Sin órdenes entrantes',
+          list: colIncoming,
+          extraAction: '',
+        },
+        {
+          id: 'preparing',
+          title: 'En Preparación',
+          sub: 'En parrilla y barra fría',
+          emptyIcon: uiIcon('flame', 'xl'),
+          emptyText: 'Fuego libre por ahora',
+          list: colPreparing,
+          extraAction: '',
+        },
+        {
+          id: 'ready',
+          title: 'Listos / Barra',
+          sub: 'Listos para entrega',
+          emptyIcon: uiIcon('check', 'xl'),
+          emptyText: 'Barra despejada',
+          list: colReady,
+          extraAction: colReady.length > 1
+            ? `<button type="button" class="kds-deliver-all-btn" onclick="deliverAllReadyOrders()">✓ Entregar todas (${colReady.length})</button>`
+            : '',
+        },
+      ];
 
-    const payBadgeHtml = order.paid
-      ? `<span class="kds-pay-badge">✓ Pagado · ${escapeHTML(order.paymentLabel || 'Apple Pay')}</span>`
-      : `<span class="kds-unpaid-badge">En cuenta</span>`;
-
-    let fulfillmentBannerHtml = '';
-    if (fMode === 'pickup') {
-      fulfillmentBannerHtml = `
-        <div class="kds-fulfillment-banner mode-pickup">
-          <span>🛍️ Pickup · ${escapeHTML(order.pickupTime || 'Lo antes posible')}</span>
-          ${order.customerPhone ? `<span class="kds-fulfillment-sub">Tel: ${escapeHTML(order.customerPhone)}</span>` : ''}
+      board.innerHTML = lanes.map(lane => `
+        <div class="kds-kanban-col col-${lane.id}">
+          <div class="kds-kanban-col-head">
+            <div class="kkc-title-group">
+              <span class="kkc-dot"></span>
+              <div class="kkc-texts">
+                <h3>${lane.title}</h3>
+                <span>${lane.sub}</span>
+              </div>
+            </div>
+            <div class="kkc-right-tools">
+              ${lane.extraAction}
+              <span class="kkc-count">${lane.list.length}</span>
+            </div>
+          </div>
+          <div class="kds-kanban-col-body">
+            ${lane.list.length > 0
+              ? lane.list.map(o => buildKDSOrderCardHTML(o, { compactKanban: true })).join('')
+              : `<div class="kds-kanban-lane-empty"><span>${lane.emptyIcon}</span><p>${lane.emptyText}</p></div>`
+            }
+          </div>
         </div>
-      `;
-    } else if (fMode === 'delivery') {
-      fulfillmentBannerHtml = `
-        <div class="kds-fulfillment-banner mode-delivery">
-          <span>🛵 A Domicilio (+$${order.deliveryFee || 25})</span>
-          <span class="kds-fulfillment-sub">${escapeHTML(order.deliveryAddress || 'Sin dirección')}${order.deliveryNotes ? ` · ${escapeHTML(order.deliveryNotes)}` : ''}</span>
-          ${order.customerPhone ? `<span class="kds-fulfillment-sub">Tel: ${escapeHTML(order.customerPhone)}</span>` : ''}
-        </div>
-      `;
+      `).join('');
     }
+  } else {
+    // MODO ENFOQUE POR ESTADO INDIVIDUAL (CON BOTÓN DE RETORNO RÁPIDO A KANBAN)
+    board.classList.remove('is-kanban-mode');
+    const filtered = baseOrders.filter(o => o.status === kdsFilter);
+    const metaLabel = (STATUS_META[kdsFilter] && STATUS_META[kdsFilter].label) || kdsFilter;
+    const focusBanner = `
+      <div class="kds-focus-banner">
+        <span>Viendo solo estado: <strong>${escapeHTML(metaLabel)}</strong></span>
+        <button type="button" onclick="setKDSFilter('all')">⇄ Volver a Vista Kanban (3 columnas)</button>
+      </div>
+    `;
 
-    const actionsBtns = (() => {
-      if (order.status === 'pending') return `
-        <button class="order-btn btn-primary-step" onclick="changeOrderStatus(${order.id}, 'received')">✓ Recibir</button>
-        <button class="order-btn btn-delete" onclick="deleteOrder(${order.id})">Cancelar</button>
-      `;
-      if (order.status === 'received') return `
-        <button class="order-btn btn-primary-step" onclick="changeOrderStatus(${order.id}, 'preparing')">▶ Preparar</button>
-        <button class="order-btn" onclick="changeOrderStatus(${order.id}, 'pending')">↩ Atrás</button>
-      `;
-      if (order.status === 'preparing') return `
-        <button class="order-btn btn-ready" onclick="changeOrderStatus(${order.id}, 'ready')">✓ Marcar Listo</button>
-        <button class="order-btn" onclick="changeOrderStatus(${order.id}, 'received')">↩ Atrás</button>
-      `;
-      return `
-        <button class="order-btn btn-ready" onclick="deliverOrder(${order.id})">✓ Entregar</button>
-        <button class="order-btn" onclick="changeOrderStatus(${order.id}, 'preparing')">↩ Atrás</button>
-      `;
-    })();
-
-    return `
-      <div class="order-card status-${order.status}" id="order-${order.id}">
-        <div class="order-card-header">
-          <div class="order-card-id-group">
-            <span class="order-num">#${String(order.num).padStart(3, '0')}</span>
-            <span class="order-timer ${timerClass}" data-order-id="${order.id}">${timerTxt}</span>
-          </div>
-          <span class="status-badge badge-${order.status}">
-            <span class="led-dot ${meta.ledClass}"></span>
-            <span>${meta.label}</span>
-          </span>
-        </div>
-
-        <div class="order-guest-strip">
-          <div class="order-avatar ${avatar.tone}">${escapeHTML(avatar.initials)}</div>
-          <div class="order-guest-meta">
-            <span class="order-table">${escapeHTML(order.table)}</span>
-            <span class="order-guest-sub">${order.guestName ? escapeHTML(order.guestName) : 'Comensal'}</span>
-          </div>
-          <div class="order-price-col">
-            <span class="order-price-val">${formatMoney(order.total)}</span>
-            ${payBadgeHtml}
-          </div>
-        </div>
-
-        ${fulfillmentBannerHtml}
-        ${(order.loyaltyDiscount > 0 || order.viaMeseroAI) ? `
-          <div class="kds-ai-loyalty-strip">
-            ${order.viaMeseroAI ? `<span class="kds-ai-order-tag">✨ Mesero IA</span>` : ''}
-            ${order.loyaltyDiscount > 0 ? `<span class="kds-loyalty-order-tag">⭐ Canje: ${escapeHTML(order.loyaltyRewardLabel || 'Recompensa')} (-$${order.loyaltyDiscount})</span>` : ''}
-          </div>
-        ` : ''}
-        ${hasTableGroup ? `
-          <div class="kds-table-group-pill">
-            👥 ${escapeHTML(order.table)} · ${tableGroup.diners.length} ${tableGroup.diners.length === 1 ? 'comensal' : 'comensales'} · Mesa: ${formatMoney(tableGroup.tableTotal)}
-          </div>
-        ` : ''}
-
-        <div class="order-items-list">
-          ${order.items.map(it => {
-            const extArr = Array.isArray(it.extras) ? it.extras : [];
-            const sinArr = Array.isArray(it.removed) ? it.removed : [];
-            const hasModTags = Boolean(it.option || extArr.length > 0 || sinArr.length > 0 || it.note);
-            const modTagsHtml = hasModTags
-              ? `<span class="kds-mod-tags">
-                  ${it.option ? `<span class="kds-mod-tag mod-opt">🔥 ${escapeHTML(it.option)}</span>` : ''}
-                  ${extArr.length > 0 ? `<span class="kds-mod-tag mod-extra">+ EXTRAS: ${extArr.map(e => escapeHTML(e.name)).join(', ')}</span>` : ''}
-                  ${sinArr.length > 0 ? `<span class="kds-mod-tag mod-sin">SIN: ${sinArr.map(r => escapeHTML(r)).join(', ')}</span>` : ''}
-                  ${it.note ? `<span class="order-item-note">📝 ${escapeHTML(it.note)}</span>` : ''}
-                </span>`
-              : '';
-            return `
-            <div class="order-item-row">
-              <span class="order-item-qty">${it.qty}×</span>
-              <span class="order-item-name">${it.emoji || ''} ${escapeHTML(it.name)}${modTagsHtml}</span>
-            </div>`;
-          }).join('')}
-        </div>
-
-        <div class="order-actions">${actionsBtns}</div>
-      </div>`;
-  }).join('');
+    if (filtered.length === 0) {
+      board.innerHTML = focusBanner + `
+        <div class="kds-empty" id="kds-empty">
+          <div class="kds-empty-icon">${kdsSearchQuery ? uiIcon('search', 'xl') : uiIcon('utensils', 'xl')}</div>
+          <p class="kds-empty-title">${kdsSearchQuery ? 'Sin resultados para tu búsqueda' : `Sin comandas en "${metaLabel}"`}</p>
+          <p class="kds-empty-sub">${kdsSearchQuery ? 'Prueba con otro número de mesa, cliente o limpia el filtro.' : 'Cambia a Vista Kanban para monitorear entrantes, fuego y barra juntos.'}</p>
+        </div>`;
+    } else {
+      board.innerHTML = focusBanner + filtered.map(order => buildKDSOrderCardHTML(order, { compactKanban: false })).join('');
+    }
+  }
 
   if (typeof updateKitchenCopilotTelemetry === 'function') {
     updateKitchenCopilotTelemetry();
@@ -7230,12 +7953,18 @@ function changeOrderStatus(orderId, newStatus) {
   if ((newStatus === 'preparing' || newStatus === 'ready') && !order.inventoryDeducted) {
     deductInventoryForOrder(order, { silent: false });
   }
+  lastMovedOrderMeta = { id: orderId, status: newStatus, ts: Date.now() };
   persistOrders();
   publishCloudSync('ORDER_STATUS', { id: orderId, status: newStatus, readyAt: order.readyAt || null });
   renderKDS();
   renderDailySales();
   renderKDSStockPanel();
   notifyClientIfMyOrderChanged(order.id, prevStatus, newStatus, order.num);
+
+  if (kdsFilter !== 'all' && kdsFilter !== newStatus && typeof showKDSToast === 'function') {
+    const label = (STATUS_META[newStatus] && STATUS_META[newStatus].label) || newStatus;
+    showKDSToast(`Orden #${String(order.num).padStart(3, '0')} → ${label}`);
+  }
 
   // Historial mensual (base de datos): guardar venta al marcar "Listo"
   if (newStatus === 'ready') {
@@ -7245,22 +7974,84 @@ function changeOrderStatus(orderId, newStatus) {
   }
 }
 
-// Archiva un pedido "Listo" como entregado para limpiar el tablero KDS sin perder su venta en el Corte del Día
-function deliverOrder(orderId) {
+function readyAndDeliverOrder(orderId) {
   const order = orders.find(o => o.id === orderId);
-  if (order && order.status === 'ready') {
+  if (!order) return;
+  const prevStatus = order.status;
+  order.status = 'ready';
+  order.readyAt = order.readyAt || Date.now();
+  if (!order.inventoryDeducted) {
+    deductInventoryForOrder(order, { silent: false });
+  }
+  notifyClientIfMyOrderChanged(order.id, prevStatus, 'ready', order.num);
+  deliverOrder(orderId);
+}
+
+function deliverAllReadyOrders() {
+  const readyList = orders.filter(
+    o => o.status === 'ready' && (kdsChannelFilter === 'all' || (o.fulfillmentMode || 'dine_in') === kdsChannelFilter)
+  );
+  if (readyList.length === 0) return;
+
+  const deliveredIds = new Set();
+  readyList.forEach(order => {
+    deliveredIds.add(order.id);
     if (!completedOrders.some(c => c.id === order.id)) {
       completedOrders.push({ ...order, status: 'ready', deliveredAt: Date.now() });
     }
-    recordSalesForOrders([order], { cloud: true });
-  }
-  orders = orders.filter(o => o.id !== orderId);
+    publishCloudSync('ORDER_DELIVER', { id: order.id, order });
+  });
+
+  recordSalesForOrders(readyList, { cloud: true });
+  orders = orders.filter(o => !deliveredIds.has(o.id));
   persistOrders();
-  publishCloudSync('ORDER_DELIVER', { id: orderId, order });
   renderKDS();
   renderDailySales();
   renderClientTracker();
   updateHeaderTrackerPill();
+
+  if (typeof showKDSToast === 'function') {
+    showKDSToast(`${readyList.length} ${readyList.length === 1 ? 'orden entregada' : 'órdenes entregadas'}`);
+  }
+}
+
+// Archiva un pedido "Listo" como entregado para limpiar el tablero KDS sin perder su venta en el Corte del Día
+function deliverOrder(orderId) {
+  if (deliveringOrderIds.has(orderId)) return;
+  const order = orders.find(o => o.id === orderId);
+  if (!order) return;
+
+  const finalizeDeliver = () => {
+    const target = orders.find(o => o.id === orderId) || order;
+    if (target && target.status === 'ready') {
+      if (!completedOrders.some(c => c.id === target.id)) {
+        completedOrders.push({ ...target, status: 'ready', deliveredAt: Date.now() });
+      }
+      recordSalesForOrders([target], { cloud: true });
+    }
+    orders = orders.filter(o => o.id !== orderId);
+    persistOrders();
+    publishCloudSync('ORDER_DELIVER', { id: orderId, order: target });
+    renderKDS();
+    renderDailySales();
+    renderClientTracker();
+    updateHeaderTrackerPill();
+    if (typeof showKDSToast === 'function' && target) {
+      showKDSToast(`Orden #${String(target.num).padStart(3, '0')} entregada`);
+    }
+  };
+
+  const cardEl = document.getElementById(`order-${orderId}`);
+  if (cardEl) {
+    deliveringOrderIds.add(orderId);
+    cardEl.classList.add('is-delivering-out');
+    setTimeout(() => {
+      deliveringOrderIds.delete(orderId);
+      finalizeDeliver();
+    }, 180);
+  } else {
+    finalizeDeliver();
+  }
 }
 
 function deleteOrder(orderId) {
@@ -7356,7 +8147,7 @@ function calculateDailySales() {
       totalUnits += qty;
 
       const labelKey = String(it.name || 'Platillo');
-      const prevDish = dishCountsMap.get(labelKey) || { name: labelKey, emoji: it.emoji || '🍽️', qty: 0 };
+      const prevDish = dishCountsMap.get(labelKey) || { name: labelKey, emoji: '', qty: 0 };
       prevDish.qty += qty;
       dishCountsMap.set(labelKey, prevDish);
 
@@ -7422,7 +8213,7 @@ function renderDailySales() {
 
   if (topProdEl) {
     if (stats.topDish && stats.topDish.qty > 0) {
-      topProdEl.textContent = `${stats.topDish.emoji || '🍽️'} ${stats.topDish.name} (${stats.topDish.qty})`;
+      topProdEl.textContent = `${stats.topDish.name} (${stats.topDish.qty})`;
     } else {
       topProdEl.textContent = '—';
     }
@@ -7438,12 +8229,12 @@ function renderDailySales() {
       : 'Pinch Drinks + Aguas Frescas (Jamaica y Horchata) · $4–$6';
 
     const catRows = [
-      { id: 'pinch_bites',        emoji: '🫒', tone: 'tone-amber',  name: 'Pinch Bites',              sub: 'Entradas y bocados · $12–$21', data: bd.pinch_bites },
-      { id: 'burgers_sandwiches', emoji: '🍔', tone: 'tone-orange', name: 'Burgers & Sandwiches',     sub: 'Hamburguesas y sándwiches · $17–$23', data: bd.burgers_sandwiches },
-      { id: 'entrees',            emoji: '🥩', tone: 'tone-plum',   name: 'Entrees',                  sub: 'Cortes Angus, ribs y pastas · $14–$39', data: bd.entrees },
-      { id: 'sides',              emoji: '🍟', tone: 'tone-sage',   name: 'Sides',                    sub: 'Guarniciones hechas en casa · $5–$12', data: bd.sides },
-      { id: 'desserts',           emoji: '🥧', tone: 'tone-rose',   name: 'Desserts',                 sub: 'Postres artesanales · $5–$16', data: bd.desserts },
-      { id: 'drinks',             emoji: '🥤', tone: 'tone-sky',    name: 'Drinks & Aguas Frescas',   sub: drinksSub, data: bd.drinks },
+      { id: 'pinch_bites',        emoji: 'PB', tone: 'tone-amber',  name: 'Pinch Bites',              sub: 'Entradas y bocados · $12–$21', data: bd.pinch_bites },
+      { id: 'burgers_sandwiches', emoji: 'BS', tone: 'tone-orange', name: 'Burgers & Sandwiches',     sub: 'Hamburguesas y sándwiches · $17–$23', data: bd.burgers_sandwiches },
+      { id: 'entrees',            emoji: 'EN', tone: 'tone-plum',   name: 'Entrees',                  sub: 'Cortes Angus, ribs y pastas · $14–$39', data: bd.entrees },
+      { id: 'sides',              emoji: 'SD', tone: 'tone-sage',   name: 'Sides',                    sub: 'Guarniciones hechas en casa · $5–$12', data: bd.sides },
+      { id: 'desserts',           emoji: 'DS', tone: 'tone-rose',   name: 'Desserts',                 sub: 'Postres artesanales · $5–$16', data: bd.desserts },
+      { id: 'drinks',             emoji: 'DR', tone: 'tone-sky',    name: 'Drinks & Aguas Frescas',   sub: drinksSub, data: bd.drinks },
     ];
 
     listEl.innerHTML = catRows.map(row => `
@@ -8222,7 +9013,7 @@ async function paintMonthlyHistory() {
 
   const hasCloud = Boolean(firebaseBaseUrl());
   if (statusEl) {
-    statusEl.textContent = hasCloud ? '☁ Nube + este dispositivo' : 'Guardado en este dispositivo';
+    statusEl.textContent = hasCloud ? 'Nube + este dispositivo' : 'Guardado en este dispositivo';
     statusEl.classList.toggle('cloud', hasCloud);
   }
 
@@ -8248,7 +9039,7 @@ async function paintMonthlyHistory() {
   if (ordersEl)   ordersEl.textContent   = agg.orders;
   if (avgEl)      avgEl.textContent      = formatMoney(daysWithSales ? Math.round(agg.total / daysWithSales) : 0);
   if (daysEl)     daysEl.textContent     = daysWithSales;
-  if (productsEl) productsEl.textContent = `🫒 ${agg.pinch_bites.qty} · 🍔 ${agg.burgers_sandwiches.qty} · 🥩 ${agg.entrees.qty} · 🍟 ${agg.sides.qty} · 🥧 ${agg.desserts.qty} · 🥤 ${drinksAllQty}`;
+  if (productsEl) productsEl.textContent = `Bites ${agg.pinch_bites.qty} · Burgers ${agg.burgers_sandwiches.qty} · Entrees ${agg.entrees.qty} · Sides ${agg.sides.qty} · Postres ${agg.desserts.qty} · Bebidas ${drinksAllQty}`;
 
   const dayRows = Array.from(agg.days.values())
     .filter(d => DAY_KEY_RE.test(d.key))
@@ -8563,7 +9354,7 @@ async function exportSalesWorkbook({ records, periodLabel, filename, includeMont
       XLSXlib.utils.book_append_sheet(wb, ws, sheet.name);
     });
     XLSXlib.writeFile(wb, `${filename}.xlsx`);
-    showKDSToast('📥 Excel Ejecutivo (.xlsx) descargado');
+    showKDSToast('Excel Ejecutivo (.xlsx) descargado');
   } else {
     // Sin internet para cargar la librería: exportar CSV compatible con Excel
     const detalle = sheets.find(s => s.name === 'Detalle');
@@ -8599,7 +9390,7 @@ function renderExecutiveExcelPreview() {
 
   const sampleRowsHtml = records.length > 0
     ? records.slice(-5).map(r => {
-        const tableGuest = r.guestName ? `${r.table} · 👤 ${r.guestName}` : r.table;
+        const tableGuest = r.guestName ? `${r.table} · ${r.guestName}` : r.table;
         const prods = (r.items || []).map(it => `${it.qty}x ${it.name}`).join(', ');
         return `
           <tr>
@@ -8657,43 +9448,43 @@ function renderExecutiveExcelPreview() {
         </thead>
         <tbody>
           <tr>
-            <td>🫒 Pinch Bites</td>
+            <td>Pinch Bites</td>
             <td style="text-align:center">${agg.pinch_bites.qty}</td>
             <td class="xl-num">$${agg.pinch_bites.amount.toFixed(2)}</td>
             <td class="xl-num">${pct(agg.pinch_bites.amount)}</td>
           </tr>
           <tr>
-            <td>🍔 Burgers &amp; Sandwiches</td>
+            <td>Burgers &amp; Sandwiches</td>
             <td style="text-align:center">${agg.burgers_sandwiches.qty}</td>
             <td class="xl-num">$${agg.burgers_sandwiches.amount.toFixed(2)}</td>
             <td class="xl-num">${pct(agg.burgers_sandwiches.amount)}</td>
           </tr>
           <tr>
-            <td>🥩 Entrees</td>
+            <td>Entrees</td>
             <td style="text-align:center">${agg.entrees.qty}</td>
             <td class="xl-num">$${agg.entrees.amount.toFixed(2)}</td>
             <td class="xl-num">${pct(agg.entrees.amount)}</td>
           </tr>
           <tr>
-            <td>🍟 Sides</td>
+            <td>Sides</td>
             <td style="text-align:center">${agg.sides.qty}</td>
             <td class="xl-num">$${agg.sides.amount.toFixed(2)}</td>
             <td class="xl-num">${pct(agg.sides.amount)}</td>
           </tr>
           <tr>
-            <td>🥧 Desserts</td>
+            <td>Desserts</td>
             <td style="text-align:center">${agg.desserts.qty}</td>
             <td class="xl-num">$${agg.desserts.amount.toFixed(2)}</td>
             <td class="xl-num">${pct(agg.desserts.amount)}</td>
           </tr>
           <tr>
-            <td>🌺 Aguas Frescas (Jamaica / Horchata)</td>
+            <td>Aguas Frescas (Jamaica / Horchata)</td>
             <td style="text-align:center">${agg.aguas.qty}</td>
             <td class="xl-num">$${agg.aguas.amount.toFixed(2)}</td>
             <td class="xl-num">${pct(agg.aguas.amount)}</td>
           </tr>
           <tr>
-            <td>🥤 Bebidas Pinch (Vidrio / Latas)</td>
+            <td>Bebidas Pinch (Vidrio / Latas)</td>
             <td style="text-align:center">${agg.drinks.qty}</td>
             <td class="xl-num">$${agg.drinks.amount.toFixed(2)}</td>
             <td class="xl-num">${pct(agg.drinks.amount)}</td>
@@ -8817,7 +9608,7 @@ const LOYALTY_REWARDS_CATALOG = [
     id: 'reward_drink_100',
     pointsCost: 100,
     discount: 6,
-    emoji: '🥤',
+    emoji: 'DR',
     title: 'Bebida o Agua Fresca Gratis',
     subtitle: 'Descuento directo de $6.00 (Mexican Coke, Saratoga, Jamaica u Horchata)',
     minSubtotal: 4,
@@ -8826,7 +9617,7 @@ const LOYALTY_REWARDS_CATALOG = [
     id: 'reward_side_180',
     pointsCost: 180,
     discount: 10,
-    emoji: '🍟',
+    emoji: 'SD',
     title: 'Guarnición o Postre Gratis',
     subtitle: 'Descuento directo de $10.00 en Sides o Desserts',
     minSubtotal: 10,
@@ -8835,7 +9626,7 @@ const LOYALTY_REWARDS_CATALOG = [
     id: 'reward_bite_240',
     pointsCost: 240,
     discount: 15,
-    emoji: '🫒',
+    emoji: 'PB',
     title: 'Pinch Bite de Cortesía',
     subtitle: 'Descuento directo de $15.00 en Pinch Bites (Croquetas, Porkbelly...)',
     minSubtotal: 15,
@@ -8844,7 +9635,7 @@ const LOYALTY_REWARDS_CATALOG = [
     id: 'reward_vip_350',
     pointsCost: 350,
     discount: 25,
-    emoji: '⭐',
+    emoji: 'VIP',
     title: 'Bono VIP Pinch $25',
     subtitle: 'Descuento directo de $25.00 aplicable a toda tu cuenta',
     minSubtotal: 25,
@@ -8880,9 +9671,9 @@ const kitchenCopilotMemory = {
 
 function getLoyaltyTierMeta(lifetimePts) {
   const pts = Number(lifetimePts) || 0;
-  if (pts >= 600) return { name: 'Oro VIP', badge: '👑 Oro VIP', nextAt: 1000, tone: 'gold' };
-  if (pts >= 200) return { name: 'Plata Frecuente', badge: '🥈 Plata Frecuente', nextAt: 600, tone: 'silver' };
-  return { name: 'Miembro Club', badge: '⭐ Miembro Escandón', nextAt: 200, tone: 'warm' };
+  if (pts >= 600) return { name: 'Oro VIP', badge: 'Oro VIP', nextAt: 1000, tone: 'gold' };
+  if (pts >= 200) return { name: 'Plata Frecuente', badge: 'Plata Frecuente', nextAt: 600, tone: 'silver' };
+  return { name: 'Miembro Club', badge: 'Miembro Escandón', nextAt: 200, tone: 'warm' };
 }
 
 function loadLoyaltyProfile() {
@@ -8943,7 +9734,7 @@ function syncLoyaltyProfileIdentity(guestName, phone) {
 
 function summarizeComboItems(items) {
   if (!Array.isArray(items) || items.length === 0) return '';
-  return items.map(it => `${it.qty}× ${it.emoji || ''} ${it.name}`.trim()).join(' + ');
+  return items.map(it => `${it.qty}× ${it.name}`.trim()).join(' + ');
 }
 
 function computeMostFrequentOrLatestCombo(history, latestItems) {
@@ -8957,7 +9748,7 @@ function computeMostFrequentOrLatestCombo(history, latestItems) {
       items: latestItems.map(it => ({
         key: it.key,
         name: it.name,
-        emoji: it.emoji || '🌮',
+        emoji: it.emoji || '',
         price: Number(it.price) || 28,
         qty: Number(it.qty) || 1,
         station: it.station || 'taco',
@@ -8993,7 +9784,7 @@ function computeMostFrequentOrLatestCombo(history, latestItems) {
     items: chosenItems.map(it => ({
       key: it.key,
       name: it.name,
-      emoji: it.emoji || '🌮',
+      emoji: it.emoji || '',
       price: Number(it.price) || 28,
       qty: Number(it.qty) || 1,
       station: it.station || 'taco',
@@ -9004,6 +9795,7 @@ function computeMostFrequentOrLatestCombo(history, latestItems) {
 function getClientUsualCombo() {
   loadLoyaltyProfile();
   if (loyaltyProfile.usualCombo && Array.isArray(loyaltyProfile.usualCombo.items) && loyaltyProfile.usualCombo.items.length > 0) {
+    loyaltyProfile.usualCombo.label = summarizeComboItems(loyaltyProfile.usualCombo.items);
     return loyaltyProfile.usualCombo;
   }
   if (Array.isArray(loyaltyProfile.orderHistory) && loyaltyProfile.orderHistory.length > 0) {
@@ -9085,7 +9877,7 @@ function recordLoyaltyOrderSubmission(order) {
   const cleanItems = (order.items || []).map(it => ({
     key: it.key || '',
     name: it.name,
-    emoji: it.emoji || '🌮',
+    emoji: it.emoji || '',
     price: Number(it.price) || 28,
     qty: Number(it.qty) || 1,
     station: it.station || 'taco',
@@ -9123,7 +9915,7 @@ function saveCurrentCartAsUsual() {
   const cleanItems = cartItems.map(it => ({
     key: it.key,
     name: it.name,
-    emoji: it.emoji || '🌮',
+    emoji: it.emoji || '',
     price: Number(it.price) || 28,
     qty: Number(it.qty) || 1,
     station: it.station || 'taco',
@@ -9141,7 +9933,7 @@ function saveCurrentCartAsUsual() {
   renderClientLoyaltyTabContent();
   renderCart();
   hapticTap(15);
-  showToast('✨ Guardado como tu pedido "Lo de siempre"');
+  showToast('Guardado como tu pedido "Lo de siempre"');
 }
 
 function loadComboItemsIntoCart(comboItems, { replaceCart = true } = {}) {
@@ -9178,7 +9970,7 @@ function loadComboItemsIntoCart(comboItems, { replaceCart = true } = {}) {
         dishId: it.dishId || '',
         category: it.category || it.station || '',
         name: it.name,
-        emoji: it.emoji || '🍽️',
+        emoji: it.emoji || '',
         price: Number(it.price) || 0,
         qty: Number(it.qty) || 1,
         station: it.station || 'pinch_bites',
@@ -9236,7 +10028,7 @@ function orderUsualOneTap(sendImmediately = false) {
   renderClientLoyaltyHeaderAndBanner();
 
   if (res.addedCount === 0) {
-    showToast('⚠️ Los ingredientes de tu pedido habitual están agotados hoy');
+    showToast('Los ingredientes de tu pedido habitual están agotados hoy');
     return;
   }
 
@@ -9250,22 +10042,17 @@ function orderUsualOneTap(sendImmediately = false) {
   if (sendImmediately) {
     closeClientAILoyaltyModal();
     upsellOfferedForCart = true; // Ya incluye su combo completo
-    // Si ya tenemos mesa y nombre guardados en modo En Mesa, podemos abrir directo confirmación o enviar
+    // Pre-cargar datos guardados pero exigir el gesto de "Desliza para pedir" para evitar envíos accidentales
     const savedTable = presetTableFromURL || readTenantStorage('last-table') || '';
     const savedGuest = currentGuestName || readTenantStorage('guest-name') || '';
-    if (currentFulfillmentMode === 'dine_in' && savedTable && savedGuest) {
-      const tableIn = document.getElementById('table-input');
-      const guestIn = document.getElementById('guest-name-input');
-      if (tableIn) tableIn.value = savedTable;
-      if (guestIn) guestIn.value = savedGuest;
-      submitOrder();
-      showToast(`⚡ ¡"Lo de siempre" enviado directo a cocina (${savedTable})!`);
-      return;
-    }
+    const tableIn = document.getElementById('table-input');
+    const guestIn = document.getElementById('guest-name-input');
+    if (tableIn && savedTable) tableIn.value = savedTable;
+    if (guestIn && savedGuest) guestIn.value = savedGuest;
     openOrderModalDirect();
-    showToast('⚡ "Lo de siempre" listo · Confirma tu mesa o entrega');
+    showToast('"Lo de siempre" listo · Desliza para enviar a cocina');
   } else {
-    showToast(`🛒 "Lo de siempre" cargado (${res.addedCount} artículos)`);
+    showToast(`"Lo de siempre" cargado (${res.addedCount} artículos)`);
     toggleCart(true);
   }
 }
@@ -9304,9 +10091,9 @@ function renderClientLoyaltyHeaderAndBanner() {
       <div class="usual-ai-card has-usual compact-pinch">
         <div class="usual-ai-top">
           <div class="usual-ai-badges">
-            <span class="usual-ai-kicker">✨ LO DE SIEMPRE</span>
+            <span class="usual-ai-kicker">${uiIcon('star', 'sm')} LO DE SIEMPRE</span>
             <span class="usual-loyalty-pill" onclick="openClientAILoyaltyModal('loyalty')">
-              ⭐ ${loyaltyProfile.points} pts ${unlockedRewards.length > 0 ? `· 🎁 ${unlockedRewards.length}` : ''}
+              ${uiIcon('star', 'sm')} ${loyaltyProfile.points} pts ${unlockedRewards.length > 0 ? `· ${unlockedRewards.length} premios` : ''}
             </span>
           </div>
         </div>
@@ -9323,10 +10110,10 @@ function renderClientLoyaltyHeaderAndBanner() {
 
         <div class="usual-ai-actions">
           <button type="button" class="btn-usual-primary" onclick="orderUsualOneTap(true)">
-            <span>⚡ Pedir lo de siempre</span>
+            ${uiIcon('flame', 'sm')} <span>Pedir lo de siempre</span>
           </button>
           <button type="button" class="btn-usual-secondary" onclick="orderUsualOneTap(false)">
-            🛒 Al carrito
+            ${uiIcon('bag', 'sm')} <span>Al carrito</span>
           </button>
         </div>
       </div>
@@ -9366,20 +10153,20 @@ function renderCartLoyaltyBox(baseFoodTotal, loyaltyDiscount) {
   box.innerHTML = `
     <div class="cart-loyalty-strip">
       <div class="cart-loyalty-top">
-        <span class="cart-loyalty-bal">⭐ <strong>${pts} pts</strong> disponibles</span>
+        <span class="cart-loyalty-bal">${uiIcon('star', 'sm')} <strong>${pts} pts</strong> disponibles</span>
         ${earnPts > 0 ? `<span class="cart-loyalty-earn">+${earnPts} pts con esta orden</span>` : ''}
       </div>
       ${baseFoodTotal > 0 ? `
         <div class="cart-rewards-scroll">${rewardsHtml}</div>
         ${loyaltyDiscount > 0 && activeRw ? `
           <div class="cart-loyalty-discount-line">
-            <span>🎁 Canje: ${escapeHTML(activeRw.title)} (-${activeRw.pointsCost} pts)</span>
+            <span>${uiIcon('gift', 'sm')} Canje: ${escapeHTML(activeRw.title)} (-${activeRw.pointsCost} pts)</span>
             <strong>-$${loyaltyDiscount} MXN</strong>
           </div>
         ` : ''}
         <div class="cart-save-usual-row">
           <button type="button" class="btn-save-cart-usual" onclick="saveCurrentCartAsUsual()">
-            📌 Guardar este pedido como "Lo de siempre"
+            ${uiIcon('pin', 'sm')} <span>Guardar como "Lo de siempre"</span>
           </button>
         </div>
       ` : ''}
@@ -9407,7 +10194,7 @@ function openClientAILoyaltyModal(tab = 'ai') {
       ? `¿Te pido lo de siempre (**${usual.label}**, $${usual.total}) o prefieres armar algo distinto?`
       : `¿Qué se te antoja hoy? Puedes escribir *"Pide lo de siempre"* o pedirme cualquier platillo de Pinch Kitchen+Bar, bebidas o aguas frescas.`;
     appendClientAIMessage('assistant', `${greet} ${usualHint}`, usual ? [
-      { label: '⚡ Pedir lo de siempre', action: "orderUsualOneTap(true)" },
+      { label: 'Pedir lo de siempre', action: "orderUsualOneTap(true)" },
     ] : []);
   } else {
     renderClientAIChatFeed();
@@ -9431,19 +10218,351 @@ function closeClientAILoyaltyModal() {
 }
 
 function switchClientAILoyaltyTab(tab) {
-  const isLoyalty = tab === 'loyalty';
-  const tabAiBtn = document.getElementById('tab-client-ai');
+  const mode = (tab === 'loyalty' || tab === 'profile') ? tab : 'ai';
+  const tabAiBtn  = document.getElementById('tab-client-ai');
   const tabLoyBtn = document.getElementById('tab-client-loyalty');
-  const paneAi = document.getElementById('pane-client-ai');
-  const paneLoy = document.getElementById('pane-client-loyalty');
+  const tabProfBtn = document.getElementById('tab-client-profile');
+  const paneAi    = document.getElementById('pane-client-ai');
+  const paneLoy   = document.getElementById('pane-client-loyalty');
+  const paneProf  = document.getElementById('pane-client-profile');
 
-  if (tabAiBtn) tabAiBtn.classList.toggle('active', !isLoyalty);
-  if (tabLoyBtn) tabLoyBtn.classList.toggle('active', isLoyalty);
-  if (paneAi) paneAi.classList.toggle('hidden', isLoyalty);
-  if (paneLoy) paneLoy.classList.toggle('hidden', !isLoyalty);
+  if (tabAiBtn)  tabAiBtn.classList.toggle('active', mode === 'ai');
+  if (tabLoyBtn) tabLoyBtn.classList.toggle('active', mode === 'loyalty');
+  if (tabProfBtn) tabProfBtn.classList.toggle('active', mode === 'profile');
 
-  if (isLoyalty) {
+  if (paneAi)   paneAi.classList.toggle('hidden', mode !== 'ai');
+  if (paneLoy)  paneLoy.classList.toggle('hidden', mode !== 'loyalty');
+  if (paneProf) paneProf.classList.toggle('hidden', mode !== 'profile');
+
+  if (mode === 'loyalty') {
     renderClientLoyaltyTabContent();
+  } else if (mode === 'profile') {
+    renderClientProfileTabContent();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  PIEZA 2: MINI-PERFIL DE GUSTOS Y ALERGIAS (LOCAL EN DISPOSITIVO · $0)
+// ═══════════════════════════════════════════════════════════════════
+function loadCustomerPrefs() {
+  try {
+    const raw = localStorage.getItem(CUSTOMER_PREFS_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        customerPrefs = {
+          name: String(parsed.name || '').trim(),
+          avoid: Array.isArray(parsed.avoid) ? parsed.avoid.filter(Boolean) : [],
+          preferredDoneness: String(parsed.preferredDoneness || '').trim(),
+          autoNote: String(parsed.autoNote || '').trim(),
+        };
+      }
+    }
+  } catch (e) {}
+
+  if (!currentGuestName && customerPrefs.name) {
+    currentGuestName = customerPrefs.name;
+    try { localStorage.setItem(storageKey('guest-name'), customerPrefs.name); } catch (e) {}
+  }
+  updateHeaderPrefsIndicator();
+  return customerPrefs;
+}
+
+function persistCustomerPrefs() {
+  try {
+    localStorage.setItem(CUSTOMER_PREFS_STORAGE_KEY, JSON.stringify(customerPrefs));
+  } catch (e) {}
+  updateHeaderPrefsIndicator();
+}
+
+function hasActiveCustomerPrefs() {
+  return Boolean(
+    (customerPrefs.avoid && customerPrefs.avoid.length > 0) ||
+    customerPrefs.preferredDoneness ||
+    customerPrefs.autoNote
+  );
+}
+
+function updateHeaderPrefsIndicator() {
+  const dotEl = document.getElementById('header-prefs-dot');
+  const btnEl = document.getElementById('btn-header-prefs');
+  const active = hasActiveCustomerPrefs();
+  if (dotEl) dotEl.classList.toggle('hidden', !active);
+  if (btnEl) btnEl.classList.toggle('has-prefs', active);
+}
+
+function renderClientProfileTabContent() {
+  const container = document.getElementById('client-profile-panel-content');
+  if (!container) return;
+  loadCustomerPrefs();
+
+  const currentName = customerPrefs.name || currentGuestName || readTenantStorage('guest-name') || '';
+
+  container.innerHTML = `
+    <div class="pref-hero-card">
+      <div class="phc-badge-row">
+        <span class="phc-pill">GUARDADO EN TU DISPOSITIVO · $0</span>
+        <span class="phc-sync-txt">Funciona sin contraseña</span>
+      </div>
+      <h3 class="phc-title">Tus Gustos y Alergias</h3>
+      <p class="phc-sub">Al guardarlos, el menú te avisará ingredientes que evitas y pre-llenará tus pedidos en automático.</p>
+    </div>
+
+    <div class="pref-form-block">
+      <label class="modal-field-label" for="pref-guest-name-input">1. TU NOMBRE DE COMENSAL</label>
+      <input
+        type="text"
+        id="pref-guest-name-input"
+        class="modal-input"
+        maxlength="35"
+        placeholder="Ej: Juan, Ana..."
+        value="${escapeHTML(currentName)}"
+        autocomplete="off"
+      />
+    </div>
+
+    <div class="pref-form-block">
+      <span class="modal-field-label">2. ALERGIAS O INGREDIENTES QUE EVITAS (1 TOQUE)</span>
+      <div class="pref-chips-grid" id="pref-avoid-chips">
+        ${CUSTOMER_AVOID_OPTIONS.map(opt => {
+          const selected = (customerPrefs.avoid || []).includes(opt.id);
+          return `
+            <button
+              type="button"
+              class="pref-chip${selected ? ' selected' : ''}"
+              onclick="toggleCustomerAvoidPref('${opt.id}')"
+            >${escapeHTML(opt.label)}</button>
+          `;
+        }).join('')}
+      </div>
+    </div>
+
+    <div class="pref-form-block">
+      <span class="modal-field-label">3. TÉRMINO FAVORITO EN CARNES Y BURGERS</span>
+      <div class="pref-chips-row" id="pref-doneness-chips">
+        ${CUSTOMER_DONENESS_OPTIONS.map(opt => {
+          const selected = (customerPrefs.preferredDoneness || '') === opt.id;
+          return `
+            <button
+              type="button"
+              class="pref-chip sm${selected ? ' selected' : ''}"
+              onclick="selectCustomerDonenessPref('${escapeHTML(opt.id)}')"
+            >${escapeHTML(opt.label)}</button>
+          `;
+        }).join('')}
+      </div>
+    </div>
+
+    <div class="pref-form-block">
+      <label class="modal-field-label" for="pref-auto-note-input">4. NOTA FIJA AUTOMÁTICA PARA COCINA (OPCIONAL)</label>
+      <input
+        type="text"
+        id="pref-auto-note-input"
+        class="modal-input"
+        maxlength="90"
+        placeholder="Ej: Salsa aparte, alergia severa a mariscos..."
+        value="${escapeHTML(customerPrefs.autoNote || '')}"
+        autocomplete="off"
+      />
+    </div>
+
+    <div class="pref-actions-row">
+      <button type="button" class="btn-confirm pref-save-btn" onclick="saveCustomerProfileFromPanel()">
+        ✓ Guardar Mis Gustos
+      </button>
+      ${hasActiveCustomerPrefs() || currentName ? `
+        <button type="button" class="btn-cancel pref-reset-btn" onclick="resetCustomerPrefsFromPanel()">
+          Limpiar
+        </button>
+      ` : ''}
+    </div>
+  `;
+}
+
+function toggleCustomerAvoidPref(avoidId) {
+  const nameInput = document.getElementById('pref-guest-name-input');
+  const noteInput = document.getElementById('pref-auto-note-input');
+  if (nameInput) customerPrefs.name = nameInput.value.trim();
+  if (noteInput) customerPrefs.autoNote = noteInput.value.trim();
+
+  const idx = customerPrefs.avoid.indexOf(avoidId);
+  if (idx >= 0) {
+    customerPrefs.avoid.splice(idx, 1);
+  } else {
+    customerPrefs.avoid.push(avoidId);
+  }
+  renderClientProfileTabContent();
+}
+
+function selectCustomerDonenessPref(val) {
+  const nameInput = document.getElementById('pref-guest-name-input');
+  const noteInput = document.getElementById('pref-auto-note-input');
+  if (nameInput) customerPrefs.name = nameInput.value.trim();
+  if (noteInput) customerPrefs.autoNote = noteInput.value.trim();
+
+  customerPrefs.preferredDoneness = val || '';
+  renderClientProfileTabContent();
+}
+
+function saveCustomerProfileFromPanel() {
+  const nameInput = document.getElementById('pref-guest-name-input');
+  const noteInput = document.getElementById('pref-auto-note-input');
+  const cleanName = nameInput ? nameInput.value.trim() : customerPrefs.name;
+  const cleanNote = noteInput ? noteInput.value.trim() : customerPrefs.autoNote;
+
+  customerPrefs.name = cleanName;
+  customerPrefs.autoNote = cleanNote;
+  persistCustomerPrefs();
+
+  if (cleanName) {
+    currentGuestName = cleanName;
+    try { localStorage.setItem(storageKey('guest-name'), cleanName); } catch (e) {}
+    if (typeof syncLoyaltyProfileIdentity === 'function') syncLoyaltyProfileIdentity(cleanName, '');
+  }
+
+  updateClientContextBar();
+  if (typeof renderPinchMenu === 'function') renderPinchMenu();
+  if (typeof renderClientLoyaltyHeaderAndBanner === 'function') renderClientLoyaltyHeaderAndBanner();
+
+  hapticTap(10);
+  showToast('✓ Tus gustos y alergias quedaron guardados');
+  closeClientAILoyaltyModal();
+}
+
+function resetCustomerPrefsFromPanel() {
+  customerPrefs = { name: '', avoid: [], preferredDoneness: '', autoNote: '' };
+  persistCustomerPrefs();
+  renderClientProfileTabContent();
+  updateClientContextBar();
+  if (typeof renderPinchMenu === 'function') renderPinchMenu();
+  showToast('Preferencias reiniciadas');
+}
+
+function getDishPreferenceStatus(dish) {
+  const alerts = [];
+  let compatLabel = '';
+  const avoid = Array.isArray(customerPrefs.avoid) ? customerPrefs.avoid : [];
+  if (!dish || avoid.length === 0) return { alerts, compatLabel };
+
+  const badges = Array.isArray(dish.badges) ? dish.badges : [];
+  const hay = normalizeSpanishQuery([
+    dish.name,
+    dish.shortDesc,
+    dish.fullDesc,
+    ...(Array.isArray(dish.ingredients) ? dish.ingredients : []),
+    ...badges,
+  ].join(' '));
+
+  if (avoid.includes('sin_mariscos')) {
+    if (badges.includes('Mariscos') || /\b(camaron|shrimp|mahi|bacalao|cangrejo|crab|pulpo|salmon|atun|marisco)\b/.test(hay)) {
+      alerts.push('Contiene mariscos');
+    }
+  }
+  if (avoid.includes('sin_picante')) {
+    if (badges.includes('Picante') || /\b(picante|spicy|jalapeno|habanero|sriracha|gochujang|kimchi|chipotle)\b/.test(hay)) {
+      alerts.push('Picante');
+    }
+  }
+  if (avoid.includes('sin_lacteos')) {
+    if (/\b(queso|cheese|suizo|swiss|cheddar|feta|crema|cream|mantequilla|butter|aioli de queso|parmesan)\b/.test(hay)) {
+      alerts.push('Contiene lácteos');
+    }
+  }
+  if (avoid.includes('sin_nueces')) {
+    if (/\b(pistacho|pistachio|nuez|almendra|cacahuate|peanut|walnut|pecan)\b/.test(hay)) {
+      alerts.push('Frutos secos');
+    }
+  }
+  if (avoid.includes('sin_gluten')) {
+    const isGF = badges.includes('GF');
+    const hasGlutenWords = dish.category === 'burgers_sandwiches' || badges.includes('Pasta') || /\b(pan|brioche|focaccia|baguette|pretzel|pasta|bucatini|tagliatelle|croqueta|cookie|galleta|budin|empanizado|harina)\b/.test(hay);
+    if (!isGF && hasGlutenWords) {
+      alerts.push('Contiene gluten');
+    }
+  }
+  if (avoid.includes('vegetariano')) {
+    if (badges.includes('V') || badges.includes('Vegetariano')) {
+      compatLabel = 'Apto vegetariano';
+    } else if (dish.category !== 'drinks') {
+      const hasMeatWords = badges.includes('Mariscos') || badges.includes('Angus Beef') || /\b(pavo|turkey|jamon|ham|res|beef|steak|ribs|costilla|cerdo|pork|pollo|chicken|tocino|bacon|camaron|shrimp|mahi|bacalao|huevo|eggs)\b/.test(hay);
+      if (hasMeatWords) alerts.push('No vegetariano');
+    }
+  }
+
+  if (alerts.length === 0 && !compatLabel && dish.category !== 'drinks') {
+    compatLabel = 'Compatible contigo';
+  }
+
+  return { alerts, compatLabel };
+}
+
+function applyCustomerPrefsToDishDetail(dish) {
+  const bannerEl = document.getElementById('dd-prefs-applied-banner');
+  const bannerText = document.getElementById('dd-prefs-applied-text');
+  const noteInputEl = document.getElementById('dd-special-note');
+  if (!dish) {
+    if (bannerEl) bannerEl.classList.add('hidden');
+    return;
+  }
+
+  const appliedReasons = [];
+  const avoid = Array.isArray(customerPrefs.avoid) ? customerPrefs.avoid : [];
+
+  // 1. Término de cocción favorito
+  if (
+    customerPrefs.preferredDoneness &&
+    dish.optionGroup &&
+    Array.isArray(dish.optionGroup.choices) &&
+    dish.optionGroup.choices.includes(customerPrefs.preferredDoneness)
+  ) {
+    pinchDetailOption = customerPrefs.preferredDoneness;
+    appliedReasons.push(`Término ${customerPrefs.preferredDoneness}`);
+  }
+
+  // 2. Omitir ingredientes base si coinciden con "Evitar"
+  const baseIngs = typeof getDishBaseIngredients === 'function' ? getDishBaseIngredients(dish) : [];
+  const autoRemoved = [];
+  baseIngs.forEach(ing => {
+    const ingLabel = typeof ing === 'string' ? ing : String((ing && ing.label) || '').trim();
+    if (!ingLabel) return;
+    const norm = normalizeSpanishQuery(ingLabel);
+    if (avoid.includes('sin_cebolla') && /\b(cebollas?|onions?)\b/.test(norm)) {
+      autoRemoved.push(ingLabel);
+    }
+    if (avoid.includes('sin_cilantro') && /\bcilantros?\b/.test(norm)) {
+      autoRemoved.push(ingLabel);
+    }
+    if (avoid.includes('sin_lacteos') && /\b(quesos?|cheeses?|cheddar|suizos?|swiss|feta|crema|parmesan)\b/.test(norm)) {
+      autoRemoved.push(ingLabel);
+    }
+  });
+  if (autoRemoved.length > 0) {
+    pinchDetailRemoved = Array.from(new Set(autoRemoved));
+    appliedReasons.push(`Sin ${autoRemoved.slice(0, 2).join(', ')}`);
+  }
+
+  // 3. Nota fija de cocina + recordatorio de alergia
+  const autoNotes = [];
+  if (avoid.includes('sin_picante') && (dish.badges || []).includes('Picante')) {
+    autoNotes.push('Sin picante');
+  }
+  if (avoid.includes('sin_nueces')) {
+    autoNotes.push('Alergia a nueces');
+  }
+  if (customerPrefs.autoNote) {
+    autoNotes.push(customerPrefs.autoNote);
+  }
+  const finalAutoNote = Array.from(new Set(autoNotes)).join(' · ').slice(0, 140);
+  if (noteInputEl && finalAutoNote) {
+    noteInputEl.value = finalAutoNote;
+    appliedReasons.push('Nota cocina');
+  }
+
+  if (bannerEl) {
+    bannerEl.classList.toggle('hidden', appliedReasons.length === 0);
+    if (appliedReasons.length > 0 && bannerText) {
+      bannerText.textContent = `Tus gustos: ${appliedReasons.join(' · ')}`;
+    }
   }
 }
 
@@ -9470,14 +10589,14 @@ function renderClientLoyaltyTabContent() {
         <span class="lw-tier-pill">${tier.badge}</span>
       </div>
       <div class="lw-points-hero">
-        <span class="lw-points-num">⭐ ${pts.toLocaleString('es-MX')}</span>
+        <span class="lw-points-num">${uiIcon('star', 'md')} ${pts.toLocaleString('es-MX')}</span>
         <span class="lw-points-label">Puntos Escandón disponibles</span>
       </div>
       <div class="lw-progress-track">
         <div class="lw-progress-fill" style="width:${progressPct}%"></div>
       </div>
       <div class="lw-meta-row">
-        <span>${pts >= nextReward.pointsCost ? `🎉 ¡Tienes recompensas listas para canjear!` : `Te faltan ${nextReward.pointsCost - pts} pts para ${nextReward.title}`}</span>
+        <span>${pts >= nextReward.pointsCost ? `Tienes recompensas listas para canjear` : `Te faltan ${nextReward.pointsCost - pts} pts para ${nextReward.title}`}</span>
         <span>${loyaltyProfile.ordersCount} ${loyaltyProfile.ordersCount === 1 ? 'visita' : 'visitas'}</span>
       </div>
     </div>
@@ -9485,7 +10604,7 @@ function renderClientLoyaltyTabContent() {
     <div class="loyalty-section-block">
       <div class="loyalty-sec-head">
         <span class="step-label">TU PLATILLO HABITUAL ("LO DE SIEMPRE")</span>
-        ${cartItems.length > 0 ? `<button type="button" class="btn-link-accent" onclick="saveCurrentCartAsUsual()">📌 Fijar carrito actual</button>` : ''}
+        ${cartItems.length > 0 ? `<button type="button" class="btn-link-accent" onclick="saveCurrentCartAsUsual()">Fijar carrito actual</button>` : ''}
       </div>
       ${usual ? `
         <div class="loyalty-usual-box">
@@ -9494,13 +10613,13 @@ function renderClientLoyaltyTabContent() {
             <span class="lub-sub">Total habitual: $${usual.total} MXN · Acumula +${usual.total} pts</span>
           </div>
           <div class="lub-actions">
-            <button type="button" class="btn-usual-primary compact" onclick="orderUsualOneTap(true)">⚡ Pedir en 1 toque</button>
+            <button type="button" class="btn-usual-primary compact" onclick="orderUsualOneTap(true)">${uiIcon('flame', 'sm')} Pedir en 1 toque</button>
           </div>
         </div>
       ` : `
         <div class="loyalty-usual-box empty">
           <span class="lub-sub">Tu primer pedido se guardará automáticamente como "Lo de siempre", o arma tu carrito y toca "Guardar como Lo de siempre".</span>
-          <button type="button" class="btn-usual-secondary compact" onclick="orderUsualOneTap(false)">✨ Probar combo clásico Escandón</button>
+          <button type="button" class="btn-usual-secondary compact" onclick="orderUsualOneTap(false)">Probar combo clásico Escandón</button>
         </div>
       `}
     </div>
@@ -9516,7 +10635,7 @@ function renderClientLoyaltyTabContent() {
           return `
             <div class="loyalty-reward-card ${unlocked ? 'unlocked' : 'locked'} ${isSelected ? 'selected' : ''}">
               <div class="lrc-left">
-                <span class="lrc-emoji">${rw.emoji}</span>
+                <span class="lrc-mono">${rw.emoji}</span>
                 <div class="lrc-texts">
                   <span class="lrc-title">${escapeHTML(rw.title)}</span>
                   <span class="lrc-sub">${escapeHTML(rw.subtitle)}</span>
@@ -9877,8 +10996,8 @@ async function processClientAICommand(rawText) {
     }
     clientAIMemory.pendingFollowUp = { type: 'send_cart_to_kitchen' };
     appendClientAIMessage('assistant', `Cargué tu pedido de siempre: **${loadedUsual.label}** ($${loadedUsual.total} MXN). ¿Lo mandamos directo a cocina?`, [
-      { label: '⚡ Mandar a cocina', action: 'orderUsualOneTap(true)' },
-      { label: '🛒 Ver carrito', action: 'closeClientAILoyaltyModal(); toggleCart(true);' },
+      { label: 'Mandar a cocina', action: 'orderUsualOneTap(true)' },
+      { label: 'Ver carrito', action: 'closeClientAILoyaltyModal(); toggleCart(true);' },
     ]);
     return;
   }
@@ -9890,8 +11009,8 @@ async function processClientAICommand(rawText) {
     const cartTotal = getCartTotal();
     clientAIMemory.pendingFollowUp = { type: 'send_cart_to_kitchen' };
     appendClientAIMessage('assistant', `Agregué **${addedSummary}** a tu carrito (llevas **$${cartTotal} MXN**). ¿Lo mandamos a cocina o agregas algo más?`, [
-      { label: '🚀 Mandar a cocina', action: 'closeClientAILoyaltyModal(); openOrderModal();' },
-      { label: '📌 Guardar como "Lo de siempre"', action: 'saveCurrentCartAsUsual()' },
+      { label: 'Mandar a cocina', action: 'closeClientAILoyaltyModal(); openOrderModal();' },
+      { label: 'Guardar como "Lo de siempre"', action: 'saveCurrentCartAsUsual()' },
     ]);
     return;
   }
@@ -9923,7 +11042,7 @@ async function processClientAICommand(rawText) {
       const data = await res.json();
       if (data && data.text) {
         appendClientAIMessage('assistant', data.text, cartItems.length > 0 ? [
-          { label: '🚀 Mandar a cocina', action: 'closeClientAILoyaltyModal(); openOrderModal();' },
+          { label: 'Mandar a cocina', action: 'closeClientAILoyaltyModal(); openOrderModal();' },
         ] : []);
         return;
       }
@@ -9971,7 +11090,7 @@ async function processClientAICommand(rawText) {
     if (usual) {
       clientAIMemory.pendingFollowUp = { type: 'order_usual' };
       appendClientAIMessage('assistant', `¡Hola! ¿Te pedimos lo de siempre (**${usual.label}**, $${usual.total}) o quieres probar algo distinto?`, [
-        { label: '⚡ Pedir lo de siempre', action: 'orderUsualOneTap(true)' },
+        { label: 'Pedir lo de siempre', action: 'orderUsualOneTap(true)' },
       ]);
     } else {
       appendClientAIMessage('assistant', '¡Hola! ¿Qué se te antoja hoy? Tenemos Pinch Bites, Burgers & Sandwiches, Entrees, Sides, Desserts, Bebidas Pinch y Aguas Frescas de Jamaica y Horchata.');
@@ -10006,8 +11125,8 @@ async function processClientAICommand(rawText) {
       : `Como es tu primera visita aquí, te cargué el favorito de la casa: **${loadedUsual.label}** ($${loadedUsual.total} MXN). ¿Lo mandamos a cocina o le cambiamos algo?`;
 
     appendClientAIMessage('assistant', reply, [
-      { label: '⚡ Mandar a cocina', action: 'orderUsualOneTap(true)' },
-      { label: '🛒 Ver carrito', action: 'closeClientAILoyaltyModal(); toggleCart(true);' },
+      { label: 'Mandar a cocina', action: 'orderUsualOneTap(true)' },
+      { label: 'Ver carrito', action: 'closeClientAILoyaltyModal(); toggleCart(true);' },
     ]);
     return;
   }
@@ -10038,17 +11157,17 @@ async function processClientAICommand(rawText) {
       if (/(canjea|usar|aplica|quiero mi)/.test(norm)) {
         activeCartLoyaltyRewardId = best.id;
         renderCart();
-        appendClientAIMessage('assistant', `Listo, apliqué tu **${best.emoji} ${best.title} (-$${best.discount})** a tu pedido.`);
+        appendClientAIMessage('assistant', `Listo, apliqué tu **${best.title} (-$${best.discount})** a tu pedido.`);
         return;
       }
       clientAIMemory.pendingFollowUp = { type: 'apply_best_reward', rewardId: best.id };
-      appendClientAIMessage('assistant', `Tienes **⭐ ${pts} Puntos Escandón**. Ya puedes canjear **${best.title} (-$${best.discount})**; ¿quieres que la aplique a tu carrito?`, unlocked.map(r => ({
-        label: `🎁 Canjear ${r.title} (-$${r.discount})`,
+      appendClientAIMessage('assistant', `Tienes **${pts} Puntos Escandón**. Ya puedes canjear **${best.title} (-$${best.discount})**; ¿quieres que la aplique a tu carrito?`, unlocked.map(r => ({
+        label: `Canjear ${r.title} (-$${r.discount})`,
         action: `toggleCartLoyaltyReward('${r.id}')`,
       })));
     } else {
       const missing = Math.max(0, 100 - pts);
-      appendClientAIMessage('assistant', `Tienes **⭐ ${pts} Puntos Escandón** (ganas 1 punto por cada $1 MXN). Te faltan **${missing} pts** para tu primera bebida gratis.`);
+      appendClientAIMessage('assistant', `Tienes **${pts} Puntos Escandón** (ganas 1 punto por cada $1 MXN). Te faltan **${missing} pts** para tu primera bebida gratis.`);
     }
     return;
   }
@@ -10059,7 +11178,7 @@ async function processClientAICommand(rawText) {
     if (cartItems.length === 0) {
       clientAIMemory.pendingFollowUp = { type: 'order_usual' };
       appendClientAIMessage('assistant', 'Tu carrito está vacío todavía. ¿Quieres que pidamos **lo de siempre** o dime qué te agrego?', [
-        { label: '⚡ Pedir lo de siempre', action: 'orderUsualOneTap(true)' },
+        { label: 'Pedir lo de siempre', action: 'orderUsualOneTap(true)' },
       ]);
       return;
     }
@@ -10077,7 +11196,7 @@ async function processClientAICommand(rawText) {
     if (activeOrder) {
       const meta = STATUS_META[activeOrder.status] || STATUS_META.pending;
       appendClientAIMessage('assistant', `Tu **Orden #${String(activeOrder.num).padStart(3, '0')}** está en **${meta.label}**. ${meta.description}`, [
-        { label: '📍 Ver rastreador', action: 'closeClientAILoyaltyModal(); openActiveTracker();' },
+        { label: 'Ver rastreador', action: 'closeClientAILoyaltyModal(); openActiveTracker();' },
       ]);
     } else {
       appendClientAIMessage('assistant', 'No tienes ninguna orden activa en este momento. ¿Te ayudo a armar una?');
@@ -10096,8 +11215,8 @@ async function processClientAICommand(rawText) {
     const cartTotal = getCartTotal();
     clientAIMemory.pendingFollowUp = { type: 'send_cart_to_kitchen' };
     appendClientAIMessage('assistant', `Agregué **${addedSummary}** a tu carrito (llevas **$${cartTotal} MXN**). ¿Lo mandamos a cocina o agregas algo más?`, [
-      { label: '🚀 Mandar a cocina', action: 'closeClientAILoyaltyModal(); openOrderModal();' },
-      { label: '📌 Guardar como "Lo de siempre"', action: 'saveCurrentCartAsUsual()' },
+      { label: 'Mandar a cocina', action: 'closeClientAILoyaltyModal(); openOrderModal();' },
+      { label: 'Guardar como "Lo de siempre"', action: 'saveCurrentCartAsUsual()' },
     ]);
     return;
   }
@@ -10106,7 +11225,7 @@ async function processClientAICommand(rawText) {
   const offCat = detectOffTopicCategory(norm);
   const offReply = buildClientOffTopicReply(offCat);
   appendClientAIMessage('assistant', offReply, clientAIMemory.offTopicStrikes < 3 ? [
-    { label: '⚡ Pedir lo de siempre', action: 'orderUsualOneTap(true)' },
+    { label: 'Pedir lo de siempre', action: 'orderUsualOneTap(true)' },
   ] : []);
 }
 
@@ -10167,11 +11286,11 @@ function updateKitchenCopilotTelemetry() {
       <span><strong>${activeCount}</strong> activas</span>
     </button>
     <button type="button" class="copilot-tel-pill" onclick="runKitchenAIQuickPrompt('¿Cuánta carne queda?')">
-      <span>🥩</span>
+      ${uiIcon('stock', 'sm')}
       <span>Proteínas: <strong>~${proteinServings} porc.</strong></span>
     </button>
     <button type="button" class="copilot-tel-pill" onclick="runKitchenAIQuickPrompt('¿Cuánto he vendido hoy?')">
-      <span>💰</span>
+      ${uiIcon('chart', 'sm')}
       <span>Hoy: <strong>${formatMoney(sales.totalRevenue)}</strong></span>
     </button>
   `;
@@ -10255,7 +11374,7 @@ function copilotNavigateTo(subView, subTab = null) {
     board: 'Tablero de Comandas',
     comandas: 'Dashboard Cocina',
   };
-  showKDSToast(`✨ Abierto: ${labels[subView] || 'Panel de Cocina'}`);
+  showKDSToast(`Abierto: ${labels[subView] || 'Panel de Cocina'}`);
 }
 
 function copilotRestockItemQuick(itemId, addQty) {
@@ -10283,7 +11402,7 @@ function copilotRestockItemQuick(itemId, addQty) {
   const servings = getEstimatedServings(item);
   const msg = `Listo, sumé **+${formatGramsAndKg(qty, item.unit)}** a **${item.name}**. Ahora tienes **${formatGramsAndKg(item.stock, item.unit)}**${servings !== null ? ` (~${servings} porciones)` : ''}.`;
   appendKitchenCopilotMessage('assistant', msg, [
-    { label: '📦 Ver en Insumos', action: "copilotNavigateTo('stock', 'inventory')" },
+    { label: 'Ver en Insumos', action: "copilotNavigateTo('stock', 'inventory')" },
   ]);
 }
 
@@ -10392,7 +11511,7 @@ function runKitchenIngredientsReadinessCheck(product = 'all') {
     if (low.length > 0) msg += ` Bajo mínimo: **${low.map(i => i.name).join(', ')}**.`;
     kitchenCopilotMemory.pendingFollowUp = { type: 'open_inventory' };
     appendKitchenCopilotMessage('assistant', msg, [
-      { label: '📦 Abrir Insumos', action: "copilotNavigateTo('stock', 'inventory')" },
+      { label: 'Abrir Insumos', action: "copilotNavigateTo('stock', 'inventory')" },
     ]);
     return;
   }
@@ -10402,7 +11521,7 @@ function runKitchenIngredientsReadinessCheck(product = 'all') {
     const summary = items.map(i => `**${i.name}**: ${formatGramsAndKg(i.stock, i.unit)}`).join(' · ');
     kitchenCopilotMemory.pendingFollowUp = { type: 'open_inventory' };
     appendKitchenCopilotMessage('assistant', `Insumos para Entrees y Cortes: ${summary}.`, [
-      { label: '📦 Abrir Insumos', action: "copilotNavigateTo('stock', 'inventory')" },
+      { label: 'Abrir Insumos', action: "copilotNavigateTo('stock', 'inventory')" },
     ]);
     return;
   }
@@ -10419,7 +11538,7 @@ function runKitchenIngredientsReadinessCheck(product = 'all') {
     let msg = `En bebidas tienes: ${summary}.`;
     if (low.length > 0) msg += ` Ojo: **${low.map(i => i.name).join(', ')}** está bajo el mínimo.`;
     appendKitchenCopilotMessage('assistant', msg, [
-      { label: '📦 Abrir Insumos', action: "copilotNavigateTo('stock', 'inventory')" },
+      { label: 'Abrir Insumos', action: "copilotNavigateTo('stock', 'inventory')" },
     ]);
     return;
   }
@@ -10436,8 +11555,8 @@ function runKitchenIngredientsReadinessCheck(product = 'all') {
   if (expItems.length > 0) bits.push(`por caducar pronto: **${expItems.map(i => `${i.name} (${getExpiryMeta(i.expiryDate).label.toLowerCase()})`).join(', ')}**`);
   kitchenCopilotMemory.pendingFollowUp = { type: 'open_inventory' };
   appendKitchenCopilotMessage('assistant', `El menú está operando, pero revisa ${bits.join('; y ')}. ¿Te abro el panel de insumos?`, [
-    { label: '📦 Ir a Insumos', action: "copilotNavigateTo('stock', 'inventory')" },
-    { label: '📋 Copiar lista de compras', action: 'copyRestockShoppingList()' },
+    { label: 'Ir a Insumos', action: "copilotNavigateTo('stock', 'inventory')" },
+    { label: 'Copiar lista de compras', action: 'copyRestockShoppingList()' },
   ]);
 }
 
@@ -10556,16 +11675,16 @@ async function processKitchenAICommand(rawQuery) {
         if (data.action === 'navegar_stock') {
           const wantMode86 = /(agotad|modo 86|pausar|bloquear|desactivar)/.test(norm);
           const tab = wantMode86 ? 'mode86' : 'inventory';
-          actions.push({ label: wantMode86 ? '⚡ Ver Modo 86' : '📦 Ver Insumos & Stock', action: `copilotNavigateTo('stock', '${tab}')` });
+          actions.push({ label: wantMode86 ? 'Ver Modo 86' : 'Ver Insumos & Stock', action: `copilotNavigateTo('stock', '${tab}')` });
           copilotNavigateTo('stock', tab);
         } else if (data.action === 'navegar_ventas') {
-          actions.push({ label: '📊 Ir al Dashboard', action: "copilotNavigateTo('sales')" });
+          actions.push({ label: 'Ir al Dashboard', action: "copilotNavigateTo('sales')" });
           copilotNavigateTo('sales');
         } else if (data.action === 'navegar_comandas') {
-          actions.push({ label: '🍽️ Ir a Comandas', action: "copilotNavigateTo('board')" });
+          actions.push({ label: 'Ir a Comandas', action: "copilotNavigateTo('board')" });
           copilotNavigateTo('board');
         } else if (data.action === 'navegar_qrs') {
-          actions.push({ label: '🖨️ Ir a Códigos QR', action: "copilotNavigateTo('qrs')" });
+          actions.push({ label: 'Ir a Códigos QR', action: "copilotNavigateTo('qrs')" });
           copilotNavigateTo('qrs');
         }
         appendKitchenCopilotMessage('assistant', data.text, actions);
@@ -10610,8 +11729,8 @@ async function processKitchenAICommand(rawQuery) {
         const s = calculateDailySales();
         const b = s.breakdown;
         appendKitchenCopilotMessage('assistant',
-          `Desglose del turno (**${formatMoney(s.totalRevenue)}**): 🫒 ${b.pinch_bites.qty} Bites · 🍔 ${b.burgers_sandwiches.qty} Burgers/Sandwiches · 🥩 ${b.entrees.qty} Entrees · 🍟 ${b.sides.qty} Sides · 🥧 ${b.desserts.qty} Postres · 🥤 ${b.drinks.qty} Bebidas (Aguas: ${b.drinks.aguas}).`,
-          [{ label: '📊 Abrir Dashboard', action: "copilotNavigateTo('sales')" }]
+          `Desglose del turno (**${formatMoney(s.totalRevenue)}**): Bites ${b.pinch_bites.qty} · Burgers/Sandwiches ${b.burgers_sandwiches.qty} · Entrees ${b.entrees.qty} · Sides ${b.sides.qty} · Postres ${b.desserts.qty} · Bebidas ${b.drinks.qty} (Aguas: ${b.drinks.aguas}).`,
+          [{ label: 'Abrir Dashboard', action: "copilotNavigateTo('sales')" }]
         );
         return;
       }
@@ -10706,8 +11825,8 @@ async function processKitchenAICommand(rawQuery) {
       kitchenCopilotMemory.pendingFollowUp = null;
       copilotNavigateTo('stock', 'inventory');
       appendKitchenCopilotMessage('assistant', 'Te acabo de abrir **Insumos & Stock** en pantalla. Siempre puedes entrar desde el botón **Stock 86** en la barra superior.', [
-        { label: '➕ Agregar Insumo', action: 'openInventoryModal()' },
-        { label: '⚡ Modo 86 Rápido', action: "copilotNavigateTo('stock', 'mode86')" },
+        { label: '+ Agregar Insumo', action: 'openInventoryModal()' },
+        { label: 'Modo 86 Rápido', action: "copilotNavigateTo('stock', 'mode86')" },
       ]);
       return;
     }
@@ -10723,7 +11842,7 @@ async function processKitchenAICommand(rawQuery) {
       kitchenCopilotMemory.pendingFollowUp = null;
       copilotNavigateTo('sales');
       appendKitchenCopilotMessage('assistant', 'Te abrí el **Dashboard de Ventas** (botón **Dashboard** arriba). Ahí ves el corte del turno y puedes exportar el Excel.', [
-        { label: '📥 Exportar Excel', action: 'exportCurrentShiftOrMonthExcel()' },
+        { label: 'Exportar Excel', action: 'exportCurrentShiftOrMonthExcel()' },
       ]);
       return;
     }
@@ -10922,7 +12041,7 @@ async function processKitchenAICommand(rawQuery) {
         return;
       }
       if (s.topDish && s.topDish.qty > 0) {
-        appendKitchenCopilotMessage('assistant', `El platillo líder hoy es **${s.topDish.emoji || '🍽️'} ${s.topDish.name}** con **${s.topDish.qty} unidades**.`);
+        appendKitchenCopilotMessage('assistant', `El platillo líder hoy es **${s.topDish.name}** con **${s.topDish.qty} unidades**.`);
         return;
       }
       const b = s.breakdown;
@@ -10948,8 +12067,8 @@ async function processKitchenAICommand(rawQuery) {
       const b = s.breakdown;
       appendKitchenCopilotMessage(
         'assistant',
-        `Desglose del turno (**${formatMoney(s.totalRevenue)}**): 🫒 ${b.pinch_bites.qty} Bites · 🍔 ${b.burgers_sandwiches.qty} Burgers/Sandwiches · 🥩 ${b.entrees.qty} Entrees · 🍟 ${b.sides.qty} Sides · 🥧 ${b.desserts.qty} Postres · 🥤 ${b.drinks.qty} Bebidas (Aguas: ${b.drinks.aguas}).`,
-        [{ label: '📊 Abrir Dashboard', action: "copilotNavigateTo('sales')" }]
+        `Desglose del turno (**${formatMoney(s.totalRevenue)}**): Bites ${b.pinch_bites.qty} · Burgers/Sandwiches ${b.burgers_sandwiches.qty} · Entrees ${b.entrees.qty} · Sides ${b.sides.qty} · Postres ${b.desserts.qty} · Bebidas ${b.drinks.qty} (Aguas: ${b.drinks.aguas}).`,
+        [{ label: 'Abrir Dashboard', action: "copilotNavigateTo('sales')" }]
       );
       return;
     }
@@ -10976,7 +12095,7 @@ async function processKitchenAICommand(rawQuery) {
     appendKitchenCopilotMessage(
       'assistant',
       `Hoy llevas **${formatMoney(s.totalRevenue)} MXN** en **${s.ordersCount} ${s.ordersCount === 1 ? 'orden cerrada' : 'órdenes cerradas'}** (ticket promedio de ${formatMoney(avgTicket)})${m.inProgressOrdersCount > 0 ? `, más ${formatMoney(m.active.totalMoney)} en cocina` : ''}. ¿Quieres ver el desglose por producto?`,
-      [{ label: '📊 Ir al Dashboard', action: "copilotNavigateTo('sales')" }]
+      [{ label: 'Ir al Dashboard', action: "copilotNavigateTo('sales')" }]
     );
     return;
   }
@@ -11008,7 +12127,7 @@ async function processKitchenAICommand(rawQuery) {
     appendKitchenCopilotMessage(
       'assistant',
       `Proteínas disponibles: **${beef ? formatGramsAndKg(beef.stock, beef.unit) : '0'}** Blend Burger 8 oz · **${steak ? formatGramsAndKg(steak.stock, steak.unit) : '0'}** Entraña Angus · **${ribs ? formatGramsAndKg(ribs.stock, ribs.unit) : '0'}** Costillar/Panceta · **${bacon ? formatGramsAndKg(bacon.stock, bacon.unit) : '0'}** Tocino ahumado. ¿Te abro Insumos?`,
-      [{ label: '📦 Abrir Insumos', action: "copilotNavigateTo('stock', 'inventory')" }]
+      [{ label: 'Abrir Insumos', action: "copilotNavigateTo('stock', 'inventory')" }]
     );
     return;
   }
@@ -11026,13 +12145,13 @@ async function processKitchenAICommand(rawQuery) {
     if (matched.length > 0) {
       const summary = matched.map(item => {
         const h = getInventoryItemHealth(item);
-        const expNote = h.needsExpiryAction ? ` · ⚠️ ${h.expiry.label.toLowerCase()}` : '';
-        const lowNote = h.status === 'out' ? ' · 🔴 agotado' : (h.status === 'low' ? ' · ⚠️ bajo mínimo' : '');
+        const expNote = h.needsExpiryAction ? ` · ${h.expiry.label.toLowerCase()}` : '';
+        const lowNote = h.status === 'out' ? ' · agotado' : (h.status === 'low' ? ' · bajo mínimo' : '');
         return `**${item.name}**: **${formatGramsAndKg(item.stock, item.unit)}**${h.servings !== null ? ` (~${h.servings} porciones)` : ''}${lowNote}${expNote}`;
       }).join(' | ');
       kitchenCopilotMemory.pendingFollowUp = { type: 'open_inventory' };
       appendKitchenCopilotMessage('assistant', `${summary}.`, [
-        { label: '📦 Ver en Insumos', action: "copilotNavigateTo('stock', 'inventory')" },
+        { label: 'Ver en Insumos', action: "copilotNavigateTo('stock', 'inventory')" },
       ]);
       return;
     }
@@ -11059,7 +12178,7 @@ async function processKitchenAICommand(rawQuery) {
       return `**#${String(o.num).padStart(3, '0')} ${o.table}** (${meta.label}, $${o.total})`;
     }).join(' · ');
     appendKitchenCopilotMessage('assistant', `Hay **${orders.length} ${orders.length === 1 ? 'comanda activa' : 'comandas activas'}**: ${listStr}.`, [
-      { label: '🍽️ Ver Tablero', action: "copilotNavigateTo('comandas')" },
+      { label: 'Ver Tablero', action: "copilotNavigateTo('comandas')" },
     ]);
     return;
   }
@@ -11107,7 +12226,15 @@ document.addEventListener('keydown', (e) => {
     if (cartOpen) toggleCart(false);
   }
   if (e.key === 'Enter' && document.getElementById('order-modal').classList.contains('open')) {
-    submitOrder();
+    if (identityPreselectOnly) {
+      submitOrder();
+    } else {
+      const knob = document.getElementById('order-slide-knob');
+      if (document.activeElement && document.activeElement !== knob) {
+        if (typeof document.activeElement.blur === 'function') document.activeElement.blur();
+        if (knob) knob.focus();
+      }
+    }
   }
   if (e.key === 'Enter' && document.getElementById('service-table-modal').classList.contains('open')) {
     confirmServiceTableModal();
@@ -11119,13 +12246,13 @@ document.addEventListener('keydown', (e) => {
 // ══════════════════════════════════════════════
 const PINCH_DIET_FILTERS = [
   { id: 'all',           label: 'Todos' },
-  { id: 'V',             label: '🌱 Vegano' },
-  { id: 'GF',            label: '🌾 Sin Gluten' },
-  { id: 'Signature',     label: '⭐ Signature' },
-  { id: 'Picante',       label: '🌶️ Picante' },
-  { id: 'Hecho en Casa', label: '🏡 En Casa' },
-  { id: 'Mariscos',      label: '🦐 Mariscos' },
-  { id: 'Brunch',        label: '🍳 Brunch' },
+  { id: 'V',             label: 'Vegano' },
+  { id: 'GF',            label: 'Sin Gluten' },
+  { id: 'Signature',     label: 'Signature' },
+  { id: 'Picante',       label: 'Picante' },
+  { id: 'Hecho en Casa', label: 'En Casa' },
+  { id: 'Mariscos',      label: 'Mariscos' },
+  { id: 'Brunch',        label: 'Brunch' },
 ];
 
 const PINCH_BADGE_TONES = {
@@ -11256,7 +12383,7 @@ function renderPinchMenu() {
   if (filtered.length === 0) {
     listEl.innerHTML = `
       <div class="pinch-empty-state">
-        <div class="pinch-empty-ico">🔍</div>
+        <div class="pinch-empty-ico">${uiIcon('search', 'xl')}</div>
         <h3>Sin platillos coincidentes</h3>
         <p>No encontramos resultados para "${escapeHTML(pinchSearchQuery || pinchDietFilter)}".</p>
         <button type="button" class="pinch-empty-reset" onclick="clearPinchSearch(true)">Mostrar los ${PINCH_MENU_ITEMS.length} platillos</button>
@@ -11283,6 +12410,12 @@ function renderPinchMenu() {
         const tone = PINCH_BADGE_TONES[b] || 'tone-neutral';
         return `<span class="pinch-badge ${tone}">${escapeHTML(b)}</span>`;
       }).join('');
+      const prefInfo = typeof getDishPreferenceStatus === 'function' ? getDishPreferenceStatus(dish) : { alerts: [], compatLabel: '' };
+      const prefBadgesHtml = [
+        ...prefInfo.alerts.slice(0, 2).map(a => `<span class="pinch-badge tone-pref-warn">${escapeHTML(a)}</span>`),
+        ...(prefInfo.alerts.length === 0 && prefInfo.compatLabel ? [`<span class="pinch-badge tone-pref-ok">${escapeHTML(prefInfo.compatLabel)}</span>`] : []),
+      ].join('');
+      const allBadgesHtml = badgeStr + prefBadgesHtml;
 
       let floatingCtrlHtml = '';
       if (isOut) {
@@ -11317,7 +12450,7 @@ function renderPinchMenu() {
               <h3 class="pinch-dish-title">${escapeHTML(dish.name)}</h3>
               ${isOut ? '<span class="pinch-badge tone-out">Agotado</span>' : ''}
             </div>
-            ${badgeStr ? `<div class="pinch-badges-row">${badgeStr}</div>` : ''}
+            ${allBadgesHtml ? `<div class="pinch-badges-row">${allBadgesHtml}</div>` : ''}
             <p class="pinch-dish-desc">${escapeHTML(dish.shortDesc)}</p>
             <div class="pinch-dish-bottom">
               <span class="pinch-dish-price">${formatMenuPrice(dish.price)}</span>
@@ -11380,7 +12513,7 @@ function quickAddPinchDish(dishId, { silentToast = false } = {}) {
   renderCart();
   renderPinchMenu();
   if (!silentToast) {
-    showToast(`✓ ${dish.emoji} ${dish.name} (${formatMenuPrice(dish.price)})`);
+    showToast(`✓ ${dish.name} (${formatMenuPrice(dish.price)})`);
   }
 }
 
@@ -11540,7 +12673,7 @@ function openPinchCategorySheet() {
     return `
       <button type="button" class="pinch-cat-sheet-row${isCur ? ' active' : ''}" onclick="selectPinchCategoryFromSheet('${cat.id}')">
         <div class="pcs-left">
-          <span class="pcs-emoji">${cat.emoji}</span>
+          <span class="pcs-mono">${escapeHTML(cat.title.slice(0, 2).toUpperCase())}</span>
           <div class="pcs-texts">
             <strong>${escapeHTML(cat.title)}</strong>
             <span>${escapeHTML(cat.subtitle)} · ${cat.priceRange}</span>
@@ -13070,15 +14203,26 @@ function openDishDetailModal(dishId) {
   const noteInputEl = document.getElementById('dd-special-note');
   const scrollBody  = modal.querySelector('.dd-scroll-body');
 
+  if (noteInputEl) noteInputEl.value = '';
+  if (typeof applyCustomerPrefsToDishDetail === 'function') {
+    applyCustomerPrefsToDishDetail(dish);
+  }
+
   if (catPillEl) catPillEl.textContent = catMeta ? catMeta.title : 'Pinch Kitchen+Bar';
   if (titleEl)   titleEl.textContent   = dish.name;
   if (fullDescEl) fullDescEl.textContent = dish.fullDesc;
 
   if (badgesEl) {
-    badgesEl.innerHTML = (dish.badges || []).map(b => {
+    const baseB = (dish.badges || []).map(b => {
       const tone = PINCH_BADGE_TONES[b] || 'tone-neutral';
       return `<span class="pinch-badge ${tone}">${escapeHTML(b)}</span>`;
     }).join('');
+    const prefInfo = typeof getDishPreferenceStatus === 'function' ? getDishPreferenceStatus(dish) : { alerts: [], compatLabel: '' };
+    const prefB = [
+      ...prefInfo.alerts.map(a => `<span class="pinch-badge tone-pref-warn">${escapeHTML(a)}</span>`),
+      ...(prefInfo.alerts.length === 0 && prefInfo.compatLabel ? [`<span class="pinch-badge tone-pref-ok">${escapeHTML(prefInfo.compatLabel)}</span>`] : []),
+    ].join('');
+    badgesEl.innerHTML = baseB + prefB;
   }
 
   if (optBlockEl && optLabelEl && optChipsEl) {
@@ -13098,7 +14242,6 @@ function openDishDetailModal(dishId) {
     }
   }
 
-  if (noteInputEl) noteInputEl.value = '';
   renderDishDetailMedia();
   refreshDishDetailCustomizationUI();
   refreshDishDetailActionBar();
@@ -13151,10 +14294,10 @@ function renderDishDetailMedia() {
     ${innerHtml}
     <div class="dd-media-switcher" role="tablist">
       <button type="button" class="dd-media-tab${pinchDetailMediaTab === 'photos' ? ' active' : ''}" onclick="switchDishDetailMedia('photos')">
-        📷 Fotos
+        ${uiIcon('camera', 'sm')} <span>Fotos</span>
       </button>
       <button type="button" class="dd-media-tab${pinchDetailMediaTab === 'video' ? ' active' : ''}" onclick="switchDishDetailMedia('video')">
-        🎬 Video
+        ${uiIcon('video', 'sm')} <span>Video</span>
       </button>
     </div>
   `;
@@ -13262,7 +14405,7 @@ function addDishFromDetailModal() {
   hapticTap(14);
   renderCart();
   renderPinchMenu();
-  showToast(`✓ ${qty > 1 ? qty + '× ' : ''}${dish.emoji} ${dish.name} (${formatMenuPrice(unitPrice * qty)})`);
+  showToast(`✓ ${qty > 1 ? qty + '× ' : ''}${dish.name} (${formatMenuPrice(unitPrice * qty)})`);
   closeDishDetailModal();
 }
 
@@ -13313,9 +14456,20 @@ function closeDishDetailModal() {
     return;
   }
 
-  const mesaParam = urlParams.get('mesa') || '';
-  const modoParam = (urlParams.get('modo') || urlParams.get('mode') || '').toLowerCase();
-  if (mesaParam) presetTableFromURL = mesaParam;
+  const rawMesaParam  = urlParams.get('mesa') || '';
+  const mesaParam     = normalizeMesaInputParam(rawMesaParam);
+  const invitaParam   = (urlParams.get('invita') || urlParams.get('invite') || '').trim();
+  const modoParam     = (urlParams.get('modo') || urlParams.get('mode') || '').toLowerCase();
+  if (typeof loadCustomerPrefs === 'function') loadCustomerPrefs();
+
+  if (mesaParam) {
+    presetTableFromURL = mesaParam;
+    try { localStorage.setItem(storageKey('last-table'), mesaParam); } catch (e) {}
+  }
+  if (invitaParam) {
+    invitedByGuest = invitaParam;
+    inviteWelcomeDismissed = false;
+  }
 
   if (mesaParam || modoParam === 'mesa' || modoParam === 'dine_in') {
     setFulfillmentMode('dine_in');
