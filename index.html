@@ -4,11 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Escandon — Pedidos en Tiempo Real</title>
-  <meta name="description" content="Escandon — Selección rápida Tap-to-select para Tacos, Hot Dogs y Bebidas con rastreador en tiempo real." />
+  <meta name="description" content="Pinch Kitchen+Bar — Menú interactivo con configurador visual, Aguas Frescas y panel KDS DineOS en tiempo real." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20261123v20" />
+  <link rel="stylesheet" href="style.css?v=20261124v31" />
 </head>
 <body class="apple-warm-theme">
 
@@ -21,7 +21,7 @@
   </div>
 </div>
 
-<!-- VISTA CLIENTE (LINK DIRECTO PARA COMENSALES · 100% MOBILE-FIRST) -->
+<!-- VISTA CLIENTE (MENÚ INTERACTIVO PINCH KITCHEN+BAR · MOBILE-FIRST) -->
 <div id="view-client" class="view hidden">
   <header class="topnav">
     <div class="topnav-left">
@@ -30,24 +30,23 @@
 
     <div class="nav-brand-center">
       <div class="nav-brand-title">
-        <span class="logo-icon small">◈</span>
-        <span class="brand-escandon">Escandon</span>
+        <span class="brand-pinch-name">Pinch Kitchen+Bar</span>
         <span class="client-cloud-dot" id="client-cloud-dot" title="Sincronización activa"></span>
       </div>
       <div class="nav-brand-credits">
-        <span>Powered by RestaurantOS</span>
+        <span>8601 Biscayne Blvd, Miami</span>
         <span class="credits-dot">·</span>
-        <span>Designed by yanni glez</span>
+        <span>RestaurantOS</span>
       </div>
     </div>
 
     <div class="topnav-right">
-      <button type="button" class="loyalty-header-pill" id="btn-header-loyalty" onclick="openClientAILoyaltyModal('loyalty')" title="Puntos Escandón · Programa de Lealtad">
+      <button type="button" class="loyalty-header-pill" id="btn-header-loyalty" onclick="openClientAILoyaltyModal('loyalty')" title="Puntos · Programa de Lealtad">
         <span class="loyalty-star-icon">⭐</span>
         <span id="header-loyalty-pts">0</span>
         <span class="loyalty-pts-unit">pts</span>
       </button>
-      <button type="button" class="ai-waiter-header-pill" id="btn-header-ai-waiter" onclick="openClientAILoyaltyModal('ai')" title="Mesero IA · Pide lo de siempre por chat">
+      <button type="button" class="ai-waiter-header-pill" id="btn-header-ai-waiter" onclick="openClientAILoyaltyModal('ai')" title="Mesero IA">
         <span class="ai-sparkle-icon">✨</span>
         <span>IA</span>
       </button>
@@ -61,138 +60,101 @@
   <!-- CONTENEDOR PRINCIPAL DEL CLIENTE -->
   <main class="client-scroll-container" id="client-scroll-container">
 
-    <!-- A) FLUJO DE MENÚ Y SELECCIÓN POR TOQUES (TAP-TO-SELECT) -->
+    <!-- A) FLUJO DE MENÚ PINCH KITCHEN+BAR (BROWSE + DETALLE FULL-SCREEN) -->
     <div id="client-menu-flow" class="client-menu-flow">
 
-      <!-- Selector de Modalidad: En Mesa vs. Pickup vs. A Domicilio -->
-      <div class="fulfillment-mode-tabs" id="fulfillment-mode-tabs">
-        <button type="button" class="fmode-tab active" id="fmode-dine_in" onclick="setFulfillmentMode('dine_in')">
-          <span>🍽️ En Mesa</span>
+      <!-- Contexto compacto superior (modalidad + mesa + favorito) que se desplaza al hacer scroll -->
+      <div class="pinch-top-context">
+        <!-- Selector de Modalidad: En Mesa vs. Pickup vs. A Domicilio -->
+        <div class="fulfillment-mode-tabs" id="fulfillment-mode-tabs">
+          <button type="button" class="fmode-tab active" id="fmode-dine_in" onclick="setFulfillmentMode('dine_in')">
+            <span>🍽️ En Mesa</span>
+          </button>
+          <button type="button" class="fmode-tab" id="fmode-pickup" onclick="setFulfillmentMode('pickup')">
+            <span>🛍️ Pickup</span>
+          </button>
+          <button type="button" class="fmode-tab" id="fmode-delivery" onclick="setFulfillmentMode('delivery')">
+            <span>🛵 A Domicilio</span>
+          </button>
+        </div>
+
+        <!-- Aviso de Pago Anticipado cuando elige Pickup o A Domicilio -->
+        <div class="prepay-mode-banner hidden" id="prepay-mode-banner">
+          <div class="prepay-banner-top">
+            <span class="prepay-badge" id="prepay-banner-badge">🔒 PAGO ANTICIPADO REQUERIDO</span>
+            <span class="prepay-wallets"> Pay · Stripe</span>
+          </div>
+          <p class="prepay-banner-desc" id="prepay-banner-desc">
+            Arma tu pedido y paga por adelantado desde tu celular para que cocina comience a prepararlo de inmediato.
+          </p>
+        </div>
+
+        <!-- Barra de Contexto de Mesa / Pickup / Domicilio -->
+        <button type="button" class="client-context-bar" id="client-context-bar" onclick="openIdentityPreselectModal()">
+          <div class="ctx-left">
+            <span class="ctx-dot"></span>
+            <span class="ctx-table-pill" id="ctx-table-pill">📍 Elegir Mesa</span>
+            <span class="ctx-sep">·</span>
+            <span class="ctx-guest-pill" id="ctx-guest-pill">👤 Tu nombre</span>
+          </div>
+          <span class="ctx-right-badge" id="ctx-group-pill">Cuentas separadas ✎</span>
         </button>
-        <button type="button" class="fmode-tab" id="fmode-pickup" onclick="setFulfillmentMode('pickup')">
-          <span>🛍️ Pickup</span>
-        </button>
-        <button type="button" class="fmode-tab" id="fmode-delivery" onclick="setFulfillmentMode('delivery')">
-          <span>🛵 A Domicilio</span>
-        </button>
+
+        <!-- Presencia en la mesa: quién más está pidiendo contigo -->
+        <div class="table-presence-strip hidden" id="table-presence-strip">
+          <div class="presence-avatars" id="presence-avatars"></div>
+          <span class="presence-text" id="presence-text">Tu mesa</span>
+        </div>
+
+        <!-- Tarjeta compacta Mesero IA ("Lo de siempre") cuando ya hay historial -->
+        <section class="client-usual-ai-banner" id="client-usual-ai-banner" aria-label="Lo de siempre"></section>
       </div>
 
-      <!-- Aviso de Pago Anticipado cuando elige Pickup o A Domicilio -->
-      <div class="prepay-mode-banner hidden" id="prepay-mode-banner">
-        <div class="prepay-banner-top">
-          <span class="prepay-badge" id="prepay-banner-badge">🔒 PAGO ANTICIPADO REQUERIDO</span>
-          <span class="prepay-wallets"> Pay · Stripe</span>
-        </div>
-        <p class="prepay-banner-desc" id="prepay-banner-desc">
-          Arma tu pedido y paga por adelantado desde tu celular para que cocina comience a prepararlo de inmediato.
-        </p>
-      </div>
-
-      <!-- Barra de Contexto de Mesa / Pickup / Domicilio -->
-      <button type="button" class="client-context-bar" id="client-context-bar" onclick="openIdentityPreselectModal()">
-        <div class="ctx-left">
-          <span class="ctx-dot"></span>
-          <span class="ctx-table-pill" id="ctx-table-pill">📍 Elegir Mesa</span>
-          <span class="ctx-sep">·</span>
-          <span class="ctx-guest-pill" id="ctx-guest-pill">👤 Tu nombre</span>
-        </div>
-        <span class="ctx-right-badge" id="ctx-group-pill">Cuentas separadas ✎</span>
-      </button>
-
-      <!-- Presencia en la mesa: quién más está pidiendo contigo -->
-      <div class="table-presence-strip hidden" id="table-presence-strip">
-        <div class="presence-avatars" id="presence-avatars"></div>
-        <span class="presence-text" id="presence-text">Tu mesa</span>
-      </div>
-
-      <!-- TARJETA INTELIGENTE: MESERO IA ("PIDE LO DE SIEMPRE") & PUNTOS ESCANDÓN -->
-      <section class="client-usual-ai-banner" id="client-usual-ai-banner" aria-label="Mesero IA y Puntos Escandón"></section>
-
-      <!-- 1. Selección inicial de base -->
-      <section id="station-selector" class="station-selector">
-        <div class="minimal-heading">
-          <span class="step-label" id="menu-hero-kicker">MENÚ · TOCA PARA ARMAR</span>
-          <h1 id="menu-hero-title">¿Qué se te antoja hoy?</h1>
-        </div>
-
-        <div class="station-cards">
-          <button class="station-card" onclick="selectStation('taco')">
-            <div class="station-illustration" id="StationSvgTaco"></div>
-            <div class="station-card-body">
-              <span class="station-kicker">AL MOMENTO · COMPLEMENTOS INCLUIDOS</span>
-              <div class="station-card-top">
-                <h2>Tacos</h2>
-                <div class="station-price-action">
-                  <span class="price-tag">$28</span>
-                  <span class="station-corner-arrow" aria-hidden="true">↗</span>
-                </div>
-              </div>
-              <p>Tortilla sencilla o doble, bistec o longaniza con cilantro, cebolla y salsa.</p>
-            </div>
+      <!-- BARRA STICKY FIEL A LA REFERENCIA: [☰] [🔍] [Tabs horizontales con línea negra activa] -->
+      <nav class="pinch-sticky-bar" id="pinch-sticky-bar" aria-label="Categorías del menú">
+        <div class="pinch-sticky-row">
+          <button type="button" class="pinch-icon-square" id="btn-pinch-cat-drawer" onclick="openPinchCategorySheet()" aria-label="Ver todas las categorías" title="Categorías del menú">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/>
+              <circle cx="4.5" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="4.5" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="4.5" cy="18" r="1" fill="currentColor" stroke="none"/>
+            </svg>
           </button>
 
-          <button class="station-card" onclick="selectStation('hotdog')">
-            <div class="station-illustration" id="StationSvgHotdog"></div>
-            <div class="station-card-body">
-              <span class="station-kicker">CLÁSICO ARTESANAL · ADEREZOS INCLUIDOS</span>
-              <div class="station-card-top">
-                <h2>Hot Dogs</h2>
-                <div class="station-price-action">
-                  <span class="price-tag">$35</span>
-                  <span class="station-corner-arrow" aria-hidden="true">↗</span>
-                </div>
-              </div>
-              <p>Pan suave con salchicha asada, aderezos clásicos, tomate y chiles curados.</p>
-            </div>
+          <button type="button" class="pinch-icon-square" id="btn-pinch-search-toggle" onclick="togglePinchSearch()" aria-label="Buscar en el menú" title="Buscar platillos o ingredientes">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.2" y2="16.2"/>
+            </svg>
           </button>
+
+          <div class="pinch-cat-tabs" id="pinch-cat-tabs" role="tablist"></div>
         </div>
 
-        <!-- Bebidas accesibles también desde el inicio si solo quieren bebida -->
-        <div class="drinks-section" id="drinks-section-home">
-          <div class="minimal-group-title">
-            <span>BEBIDAS FRÍAS (500 ML)</span>
+        <!-- Panel desplegable de búsqueda instantánea y filtros dietéticos -->
+        <div class="pinch-search-panel hidden" id="pinch-search-panel">
+          <div class="pinch-search-input-wrap">
+            <svg class="pinch-si-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.2" y2="16.2"/>
+            </svg>
+            <input
+              type="search"
+              id="pinch-search-input"
+              class="pinch-search-input"
+              placeholder="Buscar platillo, ingrediente (ej: guayaba, kimchi, angus)..."
+              oninput="onPinchSearchInput(this.value)"
+              autocomplete="off"
+            />
+            <span class="pinch-search-count" id="pinch-search-count">40 de 40 platillos</span>
+            <button type="button" class="pinch-search-clear hidden" id="btn-pinch-search-clear" onclick="clearPinchSearch()" aria-label="Limpiar búsqueda">✕</button>
           </div>
-          <div class="drinks-list" id="drinks-list-home"></div>
+          <div class="pinch-diet-chips" id="pinch-diet-chips"></div>
         </div>
-      </section>
+      </nav>
 
-      <!-- 2. Armador minimalista por toques (Tap-to-select) -->
-      <section id="builder-workspace" class="builder-workspace hidden">
-        <!-- Cambio rápido de base -->
-        <div class="station-tabs">
-          <button class="station-tab" id="tab-taco" onclick="selectStation('taco')">
-            <span>🌮 Tacos</span>
-            <span class="tab-price">$28</span>
-          </button>
-          <button class="station-tab" id="tab-hotdog" onclick="selectStation('hotdog')">
-            <span>🌭 Hot Dogs</span>
-            <span class="tab-price">$35</span>
-          </button>
-        </div>
-
-        <!-- Vista limpia del platillo sin bordes ni marcos innecesarios -->
-        <div class="plate-preview-minimal">
-          <div class="plate-canvas" id="plate-canvas"></div>
-          <div class="live-summary-line">
-            <span class="live-summary-text" id="live-item-description">Toca tu tortilla y proteína</span>
-            <button class="btn-clear-minimal" onclick="resetCurrentBuilder()">Limpiar</button>
-          </div>
-        </div>
-
-        <!-- Opciones Tap-to-Select -->
-        <div class="tap-options-container" id="ingredients-tray"></div>
-
-        <!-- Sección de Bebidas integrada -->
-        <div class="drinks-section" id="drinks-section">
-          <div class="minimal-group-title">
-            <span>BEBIDAS (500 ML)</span>
-          </div>
-          <div class="drinks-list" id="drinks-list"></div>
-        </div>
-      </section>
+      <!-- Lista completa de categorías y tarjetas horizontales de los 40 platillos -->
+      <div id="pinch-menu-list" class="pinch-menu-list"></div>
 
       <!-- Asistencia rápida en mesa desde el menú (solo visible en modo En Mesa) -->
-      <div class="service-assistance-card" id="menu-table-assistance-card">
+      <div class="service-assistance-card pinch-assist-wrap" id="menu-table-assistance-card">
         <div class="minimal-group-title">
           <span>ASISTENCIA EN MESA</span>
           <span class="service-live-tag" id="menu-service-feedback">● Directo a cocina</span>
@@ -373,21 +335,8 @@
 
   <!-- ZONA INFERIOR DEL PULGAR (DOCK FLOTANTE DE VIDRIO) -->
   <div class="thumb-dock" id="thumb-dock">
-    <!-- Acción rápida para agregar el Taco/Hot Dog actual al carrito -->
-    <div class="dock-builder-bar hidden" id="dock-builder-bar">
-      <div class="builder-qty-stepper" id="builder-qty-stepper">
-        <button type="button" class="bqty-btn" id="builder-qty-minus" onclick="changeBuilderDraftQty(-1)" aria-label="Disminuir cantidad">−</button>
-        <span class="bqty-val" id="builder-qty-val">1</span>
-        <button type="button" class="bqty-btn" id="builder-qty-plus" onclick="changeBuilderDraftQty(1)" aria-label="Aumentar cantidad">+</button>
-      </div>
-      <button class="btn-dock-add" id="btn-add-built" onclick="addBuiltItemToCart()">
-        <span id="btn-add-built-label">+ Agregar Taco</span>
-        <span class="btn-dock-price" id="live-item-price">$28</span>
-      </button>
-    </div>
-
     <!-- Barra principal de Carrito y Botón Pedir -->
-    <div class="dock-main-bar" id="mobile-bottom-bar">
+    <div class="dock-main-bar pinch-floating-cart-bar is-empty" id="mobile-bottom-bar">
       <button class="dock-cart-trigger" onclick="toggleCart(true)">
         <span class="dock-count" id="bb-count">0</span>
         <div class="dock-cart-info">
@@ -395,7 +344,7 @@
             <span class="dock-cart-label" id="bb-status-text">Tu pedido</span>
             <span class="dock-cart-sub" id="bb-table-line">Toca para ver tu pedido</span>
           </div>
-          <span class="dock-cart-total" id="bb-total-price">$0</span>
+          <span class="dock-cart-total" id="bb-total-price">$0.00</span>
         </div>
       </button>
       <button class="dock-btn-pedir" id="btn-pedir-bar" onclick="openOrderModal()">
@@ -408,6 +357,157 @@
       <button class="btn-dock-secondary" onclick="startNewOrderFromTracker()">
         + Pedir más cosas
       </button>
+    </div>
+  </div>
+
+  <!-- BOTTOM SHEET DE CATEGORÍAS RÁPIDAS (BOTÓN ☰) -->
+  <div class="cart-overlay" id="pinch-cat-overlay" onclick="closePinchCategorySheet()"></div>
+  <aside class="bottom-sheet-cart pinch-cat-sheet" id="pinch-cat-sheet" aria-label="Saltar a categoría">
+    <div class="sheet-handle-area" onclick="closePinchCategorySheet()">
+      <div class="sheet-grabber"></div>
+    </div>
+    <div class="cart-header">
+      <h2>Categorías del Menú</h2>
+      <button class="cart-close" onclick="closePinchCategorySheet()">Cerrar</button>
+    </div>
+    <div class="pinch-cat-sheet-list" id="pinch-cat-sheet-list"></div>
+  </aside>
+
+  <!-- VISOR INMERSIVO FULL-SCREEN / APPLE SHEET DE PLATILLO -->
+  <div id="dish-detail-modal" class="dish-detail-modal hidden" role="dialog" aria-modal="true" aria-labelledby="dd-title">
+    <div class="dish-detail-backdrop" onclick="closeDishDetailModal()"></div>
+    <div class="dish-detail-sheet" id="dish-detail-sheet">
+      <div class="dd-drag-bar" id="dd-drag-bar">
+        <span class="dd-grabber" aria-hidden="true"></span>
+        <div class="dd-topbar">
+          <button type="button" class="dd-back-pill" onclick="closeDishDetailModal()" aria-label="Volver al menú">
+            ← Menú
+          </button>
+          <span class="dd-cat-pill" id="dd-cat-pill">Pinch Kitchen+Bar</span>
+          <button type="button" class="dd-close-circle" onclick="closeDishDetailModal()" aria-label="Cerrar vista ampliada">✕</button>
+        </div>
+      </div>
+
+      <div class="dd-scroll-body">
+        <div class="dd-media-hero" id="dd-media-hero"></div>
+
+        <div class="dd-content">
+          <div class="dd-badges-row" id="dd-badges-row"></div>
+
+          <div class="dd-header-row">
+            <h2 class="dd-title" id="dd-title">Platillo</h2>
+            <span class="dd-price" id="dd-price">$0.00</span>
+          </div>
+
+          <p class="dd-full-desc" id="dd-full-desc"></p>
+
+          <div class="dd-section-block">
+            <span class="dd-section-label">INGREDIENTES Y BASE DEL MENÚ</span>
+            <div class="dd-ingredients-list" id="dd-ingredients-list"></div>
+          </div>
+
+          <div class="dd-section-block dd-config-launch-block" id="dd-config-launch-block">
+            <button type="button" class="dd-config-launcher" id="dd-configurator-trigger" onclick="openDishConfigurator()">
+              <div class="dd-cl-icon" aria-hidden="true">✨</div>
+              <div class="dd-cl-body">
+                <span class="dd-cl-title" id="dd-cl-title">Personalizar platillo</span>
+                <span class="dd-cl-sub" id="dd-cl-sub">Quita ingredientes o agrega extras (tocino, aguacate, salsas...)</span>
+                <div class="dd-cl-pills hidden" id="dd-cl-pills"></div>
+              </div>
+              <span class="dd-cl-arrow" id="dd-cl-arrow">Abrir →</span>
+            </button>
+          </div>
+
+          <div class="dd-section-block hidden" id="dd-options-block">
+            <span class="dd-section-label" id="dd-options-label">PREFERENCIA DE PREPARACIÓN</span>
+            <div class="dd-options-chips" id="dd-options-chips"></div>
+          </div>
+
+          <div class="dd-section-block">
+            <span class="dd-section-label">INSTRUCCIONES PARA COCINA (OPCIONAL)</span>
+            <div class="dd-quick-notes-row">
+              <button type="button" class="dd-qnote-chip" onclick="appendDishQuickNote('Sin cebolla')">Sin cebolla</button>
+              <button type="button" class="dd-qnote-chip" onclick="appendDishQuickNote('Alioli / salsa aparte')">Salsa aparte</button>
+              <button type="button" class="dd-qnote-chip" onclick="appendDishQuickNote('Sin picante')">Sin picante</button>
+              <button type="button" class="dd-qnote-chip" onclick="appendDishQuickNote('Para compartir')">Para compartir</button>
+            </div>
+            <textarea
+              id="dd-special-note"
+              class="dd-special-note"
+              rows="2"
+              maxlength="140"
+              placeholder="Ej: Sin cebolla, alergias, salsa aparte..."
+            ></textarea>
+          </div>
+        </div>
+      </div>
+
+      <footer class="dd-footer">
+        <div class="dd-qty-stepper">
+          <button type="button" class="dd-qty-btn" id="dd-qty-minus" onclick="changeDishDetailQty(-1)" aria-label="Disminuir cantidad">−</button>
+          <span class="dd-qty-val" id="dd-qty-val">1</span>
+          <button type="button" class="dd-qty-btn" id="dd-qty-plus" onclick="changeDishDetailQty(1)" aria-label="Aumentar cantidad">+</button>
+        </div>
+        <button type="button" class="dd-add-btn" id="dd-add-btn" onclick="addDishFromDetailModal()">
+          + Agregar al pedido · $0.00
+        </button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- CONFIGURADOR INTERACTIVO INDEPENDIENTE DE PLATILLO -->
+  <div id="dish-configurator-modal" class="dish-config-modal hidden" role="dialog" aria-modal="true" aria-labelledby="dc-title">
+    <div class="dish-config-backdrop" onclick="closeDishConfigurator(false)"></div>
+    <div class="dish-config-sheet" id="dish-config-sheet">
+      <header class="dc-topbar">
+        <button type="button" class="dd-back-pill" onclick="closeDishConfigurator(false)" aria-label="Volver al platillo">
+          ← Volver
+        </button>
+        <div class="dc-title-col">
+          <span class="dc-kicker">ESTUDIO DE ARMADO</span>
+          <h2 class="dc-title" id="dc-title">Personalizar</h2>
+        </div>
+        <button type="button" class="dc-reset-btn" id="dc-reset-btn" onclick="resetDishConfiguratorDraft()" title="Restablecer a receta original">
+          ↺ Original
+        </button>
+      </header>
+
+      <!-- Escenario animado del plato + feedback flotante -->
+      <div class="dc-stage-wrap">
+        <div class="dc-plate-canvas" id="dc-plate-canvas"></div>
+        <div class="dc-float-feedback" id="dc-float-feedback" aria-live="polite"></div>
+        <div class="dc-stage-status">
+          <div class="dc-stage-pills" id="dc-stage-pills">
+            <span class="dc-status-chip neutral">Receta original de Pinch</span>
+          </div>
+          <span class="dc-stage-price" id="dc-stage-price">$0.00</span>
+        </div>
+      </div>
+
+      <!-- Bandeja scrollable de ingredientes base y extras -->
+      <div class="dc-scroll-body" id="dc-scroll-body">
+        <section class="dc-group hidden" id="dc-base-group">
+          <div class="dc-group-head">
+            <span class="dc-group-title">INGREDIENTES INCLUIDOS</span>
+            <span class="dc-group-hint">Toca para quitar</span>
+          </div>
+          <div class="dc-grid cols-3" id="dc-base-grid"></div>
+        </section>
+
+        <section class="dc-group" id="dc-extras-group">
+          <div class="dc-group-head">
+            <span class="dc-group-title" id="dc-extras-title">AGREGA EXTRAS Y TOPPINGS</span>
+            <span class="dc-group-hint" id="dc-extras-hint">Toca para sumar al plato</span>
+          </div>
+          <div class="dc-grid cols-3" id="dc-extras-grid"></div>
+        </section>
+      </div>
+
+      <footer class="dc-footer">
+        <button type="button" class="dc-apply-btn" id="dc-apply-btn" onclick="applyDishConfigurator()">
+          Listo · Aplicar cambios ($0.00)
+        </button>
+      </footer>
     </div>
   </div>
 
@@ -424,14 +524,14 @@
     </div>
 
     <div class="cart-items" id="cart-items">
-      <p class="cart-empty">Selecciona tus tacos, hot dogs o bebidas</p>
+      <p class="cart-empty">Explora el menú y toca + para agregar platillos</p>
     </div>
 
     <div class="cart-footer">
       <div class="cart-loyalty-box" id="cart-loyalty-box"></div>
       <div class="cart-row total">
         <span>Total</span>
-        <span id="cart-total">$0</span>
+        <span id="cart-total">$0.00</span>
       </div>
       <button class="btn-send-order" id="btn-pedir-sheet" onclick="openOrderModal()">Pedir →</button>
     </div>
@@ -656,11 +756,11 @@
         <button type="button" class="ai-quick-chip featured" onclick="runClientAIQuickPrompt('Pide lo de siempre')">
           ⚡ Pide lo de siempre
         </button>
-        <button type="button" class="ai-quick-chip" onclick="runClientAIQuickPrompt('Quiero 2 tacos de bistec con todo y 1 coca')">
-          🌮 2 tacos bistec + coca
+        <button type="button" class="ai-quick-chip" onclick="runClientAIQuickPrompt('Quiero 1 Pinch Burger y 1 Mexican Coke')">
+          🍔 Pinch Burger + Coke
         </button>
-        <button type="button" class="ai-quick-chip" onclick="runClientAIQuickPrompt('Quiero 1 hot dog con todo y 1 agua de horchata')">
-          🌭 1 hot dog + horchata
+        <button type="button" class="ai-quick-chip" onclick="runClientAIQuickPrompt('Quiero 1 Pinch Nachos y 1 K-town Guac')">
+          🧀 Pinch Nachos + Guac
         </button>
         <button type="button" class="ai-quick-chip" onclick="runClientAIQuickPrompt('¿Cuántos puntos tengo?')">
           ⭐ Mis puntos
@@ -699,8 +799,8 @@
   </div>
 </div>
 
-<!-- VISTA COCINA KDS & DASHBOARD EJECUTIVO (APPLE WARM MINIMALIST · PIN 12345) -->
-<div id="view-kitchen" class="view hidden kds-apple-theme">
+<!-- VISTA COCINA KDS & DASHBOARD EJECUTIVO (APPLE MINIMALIST DINEOS · PIN 12345) -->
+<div id="view-kitchen" class="view hidden kds-apple-theme kds-dineos-theme">
 
   <!-- 1. PANTALLA DE BLOQUEO DEL RESTAURANTE (ACCESO PRIVADO CON PIN) -->
   <div id="kds-lock-screen" class="kds-lock-screen">
@@ -731,183 +831,400 @@
 
   <!-- PANEL DE COMANDAS KDS & DASHBOARD (Visible tras desbloquear PIN) -->
   <div id="kds-unlocked-content" class="kds-unlocked-content hidden">
-    <nav class="kds-nav no-print">
-      <div class="kds-nav-left">
-        <div class="kds-brand">
-          <span class="kds-brand-mark">◈</span>
-          <span class="brand-escandon">Escandon</span>
-        </div>
-        <span class="kds-status" id="kds-status">● EN VIVO</span>
-      </div>
 
-      <!-- Navegación central estilo Floating Pill (Apple / Worktail) -->
-      <div class="kds-nav-pills" role="tablist">
-        <button class="btn-kds-sales active" id="btn-kds-comandas" onclick="setKDSSubView('comandas')">
-          Comandas
-        </button>
-        <button class="btn-kds-sales" id="btn-kds-sales" onclick="toggleKDSSalesView()">
-          Dashboard
-        </button>
-        <button class="btn-kds-sales" id="btn-kds-stock" onclick="toggleKDSStockView()">
-          Stock 86
-        </button>
-        <button class="btn-kds-sales" id="btn-kds-qrs" onclick="toggleKDSQRsView()">
-          QRs
-        </button>
-        <button type="button" class="btn-kds-sales btn-kds-copilot-pill" id="btn-kds-copilot-nav" onclick="toggleKitchenAICopilot()">
-          <span>✨ Copiloto IA</span>
-        </button>
-      </div>
-
-      <div class="kds-right-tools">
-        <button class="btn-copy-link" onclick="copyCustomerLink()" title="Copiar link directo para clientes">
-          <span>↗</span> <span class="copy-link-label">Link Menú</span>
-        </button>
-        <div class="kds-clock" id="kds-clock">--:--</div>
-        <button class="nav-btn-minimal kds-lock-trigger" onclick="lockKDSAndExit()" title="Bloquear pantalla y salir">
-          🔒 <span class="lock-btn-label">Salir</span>
-        </button>
-      </div>
-    </nav>
-
-    <!-- BANNER DE AVISOS DE MESA EN VIVO (LLAMAR MESERO / PEDIR LA CUENTA) -->
-    <div id="kds-service-alerts" class="kds-service-alerts hidden no-print"></div>
-
-    <!-- SUB-VISTA 1: TABLERO DE COMANDAS EN TIEMPO REAL -->
-    <div id="kds-comandas-section" class="kds-comandas-section">
-      <div class="kds-workspace-shell">
-
-        <!-- Cabecera de Bienvenida + Fecha + Búsqueda rápida -->
-        <div class="kds-top-header-row">
-          <div class="kds-greeting-block">
-            <h1 class="kds-page-title">Cocina en Tiempo Real</h1>
-            <p class="kds-page-subtitle">Monitorea comandas de mesa, pickup y domicilio sin fricción.</p>
-          </div>
-          <div class="kds-header-utilities">
-            <div class="kds-search-pill">
-              <span class="kds-search-icon">⌕</span>
-              <input
-                type="search"
-                id="kds-search-input"
-                class="kds-search-input"
-                placeholder="Buscar mesa o cliente..."
-                oninput="onKDSSearchInput(this.value)"
-                autocomplete="off"
-              />
-            </div>
-            <div class="kds-date-chip" id="kds-date-pill">Turno Activo</div>
-          </div>
+    <!-- BARRA SUPERIOR MINIMALISTA RÉPLICA EXACTA DINEOS -->
+    <header class="dineos-topbar no-print">
+      <div class="dineos-top-left">
+        <div class="dineos-brand-mark" onclick="setKDSSubView('comandas')" title="Ir a Cocina">
+          <span class="dineos-logo-badge">◈</span>
+          <span class="dineos-brand-name brand-escandon">ESCANDON</span>
+          <span class="kds-status dineos-live-dot" id="kds-status" title="Sincronización en vivo">●</span>
         </div>
 
-        <!-- Mini Bento KPI Strip en vivo sobre el tablero KDS -->
-        <div class="kds-bento-kpi-row" id="kds-live-kpi-row">
-          <!-- KPI 1: Ventas del Turno -->
-          <div class="apple-kpi-card" onclick="setKDSSubView('sales')">
-            <div class="apple-card-head">
-              <span class="apple-card-label">Ventas del Turno</span>
-              <span class="apple-corner-btn" aria-hidden="true">↗</span>
-            </div>
-            <div class="apple-kpi-body">
-              <div class="apple-kpi-number" id="kds-kpi-sales">$0</div>
-              <div class="apple-kpi-meta-row">
-                <span class="apple-trend-pill positive" id="kds-kpi-sales-sub">0 pedidos listos</span>
-              </div>
-            </div>
-          </div>
+        <div class="dineos-search-capsule">
+          <button type="button" class="dineos-search-spark" onclick="toggleKitchenAICopilot(true)" title="Consultar Copiloto IA">✦</button>
+          <input
+            type="search"
+            id="kds-search-input"
+            class="dineos-search-input"
+            placeholder="Buscar órdenes, mesas, tickets, VIP..."
+            oninput="onKDSSearchInput(this.value)"
+            onkeydown="if(event.key==='Enter' && this.value.trim().length > 3){ onDineOSSearchEnter(this.value); }"
+            autocomplete="off"
+          />
+        </div>
+      </div>
 
-          <!-- KPI 2: Comandas Activas con Dot-Matrix visual (inspirado en Worktail) -->
-          <div class="apple-kpi-card">
-            <div class="apple-card-head">
-              <span class="apple-card-label">Comandas Activas</span>
-              <span class="apple-corner-btn subtle" id="kds-kpi-active-badge">●</span>
-            </div>
-            <div class="apple-kpi-split">
-              <div class="apple-kpi-body">
-                <div class="apple-kpi-number" id="kds-kpi-active">0</div>
-                <span class="apple-kpi-caption" id="kds-kpi-active-sub">Sin espera en barra</span>
-              </div>
-              <div class="apple-dot-matrix" id="kds-kpi-dot-matrix" aria-hidden="true"></div>
-            </div>
-          </div>
+      <div class="dineos-top-right">
+        <button type="button" class="dineos-chef-pill" onclick="setKDSSubView('stock')" title="Selección del chef · Ver menú e insumos">
+          <span class="dineos-chef-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z"/><line x1="6" y1="17" x2="18" y2="17"/></svg>
+          </span>
+          <span class="dineos-chef-texts">
+            <strong id="dineos-menu-status-title">Selección del chef</strong>
+            <span id="dineos-menu-status-sub">Pinch Bites, Burgers, Entrees y Bebidas</span>
+          </span>
+          <span class="dineos-chef-avatars" id="dineos-chef-thumbs">
+            <span class="dca-count" id="dineos-chef-avail-pill">+42</span>
+          </span>
+        </button>
 
-          <!-- KPI 3: Modalidades (Mesa / Pickup / Domicilio) -->
-          <div class="apple-kpi-card">
-            <div class="apple-card-head">
-              <span class="apple-card-label">Canales Activos</span>
-              <span class="apple-corner-btn subtle" aria-hidden="true">◎</span>
-            </div>
-            <div class="apple-kpi-body">
-              <div class="apple-channel-pills" id="kds-kpi-modes">
-                <span class="channel-chip mesa">🍽️ 0 Mesa</span>
-                <span class="channel-chip pickup">🛍️ 0 Pickup</span>
-                <span class="channel-chip delivery">🛵 0 Envío</span>
-              </div>
-              <span class="apple-kpi-caption">Distribución en tiempo real</span>
-            </div>
-          </div>
+        <button type="button" class="dineos-black-cta" id="btn-kds-copilot-nav" onclick="toggleKitchenAICopilot()">
+          <span>✦</span>
+          <span>Copiloto IA</span>
+        </button>
 
-          <!-- KPI 4: Pagos Digitales (Barra naranja + rayado diagonal estilo Open Positions) -->
-          <div class="apple-kpi-card" onclick="setKDSSubView('sales')">
-            <div class="apple-card-head">
-              <span class="apple-card-label">Pagadas Digital</span>
-              <span class="apple-corner-btn" aria-hidden="true">↗</span>
-            </div>
-            <div class="apple-kpi-split">
-              <div class="apple-kpi-body">
-                <div class="apple-kpi-number" id="kds-kpi-paid">0</div>
-                <span class="apple-kpi-caption"> Pay &amp; Stripe</span>
-              </div>
-              <div class="apple-hatch-meter-wrap">
-                <span class="apple-hatch-pct" id="kds-kpi-paid-pct">0%</span>
-                <div class="apple-hatch-meter">
-                  <div class="apple-hatch-fill" id="kds-kpi-paid-bar" style="width: 0%"></div>
+        <div class="dineos-icon-tools">
+          <button type="button" class="dineos-circle-btn" id="btn-dineos-alerts" onclick="scrollToKitchenAlerts()" title="Avisos de mesa (Mesero / Cuenta)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+          </button>
+          <button type="button" class="dineos-circle-btn" onclick="copyCustomerLink()" title="Copiar link directo para clientes">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>
+          </button>
+          <button type="button" class="dineos-circle-btn" onclick="setKDSSubView('board')" title="Comandas activas en tablero">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+            <span class="dineos-notif-badge" id="dineos-alerts-badge">0</span>
+          </button>
+          <button type="button" class="dineos-admin-chip" onclick="lockKDSAndExit()" title="Bloquear pantalla y salir">
+            <span class="dineos-admin-avatar">E</span>
+            <span class="dineos-admin-meta">
+              <strong class="brand-escandon">Escandon</strong>
+              <span>Admin · <em class="kds-clock-inline" id="kds-clock">--:--</em></span>
+            </span>
+            <span class="dineos-admin-caret" aria-hidden="true">▾</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- CUERPO PRINCIPAL: BARRA LATERAL VERTICAL DE ÍCONOS + ÁREA DE TRABAJO -->
+    <div class="dineos-app-shell">
+
+      <!-- RAIL LATERAL IZQUIERDO DE 7 ÍCONOS CIRCULARES (RÉPLICA EXACTA DINEOS) -->
+      <aside class="dineos-left-rail no-print" aria-label="Navegación de Cocina">
+        <div class="dineos-rail-group" role="tablist">
+          <button type="button" class="dineos-rail-btn active" id="btn-kds-comandas" onclick="setKDSSubView('comandas')" title="Dashboard Cocina">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.6"/><rect x="14" y="3" width="7" height="7" rx="1.6"/><rect x="3" y="14" width="7" height="7" rx="1.6"/><rect x="14" y="14" width="7" height="7" rx="1.6"/></svg>
+            <span class="rail-mob-label">Cocina</span>
+          </button>
+          <button type="button" class="dineos-rail-btn" id="btn-rail-board" onclick="setKDSSubView('board')" title="Tablero de Comandas">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 10h14v7a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3v-7Z"/><path d="M3 10h18"/><path d="M9 6h6"/></svg>
+            <span class="rail-mob-label">Pedidos</span>
+          </button>
+          <button type="button" class="dineos-rail-btn" id="btn-rail-copilot" onclick="toggleKitchenAICopilot()" title="Copiloto IA Operativo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3h16v18l-3-2-2.5 2-2.5-2-2.5 2L7 19l-3 2V3Z"/><path d="M8 8h8"/><path d="M8 12h6"/></svg>
+            <span class="rail-mob-label">IA</span>
+          </button>
+          <button type="button" class="dineos-rail-btn" id="btn-kds-stock" onclick="setKDSSubView('stock')" title="Insumos PEPS y Stock 86">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+            <span class="rail-mob-label">Insumos</span>
+          </button>
+          <button type="button" class="dineos-rail-btn" id="btn-kds-sales" onclick="setKDSSubView('sales')" title="Dashboard de Ventas y Excel">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            <span class="rail-mob-label">Ventas</span>
+          </button>
+          <button type="button" class="dineos-rail-btn" id="btn-kds-qrs" onclick="setKDSSubView('qrs')" title="Códigos QR por Mesa">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="15" y="3" width="6" height="6" rx="1"/><rect x="3" y="15" width="6" height="6" rx="1"/><path d="M15 15h2v2h-2z"/><path d="M19 15h2v6h-6v-2h4z"/></svg>
+            <span class="rail-mob-label">QRs</span>
+          </button>
+          <button type="button" class="dineos-rail-btn rail-lock-btn" onclick="lockKDSAndExit()" title="Bloquear panel y salir">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.85 1 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
+            <span class="rail-mob-label">Salir</span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- CONTENIDO PRINCIPAL -->
+      <div class="dineos-main-stage">
+
+        <!-- BANNER DE AVISOS DE MESA EN VIVO (LLAMAR MESERO / PEDIR LA CUENTA) -->
+        <div id="kds-service-alerts" class="kds-service-alerts hidden no-print"></div>
+
+        <!-- SUB-VISTA 1: DASHBOARD COCINA RÉPLICA EXACTA DINEOS + TABLERO DE COMANDAS -->
+        <div id="kds-comandas-section" class="kds-comandas-section">
+          <div class="kds-workspace-shell dineos-workspace-shell">
+
+            <!-- HERO BENTO DINEOS: LIENZO ABIERTO IZQUIERDO + BENTO DERECHO DE 3 NIVELES -->
+            <section class="dineos-hero-grid" aria-label="Dashboard operativo en tiempo real">
+
+              <!-- COLUMNA IZQUIERDA ABIERTA (SIN CAJA · PLATÓN DIAGONAL DE ESTUDIO) -->
+              <div class="dineos-open-left">
+                <!-- Capa de platón diagonal de porcelana blanca (estudio) -->
+                <div class="dineos-platter-layer" id="dineos-hero-dish-art"></div>
+
+                <!-- Puntos de carrusel verticales en el borde derecho (como en DineOS) -->
+                <div class="dineos-carousel-dots" id="dineos-carousel-dots" aria-label="Cambiar platillo destacado">
+                  <button type="button" class="dcd-dot active" data-dish="pinch_burger" onclick="selectDineOSHeroDish('pinch_burger')" title="Pinch Burger"></button>
+                  <button type="button" class="dcd-dot" data-dish="skirt_steak" onclick="selectDineOSHeroDish('skirt_steak')" title="Black Angus Skirt Steak"></button>
+                  <button type="button" class="dcd-dot" data-dish="cuban_sandwich" onclick="selectDineOSHeroDish('cuban_sandwich')" title="Pinch Cuban Sandwich"></button>
+                </div>
+
+                <!-- Tipografía superior flotante sobre el lienzo blanco -->
+                <div class="dineos-open-top">
+                  <h1 class="dineos-h1">Cocina</h1>
+                  <span class="dineos-yellow-pill" id="dineos-hero-kicker">Platillo insignia</span>
+                  <h2 class="dineos-dish-title" id="dineos-hero-dish-name">Pinch<br/>Burger</h2>
+                  <div class="dineos-dish-meta" id="dineos-hero-dish-sub">
+                    <span class="dineos-star">★</span>
+                    <span>4.9</span>
+                  </div>
+                  <span class="sr-only" id="kds-date-pill">Turno Activo</span>
+                </div>
+
+                <!-- Zona inferior izquierda: Tarjeta blanca flotante Preparación Actual + Sparkline abierto -->
+                <div class="dineos-open-bottom">
+                  <div class="dineos-prep-card" onclick="setKDSSubView('board')">
+                    <div class="dineos-prep-top">
+                      <div class="dineos-prep-lead">
+                        <span class="dineos-prep-ico" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 10h14v7a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3v-7Z"/><path d="M3 10h18"/><path d="M9 6h6"/></svg>
+                        </span>
+                        <div class="dineos-prep-label-col">
+                          <span class="dineos-prep-title">Preparación actual</span>
+                          <span class="dineos-prep-eta" id="dineos-prep-eta">⏱ ETA: 0 min</span>
+                        </div>
+                      </div>
+                      <span class="dineos-black-arrow-btn" aria-hidden="true">↗</span>
+                    </div>
+                    <div class="dineos-prep-bottom">
+                      <div class="dineos-dot-groups" id="kds-kpi-dot-matrix" aria-hidden="true"></div>
+                      <span class="dineos-prep-pct" id="dineos-prep-pct">0%</span>
+                    </div>
+                  </div>
+
+                  <div class="dineos-sold-mini" onclick="setKDSSubView('sales')">
+                    <div class="dineos-sold-num" id="dineos-units-sold">0</div>
+                    <div class="dineos-sparkline-box" id="dineos-units-sparkline"></div>
+                    <span class="dineos-sold-label">Platillos vendidos</span>
+                    <div class="dineos-sold-legend">
+                      <span><i class="leg-dot dark"></i> Hoy</span>
+                      <span><i class="leg-dot light"></i> Meta</span>
+                    </div>
+                  </div>
                 </div>
               </div>
+
+              <!-- COLUMNA DERECHA: 4 MINI-KPIs + BLOQUE NEGRO OBSIDIANA + TARJETAS PASTEL -->
+              <div class="dineos-bento-right">
+
+                <!-- FILA 1: 4 TARJETAS KPI MINIMALISTAS BLANCAS -->
+                <div class="dineos-top-kpis" id="kds-live-kpi-row">
+                  <div class="dineos-mini-kpi" onclick="setKDSSubView('board')">
+                    <div class="dmk-head">
+                      <span class="dmk-ico">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M2 18h20"/><path d="M4 18a8 8 0 0 1 16 0"/><path d="M12 6v4"/><path d="M10 6h4"/></svg>
+                      </span>
+                      <span class="dmk-label">Órdenes activas</span>
+                    </div>
+                    <div class="dmk-val" id="kds-kpi-active">00</div>
+                  </div>
+
+                  <div class="dineos-mini-kpi" onclick="setKDSSubView('stock'); setStockSubTab('mode86');">
+                    <div class="dmk-head">
+                      <span class="dmk-ico">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="8"/><path d="M9.5 12h5"/></svg>
+                      </span>
+                      <span class="dmk-label">Platillos disp.</span>
+                    </div>
+                    <div class="dmk-val" id="dineos-kpi-avail">15</div>
+                  </div>
+
+                  <div class="dineos-mini-kpi" onclick="setKDSSubView('board')">
+                    <div class="dmk-head">
+                      <span class="dmk-ico">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+                      </span>
+                      <span class="dmk-label">Tiempo prom.</span>
+                    </div>
+                    <div class="dmk-val" id="dineos-kpi-avg-time">0 <small>min</small></div>
+                  </div>
+
+                  <div class="dineos-mini-kpi" onclick="setKDSSubView('stock'); setStockSubTab('inventory'); setInventoryFilter('restock');">
+                    <div class="dmk-head">
+                      <span class="dmk-ico">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/></svg>
+                      </span>
+                      <span class="dmk-label">Insumos bajos</span>
+                    </div>
+                    <div class="dmk-val" id="dineos-kpi-low-stock">00</div>
+                  </div>
+                </div>
+
+                <!-- FILA 2: TARJETA ANCLA NEGRA OBSIDIANA · ESTATUS DE ÓRDENES (DIALES RADIALES) -->
+                <div class="dineos-obsidian-card">
+                  <div class="dineos-obs-header">
+                    <div class="dineos-obs-title-group">
+                      <span class="dineos-obs-ico">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="3" width="16" height="18" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="14" y2="12"/><line x1="8" y1="16" x2="12" y2="16"/></svg>
+                      </span>
+                      <span class="dineos-obs-title">Estatus de órdenes</span>
+                    </div>
+
+                    <div class="dineos-channel-tabs" id="dineos-channel-tabs" role="tablist">
+                      <button type="button" class="dineos-ch-tab active" data-channel="all" onclick="setKDSChannelFilter('all', this)">Todos</button>
+                      <button type="button" class="dineos-ch-tab" data-channel="dine_in" onclick="setKDSChannelFilter('dine_in', this)">En Mesa</button>
+                      <button type="button" class="dineos-ch-tab" data-channel="pickup" onclick="setKDSChannelFilter('pickup', this)">Pickup</button>
+                      <button type="button" class="dineos-ch-tab" data-channel="delivery" onclick="setKDSChannelFilter('delivery', this)">Domicilio</button>
+                    </div>
+
+                    <div class="dineos-obs-total">
+                      <strong id="dineos-obs-total-num">0</strong>
+                      <span>Órdenes</span>
+                    </div>
+                  </div>
+
+                  <!-- 4 Diales Radiales Interactivos (tocables para filtrar el tablero) -->
+                  <div class="dineos-dials-grid" id="dineos-status-dials"></div>
+                </div>
+
+                <!-- FILA 3: TARJETAS EDITORIALES PASTEL (AMARILLO VENTAS + AZUL OCUPACIÓN Y CANALES) -->
+                <div class="dineos-pastel-row">
+                  <!-- Tarjeta Pastel Amarillo Mantequilla: Resumen de Ventas -->
+                  <div class="dineos-pastel-card yellow" onclick="setKDSSubView('sales')">
+                    <div class="dpc-head">
+                      <div class="dpc-title-wrap">
+                        <span class="dpc-ico">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M14.5 9.5c-.5-1-1.4-1.5-2.5-1.5-1.4 0-2.5.8-2.5 2s1.1 1.7 2.5 2 2.5.8 2.5 2-1.1 2-2.5 2c-1.2 0-2.1-.6-2.6-1.5"/><path d="M12 6.5v11"/></svg>
+                        </span>
+                        <span class="dpc-title">Resumen de ventas</span>
+                      </div>
+                      <span class="dpc-pill">Hoy ∨</span>
+                    </div>
+
+                    <div class="dpc-sales-metrics">
+                      <div class="dpc-rev-main">
+                        <span class="dpc-sublabel">Ingresos totales</span>
+                        <div class="dpc-big-money" id="kds-kpi-sales">$0</div>
+                        <span class="dpc-trend-pill" id="kds-kpi-sales-sub">↑ En vivo</span>
+                      </div>
+                      <div class="dpc-rev-side">
+                        <div class="dpc-mini-stat">
+                          <span>Órdenes cerradas</span>
+                          <strong id="dineos-sales-closed">0</strong>
+                        </div>
+                        <div class="dpc-mini-stat">
+                          <span>Ticket promedio</span>
+                          <strong id="dineos-sales-avg">$0</strong>
+                        </div>
+                        <span class="hidden" id="kds-kpi-paid">0</span>
+                      </div>
+                    </div>
+
+                    <!-- Gráfica de 6 barras con rayitas horizontales finas estilo DineOS -->
+                    <div class="dineos-striped-bars" id="dineos-yellow-bars"></div>
+                  </div>
+
+                  <!-- Tarjeta Pastel Azul Cielo: Ocupación y Canales -->
+                  <div class="dineos-pastel-card blue" onclick="setKDSSubView('board')">
+                    <div class="dpc-head">
+                      <div class="dpc-title-wrap">
+                        <span class="dpc-ico">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="8" width="18" height="4" rx="1.2"/><path d="M6 12v7"/><path d="M18 12v7"/></svg>
+                        </span>
+                        <span class="dpc-title">Canales y mesas</span>
+                      </div>
+                      <span class="dineos-black-arrow-btn sm" aria-hidden="true">↗</span>
+                    </div>
+
+                    <div class="dineos-gauge-wrap">
+                      <span class="dineos-live-chip"><i></i> En vivo</span>
+                      <div class="dineos-gauge-svg-box" id="dineos-blue-gauge"></div>
+                      <div class="dineos-gauge-center">
+                        <strong id="dineos-gauge-total">0</strong>
+                        <span>Total de órdenes hoy</span>
+                      </div>
+                    </div>
+
+                    <div class="dineos-blue-stats" id="kds-kpi-modes">
+                      <div class="dbs-col">
+                        <strong id="dineos-ch-mesa">00</strong>
+                        <span><i class="dbs-dot dark"></i> En Mesa</span>
+                      </div>
+                      <div class="dbs-col">
+                        <strong id="dineos-ch-pickup">00</strong>
+                        <span><i class="dbs-dot mid"></i> Pickup</span>
+                      </div>
+                      <div class="dbs-col">
+                        <strong id="dineos-ch-delivery">00</strong>
+                        <span><i class="dbs-dot coral"></i> Domicilio</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+          </div>
+        </div>
+
+    <!-- SUB-VISTA 1B: TABLERO DE COMANDAS EN VIVO (VENTANA INDEPENDIENTE) -->
+    <section id="kds-board-section" class="kds-sales-section hidden">
+      <div class="sales-container sales-bento-container">
+        <div class="sales-header-row">
+          <div>
+            <span class="step-label">OPERACIÓN EN TIEMPO REAL · KDS</span>
+            <h2 class="sales-title">Tablero de Comandas</h2>
+          </div>
+          <div class="sales-header-actions">
+            <div class="dineos-channel-tabs dineos-board-ch-tabs" role="tablist">
+              <button type="button" class="dineos-ch-tab active" data-channel="all" onclick="setKDSChannelFilter('all', this)">Todos</button>
+              <button type="button" class="dineos-ch-tab" data-channel="dine_in" onclick="setKDSChannelFilter('dine_in', this)">En Mesa</button>
+              <button type="button" class="dineos-ch-tab" data-channel="pickup" onclick="setKDSChannelFilter('pickup', this)">Pickup</button>
+              <button type="button" class="dineos-ch-tab" data-channel="delivery" onclick="setKDSChannelFilter('delivery', this)">Domicilio</button>
             </div>
+            <button class="btn-sales-back" onclick="setKDSSubView('comandas')">← Cocina</button>
           </div>
         </div>
 
-        <!-- Filtros minimalistas tipo Segmented Pills con contadores -->
-        <div class="kds-filters-bar">
-          <div class="kds-filters">
-            <button class="kds-filter active" data-filter="all" onclick="setKDSFilter('all', this)">
-              <span>Todos</span>
-              <span class="filter-count" id="kds-count-all">0</span>
-            </button>
-            <button class="kds-filter" data-filter="pending" onclick="setKDSFilter('pending', this)">
-              <span class="filter-dot dot-pending"></span>
-              <span>Pendientes</span>
-              <span class="filter-count" id="kds-count-pending">0</span>
-            </button>
-            <button class="kds-filter" data-filter="received" onclick="setKDSFilter('received', this)">
-              <span class="filter-dot dot-received"></span>
-              <span>Recibidos</span>
-              <span class="filter-count" id="kds-count-received">0</span>
-            </button>
-            <button class="kds-filter" data-filter="preparing" onclick="setKDSFilter('preparing', this)">
-              <span class="filter-dot dot-preparing"></span>
-              <span>En preparación</span>
-              <span class="filter-count" id="kds-count-preparing">0</span>
-            </button>
-            <button class="kds-filter" data-filter="ready" onclick="setKDSFilter('ready', this)">
-              <span class="filter-dot dot-ready"></span>
-              <span>Listos</span>
-              <span class="filter-count" id="kds-count-ready">0</span>
-            </button>
-          </div>
-        </div>
+        <!-- TABLERO DE COMANDAS EN VIVO (CON FILTROS MONOCROMÁTICOS APPLE) -->
+        <section class="dineos-board-section" id="dineos-board-section">
+              <div class="dineos-board-header">
+                <div class="dineos-board-title-col">
+                  <h2 class="dineos-section-title">Tablero de Comandas</h2>
+                  <span class="dineos-section-sub" id="kds-kpi-active-sub">Sin espera en barra</span>
+                </div>
 
-        <!-- Tablero Grid de Comandas -->
-        <div class="kds-board" id="kds-board">
-          <div class="kds-empty" id="kds-empty">
-            <div class="kds-empty-icon">🍽️</div>
-            <p class="kds-empty-title">Sin comandas activas</p>
-            <p class="kds-empty-sub">Los pedidos entrantes de mesa, pickup y domicilio aparecerán al instante aquí.</p>
-          </div>
-        </div>
+                <div class="kds-filters-bar dineos-filters-bar">
+                  <div class="kds-filters">
+                    <button class="kds-filter active" data-filter="all" onclick="setKDSFilter('all', this)">
+                      <span>Todos</span>
+                      <span class="filter-count" id="kds-count-all">0</span>
+                    </button>
+                    <button class="kds-filter" data-filter="pending" onclick="setKDSFilter('pending', this)">
+                      <span class="filter-dot dot-pending"></span>
+                      <span>Pendientes</span>
+                      <span class="filter-count" id="kds-count-pending">0</span>
+                    </button>
+                    <button class="kds-filter" data-filter="received" onclick="setKDSFilter('received', this)">
+                      <span class="filter-dot dot-received"></span>
+                      <span>Recibidos</span>
+                      <span class="filter-count" id="kds-count-received">0</span>
+                    </button>
+                    <button class="kds-filter" data-filter="preparing" onclick="setKDSFilter('preparing', this)">
+                      <span class="filter-dot dot-preparing"></span>
+                      <span>En preparación</span>
+                      <span class="filter-count" id="kds-count-preparing">0</span>
+                    </button>
+                    <button class="kds-filter" data-filter="ready" onclick="setKDSFilter('ready', this)">
+                      <span class="filter-dot dot-ready"></span>
+                      <span>Listos</span>
+                      <span class="filter-count" id="kds-count-ready">0</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
 
+              <!-- Tablero Grid de Comandas -->
+              <div class="kds-board" id="kds-board">
+                <div class="kds-empty" id="kds-empty">
+                  <div class="kds-empty-icon">🍽️</div>
+                  <p class="kds-empty-title">Sin comandas activas</p>
+                  <p class="kds-empty-sub">Los pedidos entrantes de mesa, pickup y domicilio aparecerán al instante aquí.</p>
+                </div>
+              </div>
+            </section>
       </div>
-    </div>
+    </section>
 
     <!-- SUB-VISTA 2: DASHBOARD EJECUTIVO & VENTAS DEL DÍA (ESTILO APPLE / WORKTAIL) -->
     <section id="kds-sales-section" class="kds-sales-section hidden">
@@ -922,9 +1239,29 @@
             <button type="button" class="btn-export-quick" onclick="exportCurrentShiftOrMonthExcel()">
               📥 Exportar Excel (.xlsx)
             </button>
-            <button class="btn-sales-back" onclick="setKDSSubView('comandas')">← Comandas</button>
+            <button class="btn-sales-back" onclick="setKDSSubView('comandas')">← Cocina</button>
           </div>
         </div>
+
+        <!-- Selector segmentado de sub-pestañas internas para Ventas (cero scroll largo) -->
+        <div class="stock-subtab-bar sales-subtab-bar">
+          <div class="stock-segmented-pill" role="tablist">
+            <button type="button" class="stock-seg-btn active" id="btn-sales-tab-overview" onclick="setSalesSubTab('overview')">
+              📊 Resumen &amp; Gráficas
+            </button>
+            <button type="button" class="stock-seg-btn" id="btn-sales-tab-categories" onclick="setSalesSubTab('categories')">
+              🍽️ Categorías &amp; Actividad
+            </button>
+            <button type="button" class="stock-seg-btn" id="btn-sales-tab-excel" onclick="setSalesSubTab('excel')">
+              📥 Reporte Excel (.xlsx)
+            </button>
+            <button type="button" class="stock-seg-btn" id="btn-sales-tab-history" onclick="setSalesSubTab('history')">
+              📅 Historial &amp; Cierre
+            </button>
+          </div>
+        </div>
+
+        <div id="sales-pane-overview" class="sales-subpane">
 
         <!-- FILA 1: 4 TARJETAS KPI BENTO (APPLE WARM MINIMALIST) -->
         <div class="sales-bento-top-grid">
@@ -1011,7 +1348,9 @@
             <div class="apple-spline-chart-wrap" id="sales-demand-spline"></div>
           </div>
         </div>
+        </div><!-- /#sales-pane-overview -->
 
+        <div id="sales-pane-categories" class="sales-subpane hidden">
         <!-- FILA 3: RENDIMIENTO POR CATEGORÍA (ESTILO PAYROLL STATUS) + COMENSALES RECIENTES (ESTILO PENDING REQUESTS) -->
         <div class="sales-lists-bento-grid">
           <!-- Izquierda: Rendimiento por Categoría + Mini gráfica de avance de meta -->
@@ -1024,83 +1363,7 @@
               <button type="button" class="apple-corner-btn" onclick="exportCurrentShiftOrMonthExcel()" title="Ver en Excel">↗</button>
             </div>
 
-            <div class="sales-products-list">
-              <div class="sales-product-row">
-                <div class="sales-prod-main">
-                  <div class="sales-prod-left">
-                    <span class="sales-prod-icon-circle tone-orange">🌮</span>
-                    <div class="sales-prod-texts">
-                      <span class="sales-prod-name">Tacos</span>
-                      <span class="sales-prod-sub">$28 c/u · Sencillo o Doble</span>
-                    </div>
-                  </div>
-                  <div class="sales-prod-right">
-                    <span class="sales-prod-qty" id="sales-qty-tacos">0</span>
-                    <span class="sales-prod-subtotal" id="sales-amt-tacos">$0</span>
-                  </div>
-                </div>
-                <div class="sales-prod-bar-track">
-                  <div class="sales-prod-bar-fill" id="sales-bar-tacos" style="width: 0%"></div>
-                </div>
-              </div>
-
-              <div class="sales-product-row">
-                <div class="sales-prod-main">
-                  <div class="sales-prod-left">
-                    <span class="sales-prod-icon-circle tone-amber">🌭</span>
-                    <div class="sales-prod-texts">
-                      <span class="sales-prod-name">Hot Dogs</span>
-                      <span class="sales-prod-sub">$35 c/u · Clásico Artesanal</span>
-                    </div>
-                  </div>
-                  <div class="sales-prod-right">
-                    <span class="sales-prod-qty" id="sales-qty-hotdogs">0</span>
-                    <span class="sales-prod-subtotal" id="sales-amt-hotdogs">$0</span>
-                  </div>
-                </div>
-                <div class="sales-prod-bar-track">
-                  <div class="sales-prod-bar-fill" id="sales-bar-hotdogs" style="width: 0%"></div>
-                </div>
-              </div>
-
-              <div class="sales-product-row">
-                <div class="sales-prod-main">
-                  <div class="sales-prod-left">
-                    <span class="sales-prod-icon-circle tone-sage">💧</span>
-                    <div class="sales-prod-texts">
-                      <span class="sales-prod-name">Aguas Frescas</span>
-                      <span class="sales-prod-sub" id="sales-sub-aguas">$25 c/u · Jamaica y Horchata</span>
-                    </div>
-                  </div>
-                  <div class="sales-prod-right">
-                    <span class="sales-prod-qty" id="sales-qty-aguas">0</span>
-                    <span class="sales-prod-subtotal" id="sales-amt-aguas">$0</span>
-                  </div>
-                </div>
-                <div class="sales-prod-bar-track">
-                  <div class="sales-prod-bar-fill" id="sales-bar-aguas" style="width: 0%"></div>
-                </div>
-              </div>
-
-              <div class="sales-product-row">
-                <div class="sales-prod-main">
-                  <div class="sales-prod-left">
-                    <span class="sales-prod-icon-circle tone-sky">🥤</span>
-                    <div class="sales-prod-texts">
-                      <span class="sales-prod-name">Coca-Colas</span>
-                      <span class="sales-prod-sub">$30 c/u · Retornable 500ml</span>
-                    </div>
-                  </div>
-                  <div class="sales-prod-right">
-                    <span class="sales-prod-qty" id="sales-qty-cocas">0</span>
-                    <span class="sales-prod-subtotal" id="sales-amt-cocas">$0</span>
-                  </div>
-                </div>
-                <div class="sales-prod-bar-track">
-                  <div class="sales-prod-bar-fill" id="sales-bar-cocas" style="width: 0%"></div>
-                </div>
-              </div>
-            </div>
+            <div class="sales-products-list" id="sales-products-list"></div>
 
             <!-- Mini área proyectada (Inspirada en el pie de Payroll Status After) -->
             <div class="payroll-mini-footer" id="sales-goal-area-chart"></div>
@@ -1113,14 +1376,16 @@
                 <h3 class="apple-surface-title">Actividad Reciente</h3>
                 <p class="apple-surface-sub">Comensales, pagos digitales y órdenes cerradas</p>
               </div>
-              <button type="button" class="apple-corner-btn" onclick="setKDSSubView('comandas')" title="Ir a comandas">↗</button>
+              <button type="button" class="apple-corner-btn" onclick="setKDSSubView('board')" title="Ir a comandas">↗</button>
             </div>
             <div class="recent-diners-list" id="sales-recent-diners-list">
               <p class="recent-empty-msg">Aún no hay actividad registrada en este turno.</p>
             </div>
           </div>
         </div>
+        </div><!-- /#sales-pane-categories -->
 
+        <div id="sales-pane-excel" class="sales-subpane hidden">
         <!-- VISTA PREVIA VISUAL DE LA TABLA DE EXCEL EJECUTIVA + DATOS DEMO -->
         <div class="sales-breakdown-card apple-surface-card excel-preview-card">
           <div class="excel-preview-header">
@@ -1139,7 +1404,9 @@
           </p>
           <div class="excel-sheet-preview-wrap" id="excel-sheet-preview-wrap"></div>
         </div>
+        </div><!-- /#sales-pane-excel -->
 
+        <div id="sales-pane-history" class="sales-subpane hidden">
         <!-- FILA FINAL: HISTORIAL MENSUAL + CERRAR TURNO -->
         <div class="sales-bottom-bento-grid">
           <!-- HISTORIAL MENSUAL (BASE DE DATOS) + EXPORTACIÓN A EXCEL -->
@@ -1173,7 +1440,7 @@
               </div>
             </div>
 
-            <div class="history-products-line" id="hist-products">🌮 0 · 🌭 0 · 💧 0 · 🥤 0</div>
+            <div class="history-products-line" id="hist-products">🫒 0 · 🍔 0 · 🥩 0 · 🍟 0 · 🥧 0 · 🥤 0</div>
 
             <div class="history-days-list" id="hist-days-list">
               <p class="history-empty">Sin ventas registradas este mes</p>
@@ -1211,6 +1478,7 @@
             </div>
           </div>
         </div>
+        </div><!-- /#sales-pane-history -->
       </div>
     </section>
 
@@ -1229,18 +1497,24 @@
             <button type="button" class="btn-seed-demo" onclick="copyRestockShoppingList()">
               📋 Lista de Compras
             </button>
-            <button class="btn-sales-back" onclick="setKDSSubView('comandas')">← Comandas</button>
+            <button class="btn-sales-back" onclick="setKDSSubView('comandas')">← Cocina</button>
           </div>
         </div>
 
-        <!-- Selector segmentado estilo Apple: Insumos & Caducidades vs Modo 86 Rápido -->
+        <!-- Selector segmentado estilo Apple: 4 ventanas independientes dentro de Insumos -->
         <div class="stock-subtab-bar">
           <div class="stock-segmented-pill" role="tablist">
             <button type="button" class="stock-seg-btn active" id="btn-stock-tab-inventory" onclick="setStockSubTab('inventory')">
-              📦 Insumos &amp; Caducidades
+              📦 Catálogo de Insumos
+            </button>
+            <button type="button" class="stock-seg-btn" id="btn-stock-tab-alerts" onclick="setStockSubTab('alerts')">
+              ⚠️ Alertas &amp; Compras <span class="seg-count-badge hidden" id="inv-tab-alerts-badge">0</span>
             </button>
             <button type="button" class="stock-seg-btn" id="btn-stock-tab-mode86" onclick="setStockSubTab('mode86')">
-              ⚡ Modo 86 (Menú Rápido)
+              ⚡ Modo 86 Rápido
+            </button>
+            <button type="button" class="stock-seg-btn" id="btn-stock-tab-movements" onclick="setStockSubTab('movements')">
+              📋 Movimientos
             </button>
           </div>
           <div class="stock-auto86-wrap">
@@ -1310,18 +1584,6 @@
             </div>
           </div>
 
-          <!-- Tarjeta de Alertas Inteligentes (Reabastecimiento & Caducidades Urgentes) -->
-          <div class="apple-surface-card inv-alerts-card hidden" id="inv-urgent-alerts-card">
-            <div class="apple-surface-head">
-              <div>
-                <h3 class="apple-surface-title">Atención Requerida · Compras &amp; Caducidades</h3>
-                <p class="apple-surface-sub">Calculado en tiempo real según tus pedidos y fechas de vencimiento PEPS</p>
-              </div>
-              <button type="button" class="btn-seed-demo" onclick="copyRestockShoppingList()">📋 Copiar Lista</button>
-            </div>
-            <div class="inv-alerts-list" id="inv-urgent-alerts-list"></div>
-          </div>
-
           <!-- Barra de Filtros y Búsqueda de Insumos -->
           <div class="inv-toolbar-row">
             <div class="kds-filters" id="inv-filter-pills">
@@ -1337,8 +1599,8 @@
               <button type="button" class="kds-filter" data-inv-filter="Proteínas" onclick="setInventoryFilter('Proteínas')">
                 🥩 Proteínas
               </button>
-              <button type="button" class="kds-filter" data-inv-filter="Tortillas y Pan" onclick="setInventoryFilter('Tortillas y Pan')">
-                🌮 Tortillas y Pan
+              <button type="button" class="kds-filter" data-inv-filter="Panadería y Pastas" onclick="setInventoryFilter('Panadería y Pastas')">
+                🍞 Panadería y Pastas
               </button>
               <button type="button" class="kds-filter" data-inv-filter="Verduras y Salsas" onclick="setInventoryFilter('Verduras y Salsas')">
                 🌿 Verduras y Salsas
@@ -1362,8 +1624,37 @@
 
           <!-- Grid Bento de Tarjetas de Insumos -->
           <div class="inv-cards-grid" id="inventory-cards-grid"></div>
+        </div>
 
-          <!-- Registro en Vivo de Descuentos por Pedido, Entradas y Mermas -->
+        <!-- PANEL B: ALERTAS DE COMPRA & CADUCIDADES URGENTES PEPS -->
+        <div id="stock-alerts-pane" class="stock-pane hidden">
+          <div class="apple-surface-card inv-alerts-card" id="inv-urgent-alerts-card">
+            <div class="apple-surface-head">
+              <div>
+                <h3 class="apple-surface-title">Atención Requerida · Compras &amp; Caducidades</h3>
+                <p class="apple-surface-sub">Calculado en tiempo real según tus pedidos y fechas de vencimiento PEPS</p>
+              </div>
+              <button type="button" class="btn-seed-demo" onclick="copyRestockShoppingList()">📋 Copiar Lista</button>
+            </div>
+            <div class="inv-alerts-list" id="inv-urgent-alerts-list"></div>
+          </div>
+        </div>
+
+        <!-- PANEL C: MODO 86 RÁPIDO (1 CLIC EN EL MENÚ DEL CLIENTE) -->
+        <div id="stock-mode86-pane" class="stock-pane hidden">
+          <div class="mode86-top-bar">
+            <p class="stock-helper-text">
+              Toca cualquier ingrediente o bebida para alternar al instante entre <strong>Disponible</strong> y <strong>Agotado</strong> en los celulares de los comensales.
+            </p>
+            <button type="button" class="btn-seed-demo" onclick="restoreAllStockItems()">
+              ✓ Marcar Todo Disponible
+            </button>
+          </div>
+          <div id="kds-stock-list" class="kds-stock-list"></div>
+        </div>
+
+        <!-- PANEL D: MOVIMIENTOS RECIENTES DE INVENTARIO -->
+        <div id="stock-movements-pane" class="stock-pane hidden">
           <div class="apple-surface-card inv-log-card">
             <div class="apple-surface-head">
               <div>
@@ -1377,19 +1668,6 @@
             </div>
           </div>
         </div>
-
-        <!-- PANEL B: MODO 86 RÁPIDO (1 CLIC EN EL MENÚ DEL CLIENTE) -->
-        <div id="stock-mode86-pane" class="stock-pane hidden">
-          <div class="mode86-top-bar">
-            <p class="stock-helper-text">
-              Toca cualquier ingrediente o bebida para alternar al instante entre <strong>Disponible</strong> y <strong>Agotado</strong> en los celulares de los comensales.
-            </p>
-            <button type="button" class="btn-seed-demo" onclick="restoreAllStockItems()">
-              ✓ Marcar Todo Disponible
-            </button>
-          </div>
-          <div id="kds-stock-list" class="kds-stock-list"></div>
-        </div>
       </div>
     </section>
 
@@ -1401,7 +1679,7 @@
             <span class="step-label">ETIQUETAS LISTAS PARA IMPRIMIR</span>
             <h2 class="sales-title">Códigos QR por Mesa</h2>
           </div>
-          <button class="btn-sales-back" onclick="setKDSSubView('comandas')">← Comandas</button>
+          <button class="btn-sales-back" onclick="setKDSSubView('comandas')">← Cocina</button>
         </div>
 
         <div class="sales-breakdown-card apple-surface-card qr-config-card no-print">
@@ -1430,6 +1708,9 @@
       </div>
     </section>
 
+      </div><!-- /.dineos-main-stage -->
+    </div><!-- /.dineos-app-shell -->
+
     <!-- MODAL DE CONFIRMACIÓN DE SEGURIDAD: CERRAR TURNO -->
     <div class="modal-overlay" id="shift-modal-overlay" onclick="closeCloseShiftModal()"></div>
     <div class="modal" id="shift-reset-modal">
@@ -1454,17 +1735,17 @@
       <div class="inv-form-grid">
         <div class="modal-field-block span-2">
           <label class="modal-field-label" for="inv-name-input">NOMBRE DEL INSUMO</label>
-          <input class="modal-input" id="inv-name-input" type="text" placeholder="Ej: Bistec de Res, Aguacate Hass, Queso..." maxlength="48" />
+          <input class="modal-input" id="inv-name-input" type="text" placeholder="Ej: Entraña Angus, Aguacate Hass, Pan Brioche..." maxlength="48" />
         </div>
 
         <div class="modal-field-block">
           <label class="modal-field-label" for="inv-category-input">CATEGORÍA</label>
           <select class="modal-input inv-select" id="inv-category-input">
-            <option value="Proteínas">🥩 Proteínas</option>
-            <option value="Tortillas y Pan">🌮 Tortillas y Pan</option>
-            <option value="Verduras y Salsas">🌿 Verduras y Salsas</option>
-            <option value="Bebidas">🥤 Bebidas</option>
-            <option value="Otros">📦 Otros / Desechables</option>
+            <option value="Proteínas">🥩 Proteínas y Mariscos</option>
+            <option value="Panadería y Pastas">🍞 Panadería y Pastas</option>
+            <option value="Verduras y Salsas">🌿 Verduras, Quesos y Salsas</option>
+            <option value="Bebidas">🥤 Bebidas y Aguas Frescas</option>
+            <option value="Otros">📦 Otros / Repostería</option>
           </select>
         </div>
 
@@ -1503,27 +1784,38 @@
           <label class="modal-field-label" for="inv-recipe-link-input">VÍNCULO AUTOMÁTICO CON PEDIDOS (RECETA)</label>
           <select class="modal-input inv-select" id="inv-recipe-link-input">
             <option value="manual">📦 Solo inventario manual (sin descuento automático)</option>
-            <option value="taco_tortilla">🌮 Taco · Tortilla (descuenta 1x sencilla / 2x doble)</option>
-            <option value="taco_bistec">🥩 Taco · Proteína Bistec</option>
-            <option value="taco_longaniza">🌶️ Taco · Proteína Longaniza</option>
-            <option value="taco_cilantro">🌿 Taco · Cilantro</option>
-            <option value="taco_cebolla">🧅 Taco o Hot Dog · Cebolla</option>
-            <option value="taco_salsa_roja">🍅 Taco · Salsa Roja</option>
-            <option value="hotdog_base">🌭 Hot Dog · Base (Pan o Salchicha)</option>
-            <option value="hotdog_ketchup">🍅 Hot Dog · Ketchup</option>
-            <option value="hotdog_mayonesa">🥣 Hot Dog · Mayonesa</option>
-            <option value="hotdog_mostaza">💛 Hot Dog · Mostaza</option>
-            <option value="hotdog_chiles">🌶️ Hot Dog · Chiles Curados</option>
-            <option value="hotdog_tomate">🍅 Hot Dog · Tomate</option>
-            <option value="drink_jamaica">🌺 Bebida · Agua de Jamaica</option>
-            <option value="drink_horchata">🥛 Bebida · Agua de Horchata</option>
-            <option value="drink_coca">🥤 Bebida · Coca-Cola</option>
+            <option value="pinch_beef_patty">🥩 Pinch Burger 8 oz (+ Carne extra)</option>
+            <option value="pinch_angus_steak">🥩 Entraña Certified Angus 8 oz</option>
+            <option value="pinch_ribs_pork">🥩 Costillar Baby Back / Panceta BBQ</option>
+            <option value="pinch_chicken_thigh">🥩 Muslo de Pollo Frito</option>
+            <option value="pinch_cured_meats">🥩 Pavo y Jamón Curados en Casa</option>
+            <option value="pinch_seafood">🥩 Mariscos (Camarón / Mahi Mahi / Bacalao)</option>
+            <option value="pinch_bacon">🥩 Tocino Ahumado (BLT + Extra Tocino)</option>
+            <option value="pinch_eggs">🥩 Huevos Orgánicos (+ Extra Huevo)</option>
+            <option value="pinch_brioche">🍞 Pan Brioche Artesanal</option>
+            <option value="pinch_cuban_bread">🍞 Pan Cubano Hecho en Casa</option>
+            <option value="pinch_pasta">🍞 Pasta Tagliatelle &amp; Bucatini</option>
+            <option value="pinch_blue_totopos">🍞 Totopos de Maíz Azul</option>
+            <option value="pinch_potatoes">🌿 Papas Frescas (Corte en Casa / Puré)</option>
+            <option value="pinch_avocado">🌿 Aguacate Hass &amp; Guacamole (+ Extra)</option>
+            <option value="pinch_cheese">🌿 Quesos (Suizo / Parmigiano / Chipotle)</option>
+            <option value="pinch_aioli">🌿 Alioli Casa, Trufa y Picante (+ Extras)</option>
+            <option value="pinch_guava_bbq">🌿 Salsa BBQ de Guayaba (+ Extra)</option>
+            <option value="pinch_greens">🌿 Arúgula, Lechuga, Coles y Broccolini</option>
+            <option value="pinch_caramel_onion">🌿 Cebollas Caramelizadas y al Mojo</option>
+            <option value="pinch_desserts_base">📦 Repostería Casa (Postres)</option>
+            <option value="drink_agua_jamaica">🥤 Bebida · Agua de Jamaica (500 ml)</option>
+            <option value="drink_agua_horchata">🥤 Bebida · Agua de Horchata (500 ml)</option>
+            <option value="drink_mexican_coke">🥤 Bebida · Mexican Coke (Vidrio 12 oz)</option>
+            <option value="drink_mexican_sprite">🥤 Bebida · Mexican Sprite (Vidrio 12 oz)</option>
+            <option value="drink_saratoga">🥤 Bebida · Saratoga Sparkling Water</option>
+            <option value="drink_cans_12oz">🥤 Bebida · Refrescos en Lata 12 oz</option>
           </select>
         </div>
 
         <div class="modal-field-block span-2">
           <label class="modal-field-label" for="inv-consumption-input">CONSUMO POR PORCIÓN PEDIDA (EN LA UNIDAD ELEGIDA)</label>
-          <input class="modal-input" id="inv-consumption-input" type="number" min="0" step="any" placeholder="Ej: 80 (si es gramos por taco) o 1 (si es pieza)" />
+          <input class="modal-input" id="inv-consumption-input" type="number" min="0" step="any" placeholder="Ej: 1 (pieza/porción) o 500 (ml por vaso)" />
         </div>
       </div>
 
@@ -1596,8 +1888,8 @@
         <button type="button" class="ai-quick-chip featured" onclick="runKitchenAIQuickPrompt('¿Cuánto he vendido hoy?')">
           💰 ¿Cuánto he vendido?
         </button>
-        <button type="button" class="ai-quick-chip" onclick="runKitchenAIQuickPrompt('¿He vendido tacos?')">
-          🌮 ¿He vendido tacos?
+        <button type="button" class="ai-quick-chip" onclick="runKitchenAIQuickPrompt('¿He vendido burgers?')">
+          🍔 ¿He vendido burgers?
         </button>
         <button type="button" class="ai-quick-chip" onclick="runKitchenAIQuickPrompt('Oye, ¿la mesa 2 qué había pedido?')">
           🍽️ ¿Qué pidió Mesa 2?
@@ -1639,6 +1931,6 @@
 
 <!-- Sincronización multi-dispositivo en tiempo real -->
 <script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
-<script src="app.js?v=20261123v20"></script>
+<script src="app.js?v=20261124v31"></script>
 </body>
 </html>
